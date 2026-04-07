@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { apiFetch, fmt, STATUS_COLOR, STATUS_BG } from "../utils/api";
 
-const LEVEL_TABS = ["Semua", "BONGKAR", "AWAS"];
+const LEVEL_TABS = ["Semua", "BONGKAR", "AWAS" , "PERLU PANTAU"];
 
 export default function Alerts({ navigateTo }) {
   const [alerts, setAlerts] = useState([]);

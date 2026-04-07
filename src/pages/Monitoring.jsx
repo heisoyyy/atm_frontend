@@ -201,7 +201,7 @@ export default function Monitoring({ navigateTo }) {
 }
 
 function SaldoBar({ pct }) {
-  const color = pct <= 20 ? "#ff3b5c" : pct <= 25 ? "#ff8c00" : pct <= 40 ? "#f5c518" : "#00e5a0";
+  const color = pct <= 20 ? "#ff3b5c" : pct <= 30 ? "#ff8c00" : pct <= 50 ? "#f5c518" : "#00e5a0";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
       <div style={{ width: 60, height: 5, background: "rgba(255,255,255,0.08)", borderRadius: 3 }}>

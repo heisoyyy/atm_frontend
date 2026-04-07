@@ -58,7 +58,7 @@ const TabBar = ({ tabs, active, onChange }) => (
   </div>
 );
 
-export default function History({ atmId: initialAtmId }) {
+export default function History({ atmId: initialAtmId, onAddCashPlan, cashPlanIds }) {
   const [inputId, setInputId] = useState(initialAtmId || "");
   const [days, setDays] = useState(7);
   const [data, setData] = useState(null);
@@ -114,7 +114,7 @@ export default function History({ atmId: initialAtmId }) {
         const status =
           pct > 100      ? "OVERFUND"
           : pct <= 20    ? "BONGKAR"
-          : pct <= 25    ? "AWAS"
+          : pct <= 30    ? "AWAS"
           : pct <= 40    ? "PERLU PANTAU"
           : "AMAN";
         const sc = {
@@ -277,6 +277,21 @@ export default function History({ atmId: initialAtmId }) {
             setCurrentPage={setCurrentPage}
             predRows24={predRows24}
             hasPred={!!predData}
+            onAddCashPlan={onAddCashPlan}
+            cashPlanIds={cashPlanIds}
+            atmInfo={predData ? {
+              id_atm:        data.id_atm,
+              lokasi:        predData.lokasi,
+              wilayah:       predData.wilayah,
+              tipe:          predData.tipe,
+              limit:         data.limit,
+              tarik_per_jam: predData.tarik_per_jam,
+              tgl_isi:       predData.tgl_isi,
+              jam_isi:       predData.jam_isi,
+              tgl_awas:      predData.tgl_awas,
+              jam_awas:      predData.jam_awas,
+              last_update:   predData.last_update,
+            } : null}
           />
         </>
       )}
@@ -285,7 +300,7 @@ export default function History({ atmId: initialAtmId }) {
 }
 
 // ── Data Table Section dengan Tab ─────────────────────────
-function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsPerPage, setCurrentPage, predRows24, hasPred }) {
+function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsPerPage, setCurrentPage, predRows24, hasPred, onAddCashPlan, cashPlanIds, atmInfo }) {
   const [dataTab, setDataTab] = useState("historis");
 
   return (
@@ -425,9 +440,9 @@ function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsP
                 borderRadius: 8,
               }}>
                 {[
-                  { label: "AMAN",         color: "#22c55e", desc: "> 40% limit"  },
-                  { label: "PERLU PANTAU", color: "#60a5fa", desc: "25–40% limit" },
-                  { label: "AWAS",         color: "#f59e0b", desc: "20–25% limit" },
+                  { label: "AMAN",         color: "#22c55e", desc: "> 30% limit"  },
+                  { label: "PERLU PANTAU", color: "#60a5fa", desc: "30–40% limit" },
+                  { label: "AWAS",         color: "#f59e0b", desc: "20–30% limit" },
                   { label: "BONGKAR",      color: "#ef4444", desc: "< 20% limit"  },
                 ].map((s) => (
                   <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
@@ -442,7 +457,7 @@ function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsP
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
                     <tr style={{ borderBottom: "2px solid rgba(99,179,237,0.15)" }}>
-                      {["Jam ke Depan", "Waktu Estimasi", "Prediksi Saldo", "% Saldo", "Status"].map((h) => (
+                      {["Jam ke Depan", "Waktu Estimasi", "Prediksi Saldo", "% Saldo", "Status", "Cash Plan"].map((h) => (
                         <th key={h} style={{
                           padding: "12px 16px",
                           textAlign: "left",
@@ -535,6 +550,61 @@ function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsP
                               {row.status}
                             </span>
                           </td>
+
+                          {/* Cash Plan */}
+                          <td style={{ padding: "10px 16px" }}>
+                            {row.pct <= 25 ? (() => {
+                              const key   = `${atmInfo?.id_atm}_+${row.jam}j`;
+                              const added = cashPlanIds?.has(key);
+                              return (
+                                <button
+                                  onClick={() => !added && onAddCashPlan && onAddCashPlan({
+                                    key,
+                                    id_atm:      atmInfo?.id_atm   || "—",
+                                    lokasi:      atmInfo?.lokasi   || "—",
+                                    wilayah:     atmInfo?.wilayah  || "—",
+                                    tipe:        atmInfo?.tipe     || "—",
+                                    saldo:       row.saldo,
+                                    limit:       atmInfo?.limit    || 0,
+                                    pct_saldo:   row.pct,
+                                    status:      row.status,
+                                    jam_ke:      row.jam,
+                                    est_waktu:   new Date(Date.now() + row.jam * 3600000)
+                                                   .toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+                                    est_tanggal: new Date(Date.now() + row.jam * 3600000)
+                                                   .toLocaleDateString("id-ID"),
+                                    tarik_per_jam:   atmInfo?.tarik_per_jam   || 0,
+                                    tgl_isi:         atmInfo?.tgl_isi         || null,
+                                    jam_isi:         atmInfo?.jam_isi         || null,
+                                    tgl_awas:        atmInfo?.tgl_awas        || null,
+                                    jam_awas:        atmInfo?.jam_awas        || null,
+                                    last_update:     atmInfo?.last_update     || null,
+                                    added_at:        new Date().toISOString(),
+                                  })}
+                                  style={{
+                                    fontSize: 11, fontWeight: 700,
+                                    padding: "3px 10px", borderRadius: 5,
+                                    background: added
+                                      ? "rgba(0,229,160,0.1)"
+                                      : row.status === "BONGKAR"
+                                        ? "rgba(255,59,92,0.12)"
+                                        : "rgba(245,158,11,0.12)",
+                                    color: added
+                                      ? "#00e5a0"
+                                      : row.status === "BONGKAR" ? "#ff3b5c" : "#f59e0b",
+                                    border: `1px solid ${added ? "rgba(0,229,160,0.3)" : row.status === "BONGKAR" ? "rgba(255,59,92,0.3)" : "rgba(245,158,11,0.3)"}`,
+                                    cursor: added ? "default" : "pointer",
+                                    transition: "all 0.15s",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {added ? "✓ Ditambahkan" : "+ Cash Plan"}
+                                </button>
+                              );
+                            })() : (
+                              <span style={{ color: "#374151", fontSize: 11 }}>—</span>
+                            )}
+                          </td>
                         </tr>
                       );
                     })}
@@ -620,7 +690,7 @@ function PredCard({ pred }) {
 function SaldoChart({ data, limit }) {
   if (!data || data.length === 0) return null;
 
-  const W = 900, H = 200, PAD = { t: 10, b: 40, l: 80, r: 20 };
+  const W = 900, H = 200, PAD = { t: 10, b: 40, l: 100, r: 20 };
   const w = W - PAD.l - PAD.r;
   const h = H - PAD.t - PAD.b;
 
@@ -683,7 +753,7 @@ function SaldoChart({ data, limit }) {
 
 // ── PredictionFutureChart ─────────────────────────────────
 function PredictionFutureChart({ currentSaldo, tarikPerJam, estJamHabis, limit }) {
-  const W = 920, H = 260, PAD = { t: 20, b: 50, l: 80, r: 30 };
+  const W = 920, H = 260, PAD = { t: 20, b: 50, l: 100, r: 30 };
   const w = W - PAD.l - PAD.r;
   const h = H - PAD.t - PAD.b;
 

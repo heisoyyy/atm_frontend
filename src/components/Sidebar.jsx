@@ -1,3 +1,4 @@
+// src/components/Sidebar.jsx
 const NAV = [
   { id: "dashboard",  label: "Dashboard",   icon: "⬡" },
   { id: "monitoring", label: "Monitoring",  icon: "◈" },

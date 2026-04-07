@@ -1,3 +1,4 @@
+// src/utils/api.js
 const BASE = "http://localhost:8000";
 
 export async function apiFetch(path, opts = {}) {
@@ -26,19 +27,19 @@ export const fmt = {
 };
 
 export const STATUS_COLOR = {
-  "KRITIS":            "#ff3b5c",
-  "SEGERA ISI":        "#ff8c00",
-  "PERLU DIPANTAU":    "#f5c518",
-  "AMAN":              "#00e5a0",
-  "BONGKAR (OVERFUND)":"#a78bfa",
-  "NO DATA":           "#6b7280",
+  "BONGKAR":       "#E24B4A",
+  "AWAS":          "#EF9F27",
+  "PERLU PANTAU":  "#d4b800",
+  "AMAN":          "#1D9E75",
+  "OVERFUND":      "#7F77DD",
+  "NO DATA":       "#888780",
 };
 
 export const STATUS_BG = {
-  "KRITIS":            "rgba(255,59,92,0.12)",
-  "SEGERA ISI":        "rgba(255,140,0,0.12)",
-  "PERLU DIPANTAU":    "rgba(245,197,24,0.12)",
-  "AMAN":              "rgba(0,229,160,0.10)",
-  "BONGKAR (OVERFUND)":"rgba(167,139,250,0.12)",
-  "NO DATA":           "rgba(107,114,128,0.12)",
+  "BONGKAR":       "rgba(226,75,74,0.12)",
+  "AWAS":          "rgba(239,159,39,0.12)",
+  "PERLU PANTAU":  "rgba(212,184,0,0.12)",
+  "AMAN":          "rgba(29,158,117,0.10)",
+  "OVERFUND":      "rgba(127,119,221,0.12)",
+  "NO DATA":       "rgba(136,135,128,0.12)",
 };

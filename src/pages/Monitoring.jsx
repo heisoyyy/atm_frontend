@@ -1,8 +1,9 @@
+// src/pages/Monitoring.jsx
 import { useState, useEffect, useMemo } from "react";
 import { apiFetch, fmt, STATUS_COLOR, STATUS_BG } from "../utils/api";
 
 const WILAYAH = ["Semua", "Pekanbaru", "Batam", "Dumai", "Tanjung Pinang"];
-const STATUS_LIST = ["Semua", "KRITIS", "SEGERA ISI", "PERLU DIPANTAU", "AMAN", "BONGKAR (OVERFUND)"];
+const STATUS_LIST = ["Semua", "BONGKAR", "AWAS", "AMAN","PERLU PANTAU"];
 const TIPE_LIST = ["Semua", "EMV", "CRM"];
 
 export default function Monitoring({ navigateTo }) {

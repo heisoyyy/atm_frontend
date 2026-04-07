@@ -1,3 +1,4 @@
+// src/pages/Dashboard.jsx
 import { useState, useEffect } from "react";
 import { apiFetch, fmt, STATUS_COLOR, STATUS_BG } from "../utils/api";
 
@@ -41,13 +42,14 @@ export default function Dashboard({ navigateTo }) {
   const total = ov.total_atm || 1;
 
   const statCards = [
-    { label: "Total ATM",     value: ov.total_atm,    color: "#60a5fa", icon: "◈" },
-    { label: "KRITIS",        value: ov.kritis,        color: "#ff3b5c", icon: "⚠" },
-    { label: "Segera Isi",    value: ov.segera_isi,    color: "#ff8c00", icon: "⊕" },
-    { label: "Perlu Pantau",  value: ov.perlu_pantau,  color: "#f5c518", icon: "◎" },
-    { label: "Aman",          value: ov.aman,          color: "#00e5a0", icon: "✓" },
-    { label: "ATM Sepi",      value: ov.atm_sepi,      color: "#a78bfa", icon: "◐" },
-  ];
+  { label: "Total ATM",    value: ov.total_atm,   color: "#378ADD", icon: "◈" },
+  { label: "Bongkar",      value: ov.bongkar,      color: "#E24B4A", icon: "⚠" },
+  { label: "Awas",         value: ov.awas,         color: "#EF9F27", icon: "⊕" },
+  { label: "Perlu Pantau", value: ov.perlu_pantau, color: "#d4b800", icon: "◎" },
+  { label: "Aman",         value: ov.aman,         color: "#1D9E75", icon: "✓" },
+  { label: "ATM Sepi",     value: ov.atm_sepi,     color: "#7F77DD", icon: "◐" },
+];
+
 
   return (
     <div>
@@ -69,7 +71,7 @@ export default function Dashboard({ navigateTo }) {
               cursor: "pointer", fontWeight: 600,
               animation: "pulse 2s infinite",
             }}>
-              ⚠ {ov.kritis} ATM KRITIS
+              {ov.bongkar} ATM BONGKAR
             </button>
           )}
         </div>
@@ -128,17 +130,17 @@ export default function Dashboard({ navigateTo }) {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  {w.kritis > 0 && (
+                  {w.bongkar > 0 && (
                     <span style={{ background: "rgba(255,59,92,0.15)", color: "#ff3b5c", fontSize: 11, padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>
-                      {w.kritis} KRITIS
+                      {w.bongkar} BONGKAR
                     </span>
                   )}
-                  {w.segera_isi > 0 && (
+                  {w.awas > 0 && (
                     <span style={{ background: "rgba(255,140,0,0.12)", color: "#ff8c00", fontSize: 11, padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>
-                      {w.segera_isi} SEGERA
+                      {w.awas} AWAS
                     </span>
                   )}
-                  {w.kritis === 0 && w.segera_isi === 0 && (
+                  {w.bongkar === 0 && w.awas === 0 && (
                     <span style={{ color: "#00e5a0", fontSize: 11 }}>✓ Aman</span>
                   )}
                 </div>
@@ -156,6 +158,7 @@ export default function Dashboard({ navigateTo }) {
             { label: "Data", ok: status?.has_data },
             { label: "Model XGBoost", ok: status?.has_model },
             { label: "Cache Prediksi", ok: status?.has_cache },
+            { label: "V6 Config", ok: !!status?.config?.STATUS_AMAN_PCT },
           ].map(s => (
             <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 8, height: 8, borderRadius: "50%", background: s.ok ? "#00e5a0" : "#ff3b5c", boxShadow: `0 0 6px ${s.ok ? "#00e5a0" : "#ff3b5c"}` }} />

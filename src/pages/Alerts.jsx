@@ -1,7 +1,8 @@
+// src/pages/Alerts.jsx
 import { useState, useEffect } from "react";
 import { apiFetch, fmt, STATUS_COLOR, STATUS_BG } from "../utils/api";
 
-const LEVEL_TABS = ["Semua", "KRITIS", "SEGERA ISI"];
+const LEVEL_TABS = ["Semua", "BONGKAR", "AWAS"];
 
 export default function Alerts({ navigateTo }) {
   const [alerts, setAlerts] = useState([]);

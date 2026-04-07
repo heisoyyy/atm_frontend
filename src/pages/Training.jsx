@@ -1,3 +1,4 @@
+// src/pages/Training.jsx
 import { useState, useEffect, useRef } from "react";
 import { apiFetch } from "../utils/api";
 

@@ -30,7 +30,7 @@ const fmtLembar = (total, denom) => {
 const nowBulan = () => BULAN_ID[new Date().getMonth()];
 const nowTahun = () => new Date().getFullYear();
 
-// Target saldo setelah isi = 80% dari limit
+// Target saldo setelah isi = 100% dari limit
 const targetSaldo = (limit) => Math.round(limit * 1);
 const jumlahIsi   = (saldo, limit) => Math.max(0, targetSaldo(limit) - saldo);
 
@@ -46,7 +46,7 @@ const DONE_STYLE  = { color: "#00e5a0", bg: "rgba(0,229,160,0.12)", border: "rgb
 const PRED_STYLE  = { color: "#a78bfa", bg: "rgba(167,139,250,0.1)", border: "rgba(167,139,250,0.25)" };
 
 // ════════════════════════════════════════════════════════
-export default function CashPlan({ navigateTo }) {
+export default function CashPlan({ navigateTo, externalItems = [], onDoneChange }) {
   const [rawData,  setRawData]  = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [genAt,    setGenAt]    = useState(null);
@@ -59,10 +59,13 @@ export default function CashPlan({ navigateTo }) {
   const [search,        setSearch]        = useState("");
 
   // Denom global (bisa override per baris)
-  const [denomGlobal,   setDenomGlobal]   = useState(100_000);
+  const [denomGlobal, setDenomGlobal] = useState(100_000);
 
   // Override per ATM: { [id_atm]: { denom, keterangan, statusDone } }
   const [overrides, setOverrides] = useState({});
+
+  // Manual entries (tambahan manual by ID ATM)
+  const [manualItems, setManualItems] = useState([]);
 
   // Sort
   const [sort, setSort] = useState({ key: "skor_urgensi", dir: -1 });
@@ -70,6 +73,12 @@ export default function CashPlan({ navigateTo }) {
   // Pagination
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 15;
+
+  // Modal tambah manual
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addIdInput,   setAddIdInput]   = useState("");
+  const [addLoading,   setAddLoading]   = useState(false);
+  const [addError,     setAddError]     = useState("");
 
   // ── Fetch predictions ────────────────────────────────
   const fetchData = () => {
@@ -89,9 +98,26 @@ export default function CashPlan({ navigateTo }) {
 
   useEffect(() => { fetchData(); }, []);
 
+  // Merge external items dari History ke manualItems
+  useEffect(() => {
+    if (!externalItems || externalItems.length === 0) return;
+    setManualItems(prev => {
+      const existing = new Set(prev.map(x => x.id_atm));
+      const news = externalItems.filter(x => !existing.has(x.id_atm));
+      return [...prev, ...news];
+    });
+  }, [externalItems]);
+
   // ── Filter + sort ─────────────────────────────────────
+  // Gabungkan rawData + manualItems (hindari duplikasi by id_atm)
+  const allData = useMemo(() => {
+    const rawIds = new Set(rawData.map(d => d.id_atm));
+    const extras = manualItems.filter(m => !rawIds.has(m.id_atm));
+    return [...rawData, ...extras];
+  }, [rawData, manualItems]);
+
   const filtered = useMemo(() => {
-    let d = rawData;
+    let d = allData;
     if (filterWilayah !== "Semua") d = d.filter(r => r.wilayah === filterWilayah);
     if (filterStatus  !== "Semua") d = d.filter(r => r.status  === filterStatus);
     if (filterTipe    !== "Semua") d = d.filter(r => r.tipe    === filterTipe);
@@ -107,7 +133,7 @@ export default function CashPlan({ navigateTo }) {
       const va = a[sort.key] ?? 0, vb = b[sort.key] ?? 0;
       return sort.dir * (va > vb ? 1 : va < vb ? -1 : 0);
     });
-  }, [rawData, filterWilayah, filterStatus, filterTipe, search, sort]);
+  }, [allData, filterWilayah, filterStatus, filterTipe, search, sort]);
 
   const paged   = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const maxPage = Math.ceil(filtered.length / PAGE_SIZE);
@@ -118,18 +144,67 @@ export default function CashPlan({ navigateTo }) {
   };
 
   // ── Override helpers ──────────────────────────────────
-  const setOverride = (id, field, val) =>
-    setOverrides(prev => ({ ...prev, [id]: { ...prev[id], [field]: val } }));
+  const setOverride = (id, field, val) => {
+    setOverrides(prev => {
+      const next = { ...prev, [id]: { ...prev[id], [field]: val } };
+      // Notify parent for rekap page
+      if (field === "statusDone" && onDoneChange) {
+        const doneItems = allData
+          .filter(d => (next[d.id_atm]?.statusDone))
+          .map(d => ({ ...d, ...next[d.id_atm] }));
+        onDoneChange(doneItems);
+      }
+      return next;
+    });
+  };
 
   const getDenom = (id) => overrides[id]?.denom ?? denomGlobal;
   const getKet   = (id) => overrides[id]?.keterangan ?? "";
   const isDone   = (id) => overrides[id]?.statusDone ?? false;
 
+  // ── Remove helper ─────────────────────────────────────
+  const removeItem = (id_atm) => {
+    // Hapus dari manual items
+    setManualItems(prev => prev.filter(m => m.id_atm !== id_atm));
+    // Hapus dari rawData (untuk ATM yang muncul dari API)
+    setRawData(prev => prev.filter(d => d.id_atm !== id_atm));
+    // Hapus override
+    setOverrides(prev => {
+      const next = { ...prev };
+      delete next[id_atm];
+      return next;
+    });
+  };
+
   // ── Summary counts ────────────────────────────────────
-  const totalBongkar = rawData.filter(d => d.status === "BONGKAR").length;
-  const totalAwas    = rawData.filter(d => d.status === "AWAS").length;
+  const totalBongkar = allData.filter(d => d.status === "BONGKAR").length;
+  const totalAwas    = allData.filter(d => d.status === "AWAS").length;
   const totalDone    = Object.values(overrides).filter(o => o.statusDone).length;
   const totalNominal = filtered.reduce((sum, d) => sum + jumlahIsi(d.saldo, d.limit), 0);
+
+  // ── Add manual by ID ATM ──────────────────────────────
+  const handleAddManual = async () => {
+    const id = addIdInput.trim().toUpperCase();
+    if (!id) return;
+    // Cek duplikasi
+    if (allData.some(d => d.id_atm === id)) {
+      setAddError("ATM ini sudah ada dalam daftar Cash Plan.");
+      return;
+    }
+    setAddLoading(true);
+    setAddError("");
+    try {
+      const res = await apiFetch(`/api/predictions/${id}`);
+      if (!res || !res.id_atm) throw new Error("ATM tidak ditemukan");
+      setManualItems(prev => [...prev, { ...res, _manual: true }]);
+      setAddIdInput("");
+      setShowAddModal(false);
+    } catch (e) {
+      setAddError(e.message || "ATM tidak ditemukan di sistem.");
+    } finally {
+      setAddLoading(false);
+    }
+  };
 
   if (loading) return <Spinner />;
 
@@ -154,6 +229,12 @@ export default function CashPlan({ navigateTo }) {
           >
             {BULAN_ID.map(b => <option key={b} value={b}>{b} {nowTahun()}</option>)}
           </select>
+          <button
+            onClick={() => { setAddError(""); setShowAddModal(true); }}
+            style={btnStyle("#00e5a0")}
+          >
+            + Tambah Manual
+          </button>
           <button onClick={fetchData} style={btnStyle("#3b82f6")}>↺ Refresh</button>
         </div>
       </div>
@@ -161,10 +242,10 @@ export default function CashPlan({ navigateTo }) {
       {/* ── Summary Cards ──────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 20 }}>
         {[
-          { label: "Total ATM Perlu Isi", value: rawData.length, color: "#60a5fa", icon: "◈" },
-          { label: "BONGKAR",            value: totalBongkar,    color: "#ff3b5c", icon: "⚠" },
-          { label: "AWAS",               value: totalAwas,       color: "#f59e0b", icon: "⊕" },
-          { label: "Sudah Selesai",       value: totalDone,       color: "#00e5a0", icon: "✓" },
+          { label: "Total ATM Perlu Isi", value: allData.length,     color: "#60a5fa", icon: "◈" },
+          { label: "BONGKAR",            value: totalBongkar,         color: "#ff3b5c", icon: "⚠" },
+          { label: "AWAS",               value: totalAwas,            color: "#f59e0b", icon: "⊕" },
+          { label: "Sudah Selesai",       value: totalDone,           color: "#00e5a0", icon: "✓" },
           { label: "Est. Total Nominal",  value: fmtRp(totalNominal), color: "#a78bfa", icon: "◎", small: true },
         ].map(c => (
           <div key={c.label} style={{
@@ -244,6 +325,7 @@ export default function CashPlan({ navigateTo }) {
                     { label: "Saldo Terakhir", key: "saldo" },
                     { label: "Status",         key: "status" },
                     { label: "Keterangan",     key: null },
+                    { label: "Aksi",           key: null },
                   ].map((col, ci) => (
                     <th
                       key={ci}
@@ -273,9 +355,9 @@ export default function CashPlan({ navigateTo }) {
                   const rowNo    = page * PAGE_SIZE + i + 1;
                   const denom    = getDenom(atm.id_atm);
                   const totalIsi = jumlahIsi(atm.saldo, atm.limit);
-                  const lembar   = Math.ceil(totalIsi / denom);
                   const done     = isDone(atm.id_atm);
                   const ket      = getKet(atm.id_atm);
+                  const isManual = !!atm._manual;
 
                   // Tanggal dari last_update
                   const lastUpDt  = atm.last_update ? new Date(atm.last_update) : null;
@@ -312,17 +394,26 @@ export default function CashPlan({ navigateTo }) {
                       {/* Tanggal */}
                       <td style={tdStyle("#94a3b8")}>{tglStr}</td>
 
-                      {/* Bulan (realtime) */}
+                      {/* Bulan */}
                       <td style={tdStyle("#94a3b8")}>{filterBulan}</td>
 
                       {/* ID ATM */}
                       <td style={{ ...tdStyle("#e2e8f0"), fontFamily: "monospace", fontWeight: 700 }}>
-                        <span
-                          style={{ cursor: "pointer", textDecoration: "underline dotted" }}
-                          onClick={() => navigateTo && navigateTo("history", atm.id_atm)}
-                        >
-                          {atm.id_atm}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span
+                            style={{ cursor: "pointer", textDecoration: "underline dotted" }}
+                            onClick={() => navigateTo && navigateTo("history", atm.id_atm)}
+                          >
+                            {atm.id_atm}
+                          </span>
+                          {isManual && (
+                            <span style={{
+                              fontSize: 8, padding: "1px 5px", borderRadius: 3,
+                              background: "rgba(0,229,160,0.1)", color: "#00e5a0",
+                              border: "1px solid rgba(0,229,160,0.2)", fontFamily: "sans-serif",
+                            }}>MANUAL</span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Lokasi */}
@@ -432,6 +523,30 @@ export default function CashPlan({ navigateTo }) {
                           }}
                         />
                       </td>
+
+                      {/* ── Aksi: Remove ── */}
+                      <td style={{ padding: "8px 10px" }}>
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Hapus ATM ${atm.id_atm} dari Cash Plan?`)) {
+                              removeItem(atm.id_atm);
+                            }
+                          }}
+                          title="Hapus dari Cash Plan"
+                          style={{
+                            background: "rgba(255,59,92,0.08)",
+                            border: "1px solid rgba(255,59,92,0.25)",
+                            borderRadius: 6, color: "#ff3b5c",
+                            padding: "4px 10px", fontSize: 11,
+                            cursor: "pointer", fontWeight: 600,
+                            transition: "all 0.15s",
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = "rgba(255,59,92,0.18)"}
+                          onMouseLeave={e => e.currentTarget.style.background = "rgba(255,59,92,0.08)"}
+                        >
+                          ✕ Remove
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -464,6 +579,7 @@ export default function CashPlan({ navigateTo }) {
           { label: "AWAS — saldo 20–30% limit",       color: "#f59e0b" },
           { label: "Done — sudah diisi",               color: "#00e5a0" },
           { label: "Target isi = 100% dari limit ATM",  color: "#a78bfa" },
+          { label: "MANUAL — ditambahkan secara manual", color: "#00e5a0" },
         ].map(l => (
           <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div style={{ width: 8, height: 8, borderRadius: 2, background: l.color }} />
@@ -471,6 +587,95 @@ export default function CashPlan({ navigateTo }) {
           </div>
         ))}
       </div>
+
+      {/* ── Modal Tambah Manual ─────────────────────────── */}
+      {showAddModal && (
+        <div style={{
+          position: "fixed", inset: 0,
+          background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: "#0d1228",
+            border: "1px solid rgba(99,179,237,0.2)",
+            borderRadius: 16, padding: "28px 32px",
+            width: 420, boxShadow: "0 24px 80px rgba(0,0,0,0.6)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <h2 style={{ color: "#e2e8f0", fontSize: 18, fontWeight: 700, margin: 0 }}>
+                Tambah ATM Manual
+              </h2>
+              <button
+                onClick={() => { setShowAddModal(false); setAddError(""); setAddIdInput(""); }}
+                style={{ background: "none", border: "none", color: "#64748b", fontSize: 20, cursor: "pointer" }}
+              >×</button>
+            </div>
+
+            <div style={{ color: "#64748b", fontSize: 13, marginBottom: 16 }}>
+              Tambahkan ATM ke Cash Plan berdasarkan ID ATM. Data akan diambil dari sistem prediksi.
+            </div>
+
+            <label style={{ color: "#94a3b8", fontSize: 12, display: "block", marginBottom: 6 }}>
+              ID ATM
+            </label>
+            <input
+              value={addIdInput}
+              onChange={e => { setAddIdInput(e.target.value.toUpperCase()); setAddError(""); }}
+              onKeyDown={e => e.key === "Enter" && handleAddManual()}
+              placeholder="Contoh: CRM10101 atau EMV82901"
+              autoFocus
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(99,179,237,0.2)",
+                borderRadius: 8, color: "#e2e8f0",
+                padding: "10px 14px", fontSize: 14,
+                width: "100%", outline: "none",
+                boxSizing: "border-box",
+                fontFamily: "monospace",
+              }}
+            />
+
+            {addError && (
+              <div style={{
+                marginTop: 10, padding: "8px 12px",
+                background: "rgba(255,59,92,0.08)",
+                border: "1px solid rgba(255,59,92,0.25)",
+                borderRadius: 8, color: "#ff3b5c", fontSize: 12,
+              }}>
+                ⚠ {addError}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <button
+                onClick={handleAddManual}
+                disabled={addLoading || !addIdInput.trim()}
+                style={{
+                  flex: 1,
+                  background: addLoading || !addIdInput.trim() ? "rgba(0,229,160,0.05)" : "rgba(0,229,160,0.15)",
+                  border: "1px solid rgba(0,229,160,0.3)",
+                  borderRadius: 8, color: "#00e5a0",
+                  padding: "10px 0", fontSize: 13, fontWeight: 700,
+                  cursor: addLoading || !addIdInput.trim() ? "not-allowed" : "pointer",
+                }}
+              >
+                {addLoading ? "Mencari..." : "+ Tambahkan ke Cash Plan"}
+              </button>
+              <button
+                onClick={() => { setShowAddModal(false); setAddError(""); setAddIdInput(""); }}
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(99,179,237,0.12)",
+                  borderRadius: 8, color: "#64748b",
+                  padding: "10px 18px", fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >Batal</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
@@ -544,9 +749,12 @@ const tdStyle = (color) => ({
 });
 
 const btnStyle = (accent) => ({
-  background: `rgba(${accent === "#3b82f6" ? "59,130,246" : "0,229,160"},0.1)`,
+  background: accent === "#00e5a0"
+    ? "rgba(0,229,160,0.1)"
+    : "rgba(59,130,246,0.1)",
   border: `1px solid ${accent}44`,
-  borderRadius: 8, color: accent === "#3b82f6" ? "#60a5fa" : "#00e5a0",
+  borderRadius: 8,
+  color: accent === "#00e5a0" ? "#00e5a0" : "#60a5fa",
   padding: "8px 16px", fontSize: 13,
   cursor: "pointer", fontWeight: 600,
 });

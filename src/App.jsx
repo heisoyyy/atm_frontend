@@ -8,7 +8,7 @@ import Upload from "./pages/Upload";
 import Training from "./pages/Training";
 import Wilayah from "./pages/Wilayah";
 import CashPlan from "./pages/CashPlan";
-import Replacement from "./pages/Replacement";
+import Rekapreplacement from "./pages/Rekapreplacement";
 // import CashPlan2 from "./pages/CashPlan2";
 
 export default function App() {
@@ -60,8 +60,8 @@ export default function App() {
             navigateTo={navigateTo}
           />
         )}
-        {page === "replacement"   && (
-          <Replacement
+        {page === "rekapreplacement"   && (
+          <Rekapreplacement
             items={cashPlanItems}
             onRemove={removeCashPlan}
             navigateTo={navigateTo}

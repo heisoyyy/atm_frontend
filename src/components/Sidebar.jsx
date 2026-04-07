@@ -17,7 +17,7 @@ const NAV = [
 
   { id: "history", label: "Historis", icon: "◷" },
   { id: "cashplan", label: "Cash Plan", icon: "◳",},
-  { id: "replacement", label: "Rekap Replacement", icon: "◳",},
+  { id: "rekapreplacement", label: "Rekap Replacement", icon: "◳",},
   { id: "upload", label: "Upload Data", icon: "⇑" },
   { id: "training", label: "Training", icon: "⚙" },
 ];

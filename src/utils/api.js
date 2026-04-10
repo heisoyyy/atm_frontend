@@ -43,3 +43,53 @@ export const STATUS_BG = {
   "OVERFUND":      "rgba(127,119,221,0.12)",
   "NO DATA":       "rgba(136,135,128,0.12)",
 };
+
+// ── CashPlan API ──────────────────────────────────────────
+
+/** Tambah ATM ke cashplan (MySQL) */
+export async function addCashplanAPI(atmData) {
+  return apiFetch("/api/cashplan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(atmData),
+  });
+}
+
+/** Ambil list cashplan dari MySQL */
+export async function getCashplanAPI(status = "PENDING") {
+  return apiFetch(`/api/cashplan?status=${status}`);
+}
+
+/** Ubah status cashplan → DONE atau REMOVED */
+export async function updateCashplanStatusAPI(cashplanId, status, keterangan = null, denom = null) {
+  return apiFetch(`/api/cashplan/${cashplanId}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status, keterangan, denom }),
+  });
+}
+
+/** Remove (soft delete) cashplan item */
+export async function removeCashplanAPI(cashplanId) {
+  return apiFetch(`/api/cashplan/${cashplanId}`, { method: "DELETE" });
+}
+
+// ── Rekap Replacement API ──────────────────────────────────
+
+/** Ambil rekap replacement dari MySQL */
+export async function getRekapReplacementAPI({ bulan, tahun, wilayah } = {}) {
+  const params = new URLSearchParams();
+  if (bulan)   params.set("bulan", bulan);
+  if (tahun)   params.set("tahun", tahun);
+  if (wilayah && wilayah !== "Semua") params.set("wilayah", wilayah);
+  const qs = params.toString();
+  return apiFetch(`/api/rekap-replacement${qs ? "?" + qs : ""}`);
+}
+/** Update rekap replacement — jam cash in/out, tgl isi, denom */
+export async function updateRekapAPI(rekapId, { tgl_isi, jam_cash_in, jam_cash_out, denom }) {
+  return apiFetch(`/api/rekap-replacement/${rekapId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tgl_isi, jam_cash_in, jam_cash_out, denom }),
+  });
+}

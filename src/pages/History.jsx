@@ -1,7 +1,49 @@
 // src/pages/History.jsx
-import { useState, useEffect } from "react";
-import { apiFetch, fmt, STATUS_COLOR, STATUS_BG } from "../utils/api";
+import { useState, useEffect, useCallback } from "react";
+import { apiFetch, fmt, STATUS_COLOR, STATUS_BG, addCashplanAPI } from "../utils/api";
 
+// ── Threshold Constants ────────────────────────────────────
+const THR_BONGKAR    = 20;
+const THR_AWAS       = 30;
+const THR_TRIGGER    = 35;
+const THR_AUTO_CP    = 25;
+const THR_LAJU_NOTIF = 5;
+
+// ── LocalStorage key untuk track ATM yg sudah masuk cashplan ──
+const CP_STORAGE_KEY = "cashplan_added_atms";
+
+const getCashplanAdded = () => {
+  try {
+    return JSON.parse(localStorage.getItem(CP_STORAGE_KEY) || "{}");
+  } catch { return {}; }
+};
+const markCashplanAdded = (atmId) => {
+  const existing = getCashplanAdded();
+  existing[atmId] = new Date().toISOString();
+  localStorage.setItem(CP_STORAGE_KEY, JSON.stringify(existing));
+};
+const isAlreadyAdded = (atmId) => !!getCashplanAdded()[atmId];
+
+// ── Helpers ────────────────────────────────────────────────
+const getPctStatus = (pct) => {
+  if (pct == null) return "NO DATA";
+  if (pct > 100)   return "OVERFUND";
+  if (pct <= THR_BONGKAR) return "BONGKAR";
+  if (pct <= THR_AWAS)    return "AWAS";
+  if (pct <= THR_TRIGGER) return "PERLU PANTAU";
+  return "AMAN";
+};
+
+const STATUS_SC = {
+  BONGKAR:        { color: "#E24B4A", bg: "rgba(226,75,74,0.08)",    border: "rgba(226,75,74,0.25)"    },
+  AWAS:           { color: "#EF9F27", bg: "rgba(239,159,39,0.08)",   border: "rgba(239,159,39,0.25)"   },
+  "PERLU PANTAU": { color: "#d4b800", bg: "rgba(212,184,0,0.08)",    border: "rgba(212,184,0,0.25)"    },
+  AMAN:           { color: "#1D9E75", bg: "rgba(29,158,117,0.08)",   border: "rgba(29,158,117,0.25)"   },
+  OVERFUND:       { color: "#7F77DD", bg: "rgba(127,119,221,0.08)",  border: "rgba(127,119,221,0.25)"  },
+  "NO DATA":      { color: "#888780", bg: "rgba(136,135,128,0.08)",  border: "rgba(136,135,128,0.25)"  },
+};
+
+// ── Sub-components ─────────────────────────────────────────
 const Card = ({ children, title, style = {} }) => (
   <div style={{
     background: "rgba(255,255,255,0.03)",
@@ -16,74 +58,55 @@ const Card = ({ children, title, style = {} }) => (
 );
 
 const Label = ({ children }) => (
-  <div style={{
-    color: "#64748b",
-    fontSize: 11,
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-    marginBottom: 10,
-  }}>
+  <div style={{ color: "#64748b", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>
     {children}
   </div>
 );
 
-// ── Tab Bar Component ──────────────────────────────────────
 const TabBar = ({ tabs, active, onChange }) => (
   <div style={{ display: "flex", gap: 4, marginBottom: 20 }}>
     {tabs.map((tab) => (
-      <button
-        key={tab.key}
-        onClick={() => onChange(tab.key)}
-        style={{
-          background: active === tab.key
-            ? "rgba(99,179,237,0.12)"
-            : "transparent",
-          border: active === tab.key
-            ? "1px solid rgba(99,179,237,0.35)"
-            : "1px solid rgba(99,179,237,0.08)",
-          borderRadius: 8,
-          color: active === tab.key ? "#93c5fd" : "#64748b",
-          padding: "7px 16px",
-          fontSize: 12,
-          fontWeight: active === tab.key ? 600 : 400,
-          cursor: "pointer",
-          letterSpacing: "0.03em",
-          transition: "all 0.15s",
-          whiteSpace: "nowrap",
-        }}
-      >
+      <button key={tab.key} onClick={() => onChange(tab.key)} style={{
+        background: active === tab.key ? "rgba(99,179,237,0.12)" : "transparent",
+        border: active === tab.key ? "1px solid rgba(99,179,237,0.35)" : "1px solid rgba(99,179,237,0.08)",
+        borderRadius: 8,
+        color: active === tab.key ? "#93c5fd" : "#64748b",
+        padding: "7px 16px", fontSize: 12,
+        fontWeight: active === tab.key ? 600 : 400,
+        cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
+      }}>
         {tab.label}
       </button>
     ))}
   </div>
 );
 
-export default function History({ atmId: initialAtmId, onAddCashPlan, cashPlanIds }) {
-  const [inputId, setInputId] = useState(initialAtmId || "");
-  const [days, setDays] = useState(7);
-  const [data, setData] = useState(null);
-  const [predData, setPredData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState(null);
+// ── Main ───────────────────────────────────────────────────
+export default function History({ atmId: initialAtmId, navigateTo }) {
+  const [inputId,   setInputId]   = useState(initialAtmId || "");
+  const [days,      setDays]      = useState(7);
+  const [data,      setData]      = useState(null);
+  const [predData,  setPredData]  = useState(null);
+  const [loading,   setLoading]   = useState(false);
+  const [err,       setErr]       = useState(null);
+  const [chartTab,  setChartTab]  = useState("historis");
 
-  // ── Tab state ──
-  const [chartTab, setChartTab] = useState("historis");
+  // ── Track apakah ATM ini sudah ditambahkan ke cashplan ──
+  const [cpAdded, setCpAdded] = useState(false);
 
-  // ── ATM Sepi check ──
-  // ATM sepi = tidak ada transaksi (penarikan > 0) selama 14 hari terakhir
+  const isLajuTinggi = predData && data
+    ? (predData.tarik_per_jam || 0) >= (data.limit || 1) * (THR_LAJU_NOTIF / 100)
+    : false;
+
   const isAtmSepi = (histData) => {
     if (!histData || histData.length === 0) return false;
-    const now = new Date();
-    const cutoff = new Date(now.getTime() - 14 * 24 * 3600 * 1000);
-    // ambil data 14 hari terakhir
-    const recent = histData.filter(d => new Date(d.datetime) >= cutoff);
-    if (recent.length === 0) return true; // tidak ada data sama sekali = sepi
-    // cek apakah ada transaksi (penarikan > 0)
-    const hasTransaction = recent.some(d => (d.penarikan || 0) > 0);
-    return !hasTransaction;
+    const cutoff = new Date(Date.now() - 14 * 24 * 3600 * 1000);
+    const recent = histData.filter((d) => new Date(d.datetime) >= cutoff);
+    if (recent.length === 0) return true;
+    return !recent.some((d) => (d.penarikan || 0) > 0);
   };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!inputId.trim()) return;
     setLoading(true);
     setErr(null);
@@ -94,91 +117,73 @@ export default function History({ atmId: initialAtmId, onAddCashPlan, cashPlanId
       ]);
       setData(historyRes);
       setPredData(predRes);
+      // Cek apakah sudah pernah ditambahkan ke cashplan
+      setCpAdded(isAlreadyAdded(inputId.trim()));
     } catch (e) {
       setErr(e.message || "Gagal memuat data historis ATM");
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (initialAtmId) setInputId(initialAtmId);
-  }, [initialAtmId]);
-
-  useEffect(() => {
-    if (inputId.trim()) fetchData();
   }, [inputId, days]);
 
-  // ── Pagination ──
+  useEffect(() => { if (initialAtmId) setInputId(initialAtmId); }, [initialAtmId]);
+  useEffect(() => { if (inputId.trim()) fetchData(); }, [inputId, days]);
+
+  // ── Handler tambah ke cashplan (dipanggil dari PredCard) ──
+  const handleAddedToCashplan = useCallback((atmId) => {
+    markCashplanAdded(atmId);
+    setCpAdded(true);
+  }, []);
+
+  // ── Auto-add ke cashplan jika pct <= 25% ───────────────
+  useEffect(() => {
+    if (!predData || !data) return;
+    const pct = predData.pct_saldo ?? 0;
+    if (pct <= THR_AUTO_CP && !isAlreadyAdded(predData.id_atm)) {
+      const payload = {
+        id_atm:       predData.id_atm,
+        lokasi:       predData.lokasi    || "-",
+        wilayah:      predData.wilayah   || "-",
+        tipe:         predData.tipe      || "-",
+        saldo:        data.saldo_latest,
+        limit:        data.limit         || 0,
+        pct_saldo:    pct,
+        status_awal:  predData.status,
+        tgl_isi:      predData.tgl_isi   || null,
+        jam_isi:      predData.jam_isi   || null,
+        est_jam:      predData.est_jam   || null,
+        skor_urgensi: predData.skor_urgensi || 0,
+        added_by:     "system",
+      };
+      addCashplanAPI(payload)
+        .then(() => handleAddedToCashplan(predData.id_atm))
+        .catch(console.error);
+    }
+  }, [predData, data]);
+
+  // ── Pagination ─────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
   useEffect(() => { setCurrentPage(1); }, [data]);
 
-  const allRows = data?.data ? [...data.data].reverse() : [];
-  const totalPages = Math.ceil(allRows.length / rowsPerPage);
-  const startIndex = (currentPage - 1) * rowsPerPage;
+  const allRows     = data?.data ? [...data.data].reverse() : [];
+  const totalPages  = Math.ceil(allRows.length / rowsPerPage);
+  const startIndex  = (currentPage - 1) * rowsPerPage;
   const currentRows = allRows.slice(startIndex, startIndex + rowsPerPage);
 
-  // ── Build prediksi 24 jam ──
+  // ── Prediksi 24 jam ke depan ───────────────────────────
   const predRows24 = predData
     ? Array.from({ length: 25 }, (_, i) => {
-        const saldo = Math.max(0, (data?.saldo_latest || 0) - i * (predData.tarik_per_jam || 0));
-        const limit = data?.limit || 1;
-        const pct   = limit > 0 ? (saldo / limit) * 100 : 0;
-        const status =
-          pct > 100      ? "OVERFUND"
-          : pct <= 20    ? "BONGKAR"
-          : pct <= 30    ? "AWAS"
-          : pct <= 40    ? "PERLU PANTAU"
-          : "AMAN";
-        const sc = {
-          BONGKAR:        { color: "#ef4444", bg: "rgba(239,68,68,0.08)"   },
-          AWAS:           { color: "#f59e0b", bg: "rgba(245,158,11,0.08)"  },
-          "PERLU PANTAU": { color: "#60a5fa", bg: "rgba(96,165,250,0.08)"  },
-          AMAN:           { color: "#22c55e", bg: "rgba(34,197,94,0.08)"   },
-          OVERFUND:       { color: "#a78bfa", bg: "rgba(167,139,250,0.08)" },
-        }[status];
+        const saldo  = Math.max(0, (data?.saldo_latest || 0) - i * (predData.tarik_per_jam || 0));
+        const limit  = data?.limit || 1;
+        const pct    = limit > 0 ? (saldo / limit) * 100 : 0;
+        const status = getPctStatus(pct);
+        const sc     = STATUS_SC[status] || STATUS_SC["NO DATA"];
         return { jam: i, saldo, pct, status, sc };
       })
     : [];
 
-  // ── ATM Sepi status ──
   const atmSepi = data ? isAtmSepi(data.data || []) : false;
-
-  // ── Current ATM status from predData ──
-  const currentPct = predData?.pct_saldo ?? (data ? (data.saldo_latest / (data.limit || 1)) * 100 : null);
-  const currentStatus = predData?.status;
-
-  // Auto-add ke Cash Plan jika status BONGKAR atau saldo <= 25%
-  useEffect(() => {
-    if (!predData || !data || !onAddCashPlan) return;
-    const pct = predData.pct_saldo ?? 0;
-    // Auto masuk jika < 25%
-    if (pct < 25) {
-      const key = `${predData.id_atm}_auto`;
-      if (!cashPlanIds?.has(key)) {
-        onAddCashPlan({
-          key,
-          id_atm:        predData.id_atm,
-          lokasi:        predData.lokasi   || "—",
-          wilayah:       predData.wilayah  || "—",
-          tipe:          predData.tipe     || "—",
-          saldo:         data.saldo_latest,
-          limit:         data.limit        || 0,
-          pct_saldo:     pct,
-          status:        predData.status,
-          tarik_per_jam: predData.tarik_per_jam || 0,
-          tgl_isi:       predData.tgl_isi   || null,
-          jam_isi:       predData.jam_isi   || null,
-          tgl_awas:      predData.tgl_awas  || null,
-          jam_awas:      predData.jam_awas  || null,
-          last_update:   predData.last_update || null,
-          added_at:      new Date().toISOString(),
-          _auto: true,
-        });
-      }
-    }
-  }, [predData, data]);
 
   return (
     <div>
@@ -200,119 +205,121 @@ export default function History({ atmId: initialAtmId, onAddCashPlan, cashPlanId
           onKeyDown={(e) => e.key === "Enter" && fetchData()}
           placeholder="Masukkan ID ATM (contoh: CRM10101 atau EMV82901)"
           style={{
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(99,179,237,0.15)",
-            borderRadius: 8,
-            color: "#e2e8f0",
-            padding: "10px 16px",
-            fontSize: 14,
-            width: 340,
-            outline: "none",
+            background: "rgba(255,255,255,0.05)", border: "1px solid rgba(99,179,237,0.15)",
+            borderRadius: 8, color: "#e2e8f0", padding: "10px 16px",
+            fontSize: 14, width: 340, outline: "none",
           }}
         />
         <div style={{ display: "flex", gap: 6 }}>
           {[3, 7, 14, 30].map((d) => (
-            <button
-              key={d}
-              onClick={() => setDays(d)}
-              style={{
-                background: days === d ? "rgba(59,130,246,0.2)" : "rgba(255,255,255,0.03)",
-                border: days === d ? "1px solid rgba(59,130,246,0.5)" : "1px solid rgba(99,179,237,0.1)",
-                borderRadius: 8,
-                color: days === d ? "#60a5fa" : "#94a3b8",
-                padding: "8px 16px",
-                fontSize: 13,
-                fontWeight: days === d ? 600 : 400,
-                cursor: "pointer",
-              }}
-            >
+            <button key={d} onClick={() => setDays(d)} style={{
+              background: days === d ? "rgba(59,130,246,0.2)" : "rgba(255,255,255,0.03)",
+              border: days === d ? "1px solid rgba(59,130,246,0.5)" : "1px solid rgba(99,179,237,0.1)",
+              borderRadius: 8, color: days === d ? "#60a5fa" : "#94a3b8",
+              padding: "8px 16px", fontSize: 13,
+              fontWeight: days === d ? 600 : 400, cursor: "pointer",
+            }}>
               {d} Hari
             </button>
           ))}
         </div>
-        <button
-          onClick={fetchData}
-          disabled={loading || !inputId.trim()}
-          style={{
-            background: "rgba(59,130,246,0.15)",
-            border: "1px solid rgba(59,130,246,0.4)",
-            borderRadius: 8,
-            color: "#60a5fa",
-            padding: "9px 24px",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: loading || !inputId.trim() ? "not-allowed" : "pointer",
-          }}
-        >
+        <button onClick={fetchData} disabled={loading || !inputId.trim()} style={{
+          background: "rgba(59,130,246,0.15)", border: "1px solid rgba(59,130,246,0.4)",
+          borderRadius: 8, color: "#60a5fa", padding: "9px 24px",
+          fontSize: 13, fontWeight: 600,
+          cursor: loading || !inputId.trim() ? "not-allowed" : "pointer",
+        }}>
           {loading ? "Memuat..." : "Tampilkan Data"}
         </button>
       </div>
 
       {err && (
         <div style={{
-          color: "#ff3b5c",
-          background: "rgba(255,59,92,0.08)",
+          color: "#ff3b5c", background: "rgba(255,59,92,0.08)",
           border: "1px solid rgba(255,59,92,0.3)",
-          borderRadius: 10,
-          padding: "14px 18px",
-          marginBottom: 20,
-        }}>
-          ⚠ {err}
-        </div>
+          borderRadius: 10, padding: "14px 18px", marginBottom: 20,
+        }}>⚠ {err}</div>
       )}
 
       {loading && <Spinner />}
 
       {data && !loading && (
         <>
+          {/* Notif Laju Tinggi */}
+          {isLajuTinggi && (
+            <div style={{ background: "rgba(212,184,0,0.08)", border: "1px solid rgba(212,184,0,0.35)", borderRadius: 10, padding: "12px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 20 }}>⚡</span>
+              <div>
+                <div style={{ color: "#d4b800", fontWeight: 700, fontSize: 14 }}>Perlu Pantau — Laju Penarikan Tinggi</div>
+                <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>
+                  Penarikan per jam mencapai <strong style={{ color: "#d4b800" }}>{fmt.rupiah(predData.tarik_per_jam)}</strong>
+                  {" "}({((predData.tarik_per_jam / (data.limit || 1)) * 100).toFixed(1)}% dari limit) — melebihi ambang {THR_LAJU_NOTIF}%.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ATM Sepi Banner */}
+          {atmSepi && (
+            <div style={{ background: "rgba(127,119,221,0.08)", border: "1px solid rgba(127,119,221,0.3)", borderRadius: 10, padding: "12px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 20 }}>◐</span>
+              <div>
+                <div style={{ color: "#7F77DD", fontWeight: 700, fontSize: 14 }}>ATM Sepi</div>
+                <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>Tidak ada transaksi selama 14 hari terakhir.</div>
+              </div>
+            </div>
+          )}
+
+          {/* ── NOTIF SUDAH DI CASHPLAN ── */}
+          {cpAdded && (
+            <div style={{
+              background: "rgba(0,229,160,0.08)", border: "1px solid rgba(0,229,160,0.3)",
+              borderRadius: 10, padding: "12px 18px", marginBottom: 16,
+              display: "flex", alignItems: "center", gap: 12,
+            }}>
+              <span style={{ fontSize: 20 }}>✅</span>
+              <div>
+                <div style={{ color: "#00e5a0", fontWeight: 700, fontSize: 14 }}>
+                  ATM ini sudah masuk Cash Plan
+                </div>
+                <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>
+                  Data akan otomatis diperbarui saat ada upload data baru dari Colab.
+                  Pantau status di halaman <button onClick={() => navigateTo?.("cashplan")} style={{ background: "none", border: "none", color: "#00e5a0", cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 12 }}>Cash Plan →</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* PredCard */}
           {predData && (
             <PredCard
               pred={predData}
               saldoLatest={data.saldo_latest}
               limit={data.limit}
               atmSepi={atmSepi}
-              onAddCashPlan={onAddCashPlan}
-              cashPlanIds={cashPlanIds}
+              isLajuTinggi={isLajuTinggi}
+              alreadyAdded={cpAdded}
+              onAdded={handleAddedToCashplan}
               atmInfo={{
                 id_atm:        data.id_atm,
                 lokasi:        predData.lokasi,
                 wilayah:       predData.wilayah,
                 tipe:          predData.tipe,
                 limit:         data.limit,
-                tarik_per_jam: predData.tarik_per_jam,
-                tgl_isi:       predData.tgl_isi,
-                jam_isi:       predData.jam_isi,
-                tgl_awas:      predData.tgl_awas,
-                jam_awas:      predData.jam_awas,
-                last_update:   predData.last_update,
                 saldo:         data.saldo_latest,
                 pct_saldo:     predData.pct_saldo,
                 status:        predData.status,
+                tarik_per_jam: predData.tarik_per_jam,
+                tgl_isi:       predData.tgl_isi,
+                jam_isi:       predData.jam_isi,
+                est_jam:       predData.est_jam,
+                skor_urgensi:  predData.skor_urgensi,
               }}
             />
           )}
 
-          {/* ATM Sepi Banner */}
-          {atmSepi && (
-            <div style={{
-              background: "rgba(167,139,250,0.08)",
-              border: "1px solid rgba(167,139,250,0.3)",
-              borderRadius: 10, padding: "12px 18px",
-              marginBottom: 20,
-              display: "flex", alignItems: "center", gap: 12,
-            }}>
-              <span style={{ fontSize: 20 }}>◐</span>
-              <div>
-                <div style={{ color: "#a78bfa", fontWeight: 700, fontSize: 14 }}>ATM Sepi</div>
-                <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>
-                  Tidak ada transaksi (penarikan) selama 14 hari terakhir. ATM ini terdeteksi sepi penggunaan.
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Statistik Cepat */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 24 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 24 }}>
             {[
               { label: "Saldo Terkini",  value: fmt.rupiah(data.saldo_latest), color: "#60a5fa" },
               { label: "Saldo Terendah", value: fmt.rupiah(data.saldo_min),    color: "#ff3b5c" },
@@ -326,24 +333,22 @@ export default function History({ atmId: initialAtmId, onAddCashPlan, cashPlanId
             ))}
           </div>
 
-          {/* ══ TAB 1: Chart ══ */}
-          <Card style={{ marginBottom: 20, padding: "20px 24px" }}>
+          {/* Chart Tab */}
+          <Card style={{ marginBottom: 20 }}>
             <TabBar
               tabs={[
                 { key: "historis", label: "Tren Saldo Historis" },
-                { key: "prediksi", label: "Prediksi Sisa Saldo 24 Jam ke Depan" },
+                { key: "prediksi", label: "Prediksi Sisa Saldo 24 Jam" },
               ]}
               active={chartTab}
               onChange={setChartTab}
             />
-
             {chartTab === "historis" && (
               <>
                 <Label>Tren Saldo Historis — {data.id_atm} ({days} hari terakhir)</Label>
                 <SaldoChart data={data.data} limit={data.limit} />
               </>
             )}
-
             {chartTab === "prediksi" && predData && (
               <>
                 <Label>Prediksi Sisa Saldo 24 Jam ke Depan — {data.id_atm}</Label>
@@ -355,7 +360,6 @@ export default function History({ atmId: initialAtmId, onAddCashPlan, cashPlanId
                 />
               </>
             )}
-
             {chartTab === "prediksi" && !predData && (
               <div style={{ textAlign: "center", color: "#64748b", padding: "60px 20px", fontSize: 13 }}>
                 Data prediksi tidak tersedia untuk ATM ini.
@@ -363,7 +367,7 @@ export default function History({ atmId: initialAtmId, onAddCashPlan, cashPlanId
             )}
           </Card>
 
-          {/* ══ TAB 2: Data Table ══ */}
+          {/* Data Table */}
           <DataTableSection
             currentRows={currentRows}
             allRows={allRows}
@@ -373,20 +377,22 @@ export default function History({ atmId: initialAtmId, onAddCashPlan, cashPlanId
             setCurrentPage={setCurrentPage}
             predRows24={predRows24}
             hasPred={!!predData}
-            onAddCashPlan={onAddCashPlan}
-            cashPlanIds={cashPlanIds}
+            alreadyAdded={cpAdded}
+            onAdded={handleAddedToCashplan}
             atmInfo={predData ? {
               id_atm:        data.id_atm,
               lokasi:        predData.lokasi,
               wilayah:       predData.wilayah,
               tipe:          predData.tipe,
               limit:         data.limit,
+              saldo:         data.saldo_latest,
+              pct_saldo:     predData.pct_saldo,
+              status:        predData.status,
               tarik_per_jam: predData.tarik_per_jam,
               tgl_isi:       predData.tgl_isi,
               jam_isi:       predData.jam_isi,
-              tgl_awas:      predData.tgl_awas,
-              jam_awas:      predData.jam_awas,
-              last_update:   predData.last_update,
+              est_jam:       predData.est_jam,
+              skor_urgensi:  predData.skor_urgensi,
             } : null}
           />
         </>
@@ -395,8 +401,123 @@ export default function History({ atmId: initialAtmId, onAddCashPlan, cashPlanId
   );
 }
 
-// ── Data Table Section dengan Tab ─────────────────────────
-function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsPerPage, setCurrentPage, predRows24, hasPred, onAddCashPlan, cashPlanIds, atmInfo }) {
+// ── PredCard ───────────────────────────────────────────────
+function PredCard({ pred, saldoLatest, limit, atmSepi, isLajuTinggi, alreadyAdded, onAdded, atmInfo }) {
+  const [adding, setAdding] = useState(false);
+
+  const pct = pred.pct_saldo ?? (saldoLatest && limit ? (saldoLatest / limit) * 100 : null);
+  const sc  = STATUS_SC[pred.status] || STATUS_SC["NO DATA"];
+
+  const isAutoMasuk  = pct != null && pct <= THR_AUTO_CP;
+  const isTriggerBtn = pct != null && pct > THR_AUTO_CP && pct <= THR_TRIGGER;
+
+  const handleAddCP = async () => {
+    if (alreadyAdded || adding || !atmInfo) return;
+    setAdding(true);
+    try {
+      await addCashplanAPI({
+        id_atm:       atmInfo.id_atm,
+        lokasi:       atmInfo.lokasi    || "-",
+        wilayah:      atmInfo.wilayah   || "-",
+        tipe:         atmInfo.tipe      || "-",
+        saldo:        atmInfo.saldo,
+        limit:        atmInfo.limit     || 0,
+        pct_saldo:    atmInfo.pct_saldo,
+        status_awal:  atmInfo.status,
+        tgl_isi:      atmInfo.tgl_isi   || null,
+        jam_isi:      atmInfo.jam_isi   || null,
+        est_jam:      atmInfo.est_jam   || null,
+        skor_urgensi: atmInfo.skor_urgensi || 0,
+        added_by:     "user",
+      });
+      onAdded?.(atmInfo.id_atm);
+    } catch (e) {
+      alert("Gagal menambahkan ke Cash Plan: " + e.message);
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  return (
+    <div style={{
+      background: sc.bg, border: `1px solid ${sc.border}`,
+      borderRadius: 12, padding: "16px 22px",
+      marginBottom: 20, display: "flex",
+      flexWrap: "wrap", gap: 24, alignItems: "center",
+    }}>
+      {/* Status */}
+      <div>
+        <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+          Status Prediksi
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ color: sc.color, fontSize: 20, fontWeight: 700 }}>{pred.status}</div>
+          {atmSepi && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, background: "rgba(127,119,221,0.15)", color: "#7F77DD", border: "1px solid rgba(127,119,221,0.3)", fontWeight: 600 }}>◐ ATM SEPI</span>}
+          {isLajuTinggi && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, background: "rgba(212,184,0,0.12)", color: "#d4b800", border: "1px solid rgba(212,184,0,0.3)", fontWeight: 600 }}>⚡ LAJU TINGGI</span>}
+        </div>
+      </div>
+
+      {/* Info metrics */}
+      {[
+        { label: "Est. Jam Habis", value: pred.est_jam != null ? `${pred.est_jam.toFixed(1)} jam` : "—" },
+        { label: "Tarik/Jam",      value: fmt.rupiah(pred.tarik_per_jam) },
+        { label: "Jadwal Isi",     value: pred.tgl_isi ? `${pred.tgl_isi} ${pred.jam_isi || ""}` : "—" },
+        { label: "Skor Urgensi",   value: pred.skor_urgensi != null ? `${pred.skor_urgensi}/100` : "—" },
+        { label: "% Saldo",        value: pct != null ? `${pct.toFixed(1)}%` : "—" },
+      ].map((s, i) => (
+        <div key={i}>
+          <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{s.label}</div>
+          <div style={{ color: "#e2e8f0", fontSize: 15, fontWeight: 600 }}>{s.value}</div>
+        </div>
+      ))}
+
+      {/* Cash Plan Action */}
+      <div style={{ marginLeft: "auto" }}>
+        {/* Sudah ditambahkan */}
+        {alreadyAdded && (
+          <div style={{
+            fontSize: 12, fontWeight: 700, padding: "8px 18px", borderRadius: 8,
+            background: "rgba(0,229,160,0.1)", color: "#00e5a0",
+            border: "1px solid rgba(0,229,160,0.3)", textAlign: "center",
+          }}>
+            ✅ Sudah di Cash Plan
+            <div style={{ fontSize: 10, fontWeight: 400, marginTop: 2, color: "#94a3b8" }}>
+              Tunggu upload data baru
+            </div>
+          </div>
+        )}
+
+        {/* Auto masuk (pct ≤ 25%) dan belum ditandai */}
+        {!alreadyAdded && isAutoMasuk && (
+          <div style={{
+            fontSize: 11, fontWeight: 700, padding: "6px 14px", borderRadius: 7,
+            background: "rgba(255,59,92,0.1)", color: "#ff3b5c",
+            border: "1px solid rgba(255,59,92,0.3)", textAlign: "center",
+          }}>
+            <div>⚡ Otomatis Masuk</div>
+            <div style={{ fontSize: 9, fontWeight: 400, marginTop: 2, color: "#f87171" }}>Cash Plan (saldo ≤25%)</div>
+          </div>
+        )}
+
+        {/* Tombol manual (25% < pct ≤ 35%) */}
+        {!alreadyAdded && isTriggerBtn && (
+          <button onClick={handleAddCP} disabled={adding} style={{
+            fontSize: 12, fontWeight: 700, padding: "8px 18px", borderRadius: 8,
+            background: adding ? "rgba(212,184,0,0.05)" : "rgba(212,184,0,0.12)",
+            color: "#d4b800", border: "1px solid rgba(212,184,0,0.35)",
+            cursor: adding ? "not-allowed" : "pointer",
+            transition: "all 0.15s", whiteSpace: "nowrap",
+          }}>
+            {adding ? "Menyimpan..." : "+ Tambah ke Cash Plan"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── DataTableSection ───────────────────────────────────────
+function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsPerPage, setCurrentPage, predRows24, hasPred, alreadyAdded, onAdded, atmInfo }) {
   const [dataTab, setDataTab] = useState("historis");
 
   return (
@@ -410,7 +531,6 @@ function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsP
         onChange={setDataTab}
       />
 
-      {/* ── DATA HISTORIS ── */}
       {dataTab === "historis" && (
         <>
           <div style={{ overflowX: "auto" }}>
@@ -418,63 +538,28 @@ function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsP
               <thead>
                 <tr style={{ borderBottom: "2px solid rgba(99,179,237,0.15)" }}>
                   {["Waktu", "Saldo", "Persentase", "Penarikan", "Refill", "Status"].map((h) => (
-                    <th key={h} style={{
-                      padding: "12px 16px",
-                      textAlign: "left",
-                      color: "#64748b",
-                      fontWeight: 600,
-                      fontSize: 11,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                    }}>
-                      {h}
-                    </th>
+                    <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: "#64748b", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {currentRows.map((row, i) => (
-                  <tr key={i} style={{
-                    borderBottom: "1px solid rgba(99,179,237,0.06)",
-                    background: i % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent",
-                  }}>
-                    <td style={{ padding: "10px 16px", color: "#94a3b8", fontFamily: "monospace" }}>
-                      {String(row.datetime).slice(0, 16)}
-                    </td>
-                    <td style={{ padding: "10px 16px", color: "#e2e8f0", fontWeight: 600 }}>
-                      {fmt.rupiah(row.saldo)}
-                    </td>
+                  <tr key={i} style={{ borderBottom: "1px solid rgba(99,179,237,0.06)", background: i % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent" }}>
+                    <td style={{ padding: "10px 16px", color: "#94a3b8", fontFamily: "monospace" }}>{String(row.datetime).slice(0, 16)}</td>
+                    <td style={{ padding: "10px 16px", color: "#e2e8f0", fontWeight: 600 }}>{fmt.rupiah(row.saldo)}</td>
                     <td style={{ padding: "10px 16px" }}>
-                      <span style={{ color: row.pct <= 20 ? "#ff3b5c" : row.pct <= 25 ? "#f5c518" : "#00e5a0" }}>
+                      <span style={{ color: row.pct <= THR_BONGKAR ? "#E24B4A" : row.pct <= THR_AWAS ? "#EF9F27" : "#1D9E75" }}>
                         {row.pct?.toFixed(1)}%
                       </span>
                     </td>
-                    <td style={{ padding: "10px 16px", color: "#94a3b8" }}>
-                      {row.penarikan > 0 ? fmt.rupiah(row.penarikan) : "—"}
-                    </td>
+                    <td style={{ padding: "10px 16px", color: "#94a3b8" }}>{row.penarikan > 0 ? fmt.rupiah(row.penarikan) : "—"}</td>
                     <td style={{ padding: "10px 16px" }}>
                       {row.is_refill ? (
-                        <span style={{
-                          background: "rgba(0,229,160,0.1)",
-                          color: "#00e5a0",
-                          borderRadius: 4,
-                          padding: "2px 8px",
-                          fontSize: 11,
-                          fontWeight: 600,
-                        }}>
-                          ✓ Refill
-                        </span>
+                        <span style={{ background: "rgba(0,229,160,0.1)", color: "#00e5a0", borderRadius: 4, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>✓ Refill</span>
                       ) : "—"}
                     </td>
                     <td style={{ padding: "10px 16px" }}>
-                      <span style={{
-                        background: STATUS_BG?.[row.status] || "rgba(100,116,139,0.1)",
-                        color: STATUS_COLOR?.[row.status] || "#64748b",
-                        borderRadius: 5,
-                        padding: "3px 10px",
-                        fontSize: 11,
-                        fontWeight: 600,
-                      }}>
+                      <span style={{ background: STATUS_BG?.[row.status] || "rgba(100,116,139,0.1)", color: STATUS_COLOR?.[row.status] || "#64748b", borderRadius: 5, padding: "3px 10px", fontSize: 11, fontWeight: 600 }}>
                         {row.status || "—"}
                       </span>
                     </td>
@@ -483,63 +568,36 @@ function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsP
               </tbody>
             </table>
           </div>
-
-          {/* Pagination */}
           {totalPages > 1 && (
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginTop: 16,
-              flexWrap: "wrap",
-              gap: 8,
-            }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, flexWrap: "wrap", gap: 8 }}>
               <span style={{ color: "#64748b", fontSize: 12 }}>
-                Menampilkan {(currentPage - 1) * rowsPerPage + 1}–{Math.min(currentPage * rowsPerPage, allRows.length)} dari {allRows.length} baris
+                {(currentPage - 1) * rowsPerPage + 1}–{Math.min(currentPage * rowsPerPage, allRows.length)} dari {allRows.length} baris
               </span>
               <div style={{ display: "flex", gap: 4 }}>
-                <PaginBtn onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>←</PaginBtn>
+                <PaginBtn onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>←</PaginBtn>
                 {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-                  const p = totalPages <= 7 ? i + 1
-                    : currentPage <= 4 ? i + 1
-                    : currentPage >= totalPages - 3 ? totalPages - 6 + i
-                    : currentPage - 3 + i;
-                  return (
-                    <PaginBtn key={p} onClick={() => setCurrentPage(p)} active={currentPage === p}>{p}</PaginBtn>
-                  );
+                  const p = totalPages <= 7 ? i + 1 : currentPage <= 4 ? i + 1 : currentPage >= totalPages - 3 ? totalPages - 6 + i : currentPage - 3 + i;
+                  return <PaginBtn key={p} onClick={() => setCurrentPage(p)} active={currentPage === p}>{p}</PaginBtn>;
                 })}
-                <PaginBtn onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>→</PaginBtn>
+                <PaginBtn onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>→</PaginBtn>
               </div>
             </div>
           )}
         </>
       )}
 
-      {/* ── DATA PREDIKSI 24 JAM ── */}
       {dataTab === "prediksi" && (
         <>
           {!hasPred ? (
-            <div style={{ textAlign: "center", color: "#64748b", padding: "60px 20px", fontSize: 13 }}>
-              Data prediksi tidak tersedia untuk ATM ini.
-            </div>
+            <div style={{ textAlign: "center", color: "#64748b", padding: "60px 20px", fontSize: 13 }}>Data prediksi tidak tersedia untuk ATM ini.</div>
           ) : (
             <>
-              {/* Legend */}
-              <div style={{
-                display: "flex",
-                gap: 16,
-                flexWrap: "wrap",
-                marginBottom: 16,
-                padding: "10px 14px",
-                background: "rgba(99,179,237,0.04)",
-                border: "1px solid rgba(99,179,237,0.1)",
-                borderRadius: 8,
-              }}>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 16, padding: "10px 14px", background: "rgba(99,179,237,0.04)", border: "1px solid rgba(99,179,237,0.1)", borderRadius: 8 }}>
                 {[
-                  { label: "AMAN",         color: "#22c55e", desc: "> 40% limit"  },
-                  { label: "PERLU PANTAU", color: "#60a5fa", desc: "30–40% · ada tombol Cash Plan" },
-                  { label: "AWAS",         color: "#f59e0b", desc: "25–30% · tombol Cash Plan"  },
-                  { label: "BONGKAR",      color: "#ef4444", desc: "< 25% · otomatis masuk Cash Plan"  },
+                  { label: "AMAN",         color: "#1D9E75", desc: `> ${THR_TRIGGER}% limit` },
+                  { label: "PERLU PANTAU", color: "#d4b800", desc: `${THR_AWAS}–${THR_TRIGGER}% · ada tombol Cash Plan` },
+                  { label: "AWAS",         color: "#EF9F27", desc: `${THR_BONGKAR}–${THR_AWAS}% · otomatis Cash Plan` },
+                  { label: "BONGKAR",      color: "#E24B4A", desc: `≤ ${THR_BONGKAR}% · otomatis Cash Plan` },
                 ].map((s) => (
                   <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
                     <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: s.color }} />
@@ -548,23 +606,12 @@ function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsP
                   </div>
                 ))}
               </div>
-
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
                     <tr style={{ borderBottom: "2px solid rgba(99,179,237,0.15)" }}>
-                      {["Jam ke Depan", "Waktu Estimasi", "Prediksi Saldo", "% Saldo", "Status", "Cash Plan"].map((h) => (
-                        <th key={h} style={{
-                          padding: "12px 16px",
-                          textAlign: "left",
-                          color: "#64748b",
-                          fontWeight: 600,
-                          fontSize: 11,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                        }}>
-                          {h}
-                        </th>
+                      {["Jam ke Depan", "Waktu Estimasi", "Prediksi Saldo", "% Saldo", "Status", "Cash Plan"].map(h => (
+                        <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: "#64748b", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -572,160 +619,39 @@ function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsP
                     {predRows24.map((row, i) => {
                       const now     = new Date();
                       const estTime = new Date(now.getTime() + row.jam * 3600 * 1000);
-                      const timeStr = row.jam === 0
-                        ? "Sekarang"
-                        : estTime.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-
-                      // Threshold logic:
-                      // < 25%  → auto masuk (sudah otomatis), tampilkan badge "Auto"
-                      // 25-30% → tombol + Cash Plan (AWAS range)
-                      // 30-40% → tombol + Cash Plan (PERLU PANTAU range)
-                      // > 40%  → tidak ada tombol
-                      const showAutoLabel   = row.pct < 25;
-                      const showTriggerBtn  = row.pct >= 25 && row.pct <= 40;
+                      const timeStr = row.jam === 0 ? "Sekarang" : estTime.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+                      const showAutoLabel  = row.pct <= THR_AUTO_CP;
+                      const showTriggerBtn = row.pct > THR_AUTO_CP && row.pct <= THR_TRIGGER;
 
                       return (
-                        <tr
-                          key={i}
-                          style={{
-                            borderBottom: "1px solid rgba(99,179,237,0.06)",
-                            background: row.jam === 0
-                              ? "rgba(99,179,237,0.06)"
-                              : row.pct < 25
-                              ? "rgba(255,59,92,0.025)"
-                              : i % 2 === 0
-                                ? "rgba(255,255,255,0.01)"
-                                : "transparent",
-                          }}
-                        >
-                          {/* Jam ke Depan */}
+                        <tr key={i} style={{ borderBottom: "1px solid rgba(99,179,237,0.06)", background: row.jam === 0 ? "rgba(99,179,237,0.06)" : row.pct <= THR_AUTO_CP ? "rgba(226,75,74,0.025)" : i % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent" }}>
                           <td style={{ padding: "10px 16px" }}>
-                            <span style={{
-                              display: "inline-block",
-                              padding: "2px 10px",
-                              borderRadius: 5,
-                              background: row.jam === 0 ? "rgba(99,179,237,0.15)" : "rgba(255,255,255,0.04)",
-                              color: row.jam === 0 ? "#93c5fd" : "#94a3b8",
-                              fontFamily: "monospace",
-                              fontSize: 12,
-                              fontWeight: row.jam === 0 ? 700 : 400,
-                            }}>
+                            <span style={{ display: "inline-block", padding: "2px 10px", borderRadius: 5, background: row.jam === 0 ? "rgba(99,179,237,0.15)" : "rgba(255,255,255,0.04)", color: row.jam === 0 ? "#93c5fd" : "#94a3b8", fontFamily: "monospace", fontSize: 12, fontWeight: row.jam === 0 ? 700 : 400 }}>
                               {row.jam === 0 ? "Sekarang" : `+${row.jam} Jam`}
                             </span>
                           </td>
-
-                          {/* Waktu Estimasi */}
-                          <td style={{ padding: "10px 16px", color: "#64748b", fontFamily: "monospace", fontSize: 12 }}>
-                            {timeStr}
-                          </td>
-
-                          {/* Prediksi Saldo */}
-                          <td style={{ padding: "10px 16px", color: "#e2e8f0", fontWeight: 600 }}>
-                            {fmt.rupiah(row.saldo)}
-                          </td>
-
-                          {/* % Saldo dengan mini bar */}
+                          <td style={{ padding: "10px 16px", color: "#64748b", fontFamily: "monospace", fontSize: 12 }}>{timeStr}</td>
+                          <td style={{ padding: "10px 16px", color: "#e2e8f0", fontWeight: 600 }}>{fmt.rupiah(row.saldo)}</td>
                           <td style={{ padding: "10px 16px" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                               <div style={{ width: 56, height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
-                                <div style={{
-                                  width: `${Math.min(row.pct, 100)}%`,
-                                  height: "100%",
-                                  background: row.sc.color,
-                                  borderRadius: 3,
-                                  transition: "width 0.3s",
-                                }} />
+                                <div style={{ width: `${Math.min(row.pct, 100)}%`, height: "100%", background: row.sc.color, borderRadius: 3 }} />
                               </div>
-                              <span style={{ color: row.sc.color, fontSize: 12, fontWeight: 600, fontFamily: "monospace" }}>
-                                {row.pct.toFixed(1)}%
-                              </span>
+                              <span style={{ color: row.sc.color, fontSize: 12, fontWeight: 600, fontFamily: "monospace" }}>{row.pct.toFixed(1)}%</span>
                             </div>
                           </td>
-
-                          {/* Status */}
                           <td style={{ padding: "10px 16px" }}>
-                            <span style={{
-                              background: row.sc.bg,
-                              color: row.sc.color,
-                              border: `1px solid ${row.sc.color}33`,
-                              borderRadius: 5,
-                              padding: "3px 10px",
-                              fontSize: 11,
-                              fontWeight: 600,
-                            }}>
-                              {row.status}
-                            </span>
+                            <span style={{ background: row.sc.bg, color: row.sc.color, border: `1px solid ${row.sc.border}`, borderRadius: 5, padding: "3px 10px", fontSize: 11, fontWeight: 600 }}>{row.status}</span>
                           </td>
-
-                          {/* Cash Plan Column */}
                           <td style={{ padding: "10px 16px" }}>
-                            {showAutoLabel ? (
-                              // < 25% → auto label
-                              <span style={{
-                                fontSize: 10, fontWeight: 700,
-                                padding: "3px 10px", borderRadius: 5,
-                                background: "rgba(255,59,92,0.08)",
-                                color: "#ff3b5c",
-                                border: "1px solid rgba(255,59,92,0.25)",
-                                whiteSpace: "nowrap",
-                              }}>
-                                ⚡ Otomatis Masuk
-                              </span>
-                            ) : showTriggerBtn ? (() => {
-                              // 25-40% → trigger button
-                              const key   = `${atmInfo?.id_atm}_+${row.jam}j`;
-                              const added = cashPlanIds?.has(key);
-                              const isBorder = row.pct < 30; // 25-30% = warna lebih urgent
-                              return (
-                                <button
-                                  onClick={() => !added && onAddCashPlan && onAddCashPlan({
-                                    key,
-                                    id_atm:      atmInfo?.id_atm   || "—",
-                                    lokasi:      atmInfo?.lokasi   || "—",
-                                    wilayah:     atmInfo?.wilayah  || "—",
-                                    tipe:        atmInfo?.tipe     || "—",
-                                    saldo:       row.saldo,
-                                    limit:       atmInfo?.limit    || 0,
-                                    pct_saldo:   row.pct,
-                                    status:      row.status,
-                                    jam_ke:      row.jam,
-                                    est_waktu:   new Date(Date.now() + row.jam * 3600000)
-                                                   .toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
-                                    est_tanggal: new Date(Date.now() + row.jam * 3600000)
-                                                   .toLocaleDateString("id-ID"),
-                                    tarik_per_jam:   atmInfo?.tarik_per_jam   || 0,
-                                    tgl_isi:         atmInfo?.tgl_isi         || null,
-                                    jam_isi:         atmInfo?.jam_isi         || null,
-                                    tgl_awas:        atmInfo?.tgl_awas        || null,
-                                    jam_awas:        atmInfo?.jam_awas        || null,
-                                    last_update:     atmInfo?.last_update     || null,
-                                    added_at:        new Date().toISOString(),
-                                  })}
-                                  style={{
-                                    fontSize: 11, fontWeight: 700,
-                                    padding: "3px 10px", borderRadius: 5,
-                                    background: added
-                                      ? "rgba(0,229,160,0.1)"
-                                      : isBorder
-                                        ? "rgba(245,158,11,0.12)"
-                                        : "rgba(96,165,250,0.12)",
-                                    color: added
-                                      ? "#00e5a0"
-                                      : isBorder ? "#f59e0b" : "#60a5fa",
-                                    border: `1px solid ${added
-                                      ? "rgba(0,229,160,0.3)"
-                                      : isBorder ? "rgba(245,158,11,0.3)" : "rgba(96,165,250,0.3)"}`,
-                                    cursor: added ? "default" : "pointer",
-                                    transition: "all 0.15s",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  {added ? "✓ Ditambahkan" : `+ Cash Plan`}
-                                </button>
-                              );
-                            })() : (
-                              <span style={{ color: "#374151", fontSize: 11 }}>—</span>
-                            )}
+                            <CashPlanCell
+                              showAutoLabel={showAutoLabel}
+                              showTriggerBtn={showTriggerBtn}
+                              row={row}
+                              atmInfo={atmInfo}
+                              alreadyAdded={alreadyAdded}
+                              onAdded={onAdded}
+                            />
                           </td>
                         </tr>
                       );
@@ -741,183 +667,92 @@ function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsP
   );
 }
 
-// ── PaginBtn ──────────────────────────────────────────────
+// ── CashPlanCell ───────────────────────────────────────────
+function CashPlanCell({ showAutoLabel, showTriggerBtn, row, atmInfo, alreadyAdded, onAdded }) {
+  const [adding, setAdding] = useState(false);
+
+  const handleAdd = async () => {
+    if (alreadyAdded || adding || !atmInfo) return;
+    setAdding(true);
+    try {
+      await addCashplanAPI({
+        id_atm:       atmInfo.id_atm,
+        lokasi:       atmInfo.lokasi    || "-",
+        wilayah:      atmInfo.wilayah   || "-",
+        tipe:         atmInfo.tipe      || "-",
+        saldo:        row.saldo,
+        limit:        atmInfo.limit     || 0,
+        pct_saldo:    row.pct,
+        status_awal:  row.status,
+        tgl_isi:      atmInfo.tgl_isi   || null,
+        jam_isi:      atmInfo.jam_isi   || null,
+        est_jam:      atmInfo.est_jam   || null,
+        skor_urgensi: atmInfo.skor_urgensi || 0,
+        added_by:     "user",
+      });
+      onAdded?.(atmInfo.id_atm);
+    } catch (e) {
+      alert("Gagal: " + e.message);
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  // Jika sudah ditambahkan (dari manapun di halaman ini)
+  if (alreadyAdded) {
+    return <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 5, background: "rgba(0,229,160,0.08)", color: "#00e5a0", border: "1px solid rgba(0,229,160,0.25)" }}>✅ Di Cash Plan</span>;
+  }
+
+  if (showAutoLabel) {
+    return <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 5, background: "rgba(226,75,74,0.08)", color: "#E24B4A", border: "1px solid rgba(226,75,74,0.25)", whiteSpace: "nowrap" }}>⚡ Otomatis Masuk</span>;
+  }
+
+  if (showTriggerBtn) {
+    return (
+      <button onClick={handleAdd} disabled={adding} style={{
+        fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 5,
+        background: "rgba(212,184,0,0.1)", color: "#d4b800",
+        border: "1px solid rgba(212,184,0,0.3)",
+        cursor: adding ? "default" : "pointer",
+        transition: "all 0.15s", whiteSpace: "nowrap",
+      }}>
+        {adding ? "..." : "+ Cash Plan"}
+      </button>
+    );
+  }
+
+  return <span style={{ color: "#374151", fontSize: 11 }}>—</span>;
+}
+
+// ── PaginBtn ───────────────────────────────────────────────
 function PaginBtn({ children, onClick, disabled, active }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        background: active ? "rgba(59,130,246,0.2)" : "rgba(255,255,255,0.03)",
-        border: active ? "1px solid rgba(59,130,246,0.5)" : "1px solid rgba(99,179,237,0.1)",
-        borderRadius: 6,
-        color: disabled ? "#334155" : active ? "#60a5fa" : "#94a3b8",
-        padding: "5px 10px",
-        fontSize: 12,
-        cursor: disabled ? "not-allowed" : "pointer",
-        minWidth: 32,
-        opacity: disabled ? 0.4 : 1,
-      }}
-    >
-      {children}
-    </button>
+    <button onClick={onClick} disabled={disabled} style={{
+      background: active ? "rgba(59,130,246,0.2)" : "rgba(255,255,255,0.03)",
+      border: active ? "1px solid rgba(59,130,246,0.5)" : "1px solid rgba(99,179,237,0.1)",
+      borderRadius: 6, color: disabled ? "#334155" : active ? "#60a5fa" : "#94a3b8",
+      padding: "5px 10px", fontSize: 12, cursor: disabled ? "not-allowed" : "pointer",
+      minWidth: 32, opacity: disabled ? 0.4 : 1,
+    }}>{children}</button>
   );
 }
 
-// ── PredCard (updated with Cash Plan trigger) ─────────────
-function PredCard({ pred, saldoLatest, limit, atmSepi, onAddCashPlan, cashPlanIds, atmInfo }) {
-  const statusColors = {
-    BONGKAR:        { color: "#ef4444", bg: "rgba(239,68,68,0.08)",   border: "rgba(239,68,68,0.25)"   },
-    AWAS:           { color: "#f59e0b", bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.25)"  },
-    "PERLU PANTAU": { color: "#60a5fa", bg: "rgba(96,165,250,0.08)",  border: "rgba(96,165,250,0.25)"  },
-    AMAN:           { color: "#22c55e", bg: "rgba(34,197,94,0.08)",   border: "rgba(34,197,94,0.25)"   },
-    OVERFUND:       { color: "#a78bfa", bg: "rgba(167,139,250,0.08)", border: "rgba(167,139,250,0.25)" },
-  };
-  const sc = statusColors[pred.status] || { color: "#64748b", bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.25)" };
-
-  const pct = pred.pct_saldo ?? (saldoLatest && limit ? (saldoLatest / limit) * 100 : null);
-
-  // Cash Plan button logic for current ATM status
-  const isAutoMasuk   = pct != null && pct < 25;                 // otomatis masuk
-  const isTriggerBtn  = pct != null && pct >= 25 && pct <= 40;  // manual trigger (AWAS + PERLU PANTAU)
-  const isPantau      = pred.status === "PERLU PANTAU";
-
-  const cpKey  = `${atmInfo?.id_atm}_auto`;
-  const cpKey2 = `${atmInfo?.id_atm}_manual`;
-  const added  = cashPlanIds?.has(cpKey) || cashPlanIds?.has(cpKey2);
-
-  const handleAddCP = () => {
-    if (added || !onAddCashPlan || !atmInfo) return;
-    onAddCashPlan({
-      key:           cpKey2,
-      id_atm:        atmInfo.id_atm,
-      lokasi:        atmInfo.lokasi    || "—",
-      wilayah:       atmInfo.wilayah   || "—",
-      tipe:          atmInfo.tipe      || "—",
-      saldo:         atmInfo.saldo,
-      limit:         atmInfo.limit     || 0,
-      pct_saldo:     atmInfo.pct_saldo,
-      status:        atmInfo.status,
-      tarik_per_jam: atmInfo.tarik_per_jam || 0,
-      tgl_isi:       atmInfo.tgl_isi   || null,
-      jam_isi:       atmInfo.jam_isi   || null,
-      tgl_awas:      atmInfo.tgl_awas  || null,
-      jam_awas:      atmInfo.jam_awas  || null,
-      last_update:   atmInfo.last_update || null,
-      added_at:      new Date().toISOString(),
-    });
-  };
-
-  return (
-    <div style={{
-      background: sc.bg,
-      border: `1px solid ${sc.border}`,
-      borderRadius: 12,
-      padding: "16px 22px",
-      marginBottom: 20,
-      display: "flex",
-      flexWrap: "wrap",
-      gap: 24,
-      alignItems: "center",
-    }}>
-      <div>
-        <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
-          Status Prediksi
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ color: sc.color, fontSize: 20, fontWeight: 700 }}>{pred.status}</div>
-          {atmSepi && (
-            <span style={{
-              fontSize: 10, padding: "2px 8px", borderRadius: 4,
-              background: "rgba(167,139,250,0.15)", color: "#a78bfa",
-              border: "1px solid rgba(167,139,250,0.3)", fontWeight: 600,
-            }}>◐ ATM SEPI</span>
-          )}
-        </div>
-      </div>
-      {[
-        { label: "Est. Jam Habis", value: pred.est_jam != null ? `${pred.est_jam.toFixed(1)} jam` : "—" },
-        { label: "Tarik/Jam",      value: fmt.rupiah(pred.tarik_per_jam) },
-        { label: "Jadwal Isi",     value: pred.tgl_isi || "—" },
-        { label: "Skor Urgensi",   value: pred.skor_urgensi != null ? `${pred.skor_urgensi}/100` : "—" },
-        { label: "% Saldo",        value: pct != null ? `${pct.toFixed(1)}%` : "—" },
-      ].map((s, i) => (
-        <div key={i}>
-          <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{s.label}</div>
-          <div style={{ color: "#e2e8f0", fontSize: 15, fontWeight: 600 }}>{s.value}</div>
-        </div>
-      ))}
-
-      {/* Cash Plan Action */}
-      <div style={{ marginLeft: "auto" }}>
-        {isAutoMasuk ? (
-          <div style={{
-            fontSize: 11, fontWeight: 700,
-            padding: "6px 14px", borderRadius: 7,
-            background: "rgba(255,59,92,0.1)",
-            color: "#ff3b5c",
-            border: "1px solid rgba(255,59,92,0.3)",
-            textAlign: "center",
-          }}>
-            <div>⚡ Otomatis Masuk</div>
-            <div style={{ fontSize: 9, fontWeight: 400, marginTop: 2, color: "#f87171" }}>Cash Plan (saldo &lt;25%)</div>
-          </div>
-        ) : isTriggerBtn ? (
-          <button
-            onClick={handleAddCP}
-            disabled={added}
-            style={{
-              fontSize: 12, fontWeight: 700,
-              padding: "8px 18px", borderRadius: 8,
-              background: added
-                ? "rgba(0,229,160,0.1)"
-                : isPantau
-                  ? "rgba(96,165,250,0.15)"
-                  : "rgba(245,158,11,0.15)",
-              color: added ? "#00e5a0" : isPantau ? "#60a5fa" : "#f59e0b",
-              border: `1px solid ${added
-                ? "rgba(0,229,160,0.3)"
-                : isPantau ? "rgba(96,165,250,0.35)" : "rgba(245,158,11,0.35)"}`,
-              cursor: added ? "default" : "pointer",
-              transition: "all 0.15s",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {added ? "✓ Sudah di Cash Plan" : `+ Tambah ke Cash Plan`}
-          </button>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-// ── SaldoChart ────────────────────────────────────────────
+// ── SaldoChart ─────────────────────────────────────────────
 function SaldoChart({ data, limit }) {
   if (!data || data.length === 0) return null;
-
-  const W = 900, H = 200, PAD = { t: 10, b: 40, l: 100, r: 20 };
-  const w = W - PAD.l - PAD.r;
-  const h = H - PAD.t - PAD.b;
-
-  const maxSaldo = limit || Math.max(...data.map((d) => d.saldo));
-  const xs = (i) => PAD.l + (i / (data.length - 1 || 1)) * w;
-  const ys = (v) => PAD.t + h - (v / (maxSaldo || 1)) * h;
-
-  const pts  = data.map((d, i) => `${xs(i)},${ys(d.saldo)}`).join(" ");
+  const W = 900, H = 200, PAD = { t: 10, b: 40, l: 100, r: 30 };
+  const w = W - PAD.l - PAD.r, h = H - PAD.t - PAD.b;
+  const maxSaldo = limit || Math.max(...data.map(d => d.saldo));
+  const xs = i => PAD.l + (i / (data.length - 1 || 1)) * w;
+  const ys = v => PAD.t + h - (v / (maxSaldo || 1)) * h;
+  const pts = data.map((d, i) => `${xs(i)},${ys(d.saldo)}`).join(" ");
   const area = `M ${PAD.l},${PAD.t + h} L ${pts.split(" ").join(" L ")} L ${xs(data.length - 1)},${PAD.t + h} Z`;
-
-  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((p) => ({
-    y: PAD.t + h - p * h,
-    label: fmt.rupiah(p * maxSaldo),
-  }));
-
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(p => ({ y: PAD.t + h - p * h, label: fmt.rupiah(p * maxSaldo) }));
   const xStep  = Math.max(1, Math.floor(data.length / 8));
-  const xLabels = data
-    .filter((_, i) => i % xStep === 0 || i === data.length - 1)
-    .map((d) => ({ x: xs(data.indexOf(d)), label: String(d.datetime).slice(5, 13) }));
-
-  const refills = data.map((d, i) => ({ i, d })).filter(({ d }) => d.is_refill);
-  const limitY  = ys(limit);
+  const xLabels = data.filter((_, i) => i % xStep === 0 || i === data.length - 1).map(d => ({ x: xs(data.indexOf(d)), label: String(d.datetime).slice(5, 13) }));
+  const refills  = data.map((d, i) => ({ i, d })).filter(({ d }) => d.is_refill);
+  const awasY    = ys(maxSaldo * (THR_AWAS / 100));
+  const bongkarY = ys(maxSaldo * (THR_BONGKAR / 100));
 
   return (
     <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
@@ -933,13 +768,12 @@ function SaldoChart({ data, limit }) {
           <text x={PAD.l - 8} y={t.y + 4} fontSize="10" fill="#374151" textAnchor="end">{t.label}</text>
         </g>
       ))}
-      {(() => {
-        const dangerY = ys(maxSaldo * 0.2);
-        return <rect x={PAD.l} y={dangerY} width={w} height={PAD.t + h - dangerY} fill="rgba(255,59,92,0.05)" />;
-      })()}
-      {limit > 0 && (
-        <line x1={PAD.l} x2={PAD.l + w} y1={limitY} y2={limitY} stroke="rgba(167,139,250,0.4)" strokeWidth="1" strokeDasharray="6,4" />
-      )}
+      <rect x={PAD.l} y={bongkarY} width={w} height={PAD.t + h - bongkarY} fill="rgba(226,75,74,0.06)" />
+      <rect x={PAD.l} y={awasY} width={w} height={bongkarY - awasY} fill="rgba(239,159,39,0.04)" />
+      <line x1={PAD.l} x2={PAD.l + w} y1={awasY} y2={awasY} stroke="rgba(239,159,39,0.4)" strokeWidth="1" strokeDasharray="5,4" />
+      <text x={PAD.l + w + 4} y={awasY + 4} fontSize="9" fill="#EF9F27">{THR_AWAS}%</text>
+      <line x1={PAD.l} x2={PAD.l + w} y1={bongkarY} y2={bongkarY} stroke="rgba(226,75,74,0.5)" strokeWidth="1" strokeDasharray="5,4" />
+      <text x={PAD.l + w + 4} y={bongkarY + 4} fontSize="9" fill="#E24B4A">{THR_BONGKAR}%</text>
       <path d={area} fill="url(#sg)" />
       <polyline points={pts} fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinejoin="round" />
       {refills.map(({ i, d }) => (
@@ -956,20 +790,18 @@ function SaldoChart({ data, limit }) {
   );
 }
 
-// ── PredictionFutureChart ─────────────────────────────────
+// ── PredictionFutureChart ──────────────────────────────────
 function PredictionFutureChart({ currentSaldo, tarikPerJam, estJamHabis, limit }) {
   const W = 920, H = 260, PAD = { t: 20, b: 50, l: 100, r: 30 };
-  const w = W - PAD.l - PAD.r;
-  const h = H - PAD.t - PAD.b;
-
-  const hours     = Array.from({ length: 25 }, (_, i) => i);
-  const maxSaldo  = limit || currentSaldo * 1.3;
-  const getSaldo  = (hr) => Math.max(0, currentSaldo - hr * tarikPerJam);
-  const xs        = (i) => PAD.l + (i / 24) * w;
-  const ys        = (v) => PAD.t + h - (v / maxSaldo) * h;
-  const points    = hours.map((i) => `${xs(i)},${ys(getSaldo(i))}`).join(" ");
-  const danger20Y = ys(maxSaldo * 0.2);
-  const danger10Y = ys(maxSaldo * 0.1);
+  const w = W - PAD.l - PAD.r, h = H - PAD.t - PAD.b;
+  const hours    = Array.from({ length: 25 }, (_, i) => i);
+  const maxSaldo = limit || currentSaldo * 1.3;
+  const getSaldo = hr => Math.max(0, currentSaldo - hr * tarikPerJam);
+  const xs       = i => PAD.l + (i / 24) * w;
+  const ys       = v => PAD.t + h - (v / maxSaldo) * h;
+  const points   = hours.map(i => `${xs(i)},${ys(getSaldo(i))}`).join(" ");
+  const awasY    = ys(maxSaldo * (THR_AWAS / 100));
+  const bongkarY = ys(maxSaldo * (THR_BONGKAR / 100));
 
   return (
     <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
@@ -984,21 +816,20 @@ function PredictionFutureChart({ currentSaldo, tarikPerJam, estJamHabis, limit }
         return (
           <g key={idx}>
             <line x1={PAD.l} x2={PAD.l + w} y1={y} y2={y} stroke="rgba(99,179,237,0.08)" strokeDasharray="4,4" />
-            <text x={PAD.l - 12} y={y + 4} fontSize="10" fill="#64748b" textAnchor="end">
-              {fmt.rupiah(Math.round(p * maxSaldo))}
-            </text>
+            <text x={PAD.l - 12} y={y + 4} fontSize="10" fill="#64748b" textAnchor="end">{fmt.rupiah(Math.round(p * maxSaldo))}</text>
           </g>
         );
       })}
-      <rect x={PAD.l} y={danger20Y} width={w} height={h - (danger20Y - PAD.t)} fill="rgba(255,59,92,0.06)" />
-      <rect x={PAD.l} y={danger10Y} width={w} height={h - (danger10Y - PAD.t)} fill="rgba(255,59,92,0.12)" />
-      <path
-        d={`M ${PAD.l},${ys(currentSaldo)} L ${points} L ${xs(24)},${PAD.t + h} L ${PAD.l},${PAD.t + h} Z`}
-        fill="url(#futureGrad)"
-      />
+      <rect x={PAD.l} y={awasY} width={w} height={bongkarY - awasY} fill="rgba(239,159,39,0.05)" />
+      <rect x={PAD.l} y={bongkarY} width={w} height={h - (bongkarY - PAD.t)} fill="rgba(226,75,74,0.08)" />
+      <line x1={PAD.l} x2={PAD.l + w} y1={awasY} y2={awasY} stroke="rgba(239,159,39,0.5)" strokeWidth="1" strokeDasharray="5,3" />
+      <text x={PAD.l + w + 4} y={awasY + 4} fontSize="9" fill="#EF9F27">{THR_AWAS}%</text>
+      <line x1={PAD.l} x2={PAD.l + w} y1={bongkarY} y2={bongkarY} stroke="rgba(226,75,74,0.5)" strokeWidth="1.5" strokeDasharray="5,3" />
+      <text x={PAD.l + w + 4} y={bongkarY + 4} fontSize="9" fill="#E24B4A">{THR_BONGKAR}%</text>
+      <path d={`M ${PAD.l},${ys(currentSaldo)} L ${points} L ${xs(24)},${PAD.t + h} L ${PAD.l},${PAD.t + h} Z`} fill="url(#futureGrad)" />
       <polyline points={points} fill="none" stroke="#a78bfa" strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round" />
       <circle cx={xs(0)} cy={ys(currentSaldo)} r="7" fill="#60a5fa" stroke="#0f172a" strokeWidth="2" />
-      {[0, 4, 8, 12, 16, 20, 24].map((i) => (
+      {[0, 4, 8, 12, 16, 20, 24].map(i => (
         <text key={i} x={xs(i)} y={H - 12} fontSize="11" fill="#64748b" textAnchor="middle">+{i}j</text>
       ))}
       {estJamHabis && estJamHabis <= 24 && (
@@ -1011,17 +842,10 @@ function PredictionFutureChart({ currentSaldo, tarikPerJam, estJamHabis, limit }
   );
 }
 
-// ── Spinner ───────────────────────────────────────────────
 function Spinner() {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300, flexDirection: "column", gap: 12, color: "#64748b" }}>
-      <div style={{
-        width: 36, height: 36,
-        border: "3px solid rgba(59,130,246,0.2)",
-        borderTopColor: "#3b82f6",
-        borderRadius: "50%",
-        animation: "spin 0.9s linear infinite",
-      }} />
+      <div style={{ width: 36, height: 36, border: "3px solid rgba(59,130,246,0.2)", borderTopColor: "#3b82f6", borderRadius: "50%", animation: "spin 0.9s linear infinite" }} />
       <span>Memuat data historis dan prediksi...</span>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>

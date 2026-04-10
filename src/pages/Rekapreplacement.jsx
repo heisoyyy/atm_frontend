@@ -1,45 +1,137 @@
 // src/pages/RekapReplacement.jsx
-// Halaman Rekap Replacement — ATM yang sudah selesai diisi (Status DONE dari Cash Plan)
-import { useState, useMemo } from "react";
-import { fmt } from "../utils/api";
+import { useState, useEffect, useMemo } from "react";
+import { getRekapReplacementAPI, updateRekapAPI } from "../utils/api";
 
-const BULAN_ID = [
-  "Januari","Februari","Maret","April","Mei","Juni",
-  "Juli","Agustus","September","Oktober","November","Desember",
-];
+const BULAN_ID     = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+const WILAYAH_LIST = ["Semua", "Pekanbaru", "Batam", "Dumai", "Tanjung Pinang"];
+const DENOM_OPTIONS = [{ label: "Rp 50.000", value: 50_000 }, { label: "Rp 100.000", value: 100_000 }];
 
-const fmtRp = (v) => {
-  if (v == null || isNaN(v)) return "—";
-  return "Rp " + Number(v).toLocaleString("id-ID");
-};
-
-const fmtLembar = (total, denom) => {
-  if (!total || !denom) return "—";
-  return Math.ceil(total / denom).toLocaleString("id-ID") + " lembar";
-};
-
+const fmtRp    = v => v == null || isNaN(v) ? "—" : "Rp " + Number(v).toLocaleString("id-ID");
 const nowBulan = () => BULAN_ID[new Date().getMonth()];
 const nowTahun = () => new Date().getFullYear();
+const hitungJumlahIsi = (limit) => limit || 0;
+const hitungLembar    = (jumlah, denom) => (!jumlah || !denom) ? 0 : Math.ceil(jumlah / denom);
 
-const targetSaldo = (limit) => Math.round(limit * 1);
-const jumlahIsi   = (saldo, limit) => Math.max(0, targetSaldo(limit) - saldo);
+// ── Export CSV ─────────────────────────────────────────────
+function exportToCSV(data, overrides, bulan, tahun, wilayah) {
+  const filtered = wilayah === "Semua"
+    ? data
+    : data.filter(d => d.wilayah?.toLowerCase() === wilayah.toLowerCase());
 
-const WILAYAH_LIST  = ["Semua", "PEKANBARU", "BATAM", "DUMAI", "Tanjung Pinang"];
+  const headers = [
+    "No","Tanggal Isi","Jam Cash In","Jam Cash Out","Bulan","Tahun",
+    "ID ATM","Lokasi","Wilayah","Tipe",
+    "Saldo Awal (Rp)","Jumlah Isi (Rp)","Denom","Lembar","Status Cash Plan","Keterangan",
+  ];
 
-export default function RekapReplacement({ doneItems = [], navigateTo }) {
+  const rows = filtered.map((item, i) => {
+    const ov        = overrides[item.id] || {};
+    const denom     = item.is_saved ? (item.denom || 100_000) : (ov.denom ?? 100_000);
+    const jumlahIsi = hitungJumlahIsi(item.limit);
+    const lembar    = hitungLembar(jumlahIsi, denom);
+    const tglIsi    = item.is_saved ? (item.tgl_isi || "-")      : (ov.tgl_isi      || item.tgl_isi      || "-");
+    const cashIn    = item.is_saved ? (item.jam_cash_in || "-")  : (ov.jam_cash_in  || item.jam_cash_in  || "-");
+    const cashOut   = item.is_saved ? (item.jam_cash_out || "-") : (ov.jam_cash_out || item.jam_cash_out || "-");
+    return [
+      i + 1, tglIsi, cashIn, cashOut,
+      item.bulan || bulan, item.tahun || tahun,
+      item.id_atm || "-",
+      `"${(item.lokasi || "-").replace(/"/g,'""')}"`,
+      item.wilayah || "-", item.tipe || "-",
+      item.saldo_awal || 0, jumlahIsi,
+      `Rp ${Number(denom).toLocaleString("id-ID")}`,
+      lembar,
+      item.status_done || "-",
+      `"${(item.keterangan || "-").replace(/"/g,'""')}"`,
+    ].join(",");
+  });
+
+  const csv  = [headers.join(","), ...rows].join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `rekap_replacement_${wilayah === "Semua" ? "Semua" : wilayah}_${bulan}_${tahun}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ════════════════════════════════════════════════════════
+export default function RekapReplacement({ navigateTo }) {
+  const [items,         setItems]         = useState([]);
+  const [loading,       setLoading]       = useState(true);
   const [filterWilayah, setFilterWilayah] = useState("Semua");
   const [filterBulan,   setFilterBulan]   = useState(nowBulan());
   const [filterTipe,    setFilterTipe]    = useState("Semua");
+  const [filterStatus,  setFilterStatus]  = useState("Semua");
   const [search,        setSearch]        = useState("");
   const [sort,          setSort]          = useState({ key: "done_at", dir: -1 });
   const [page,          setPage]          = useState(0);
+  const [savingId,      setSavingId]      = useState(null); // ID yang sedang disimpan
+
+  // Override per baris: denom, tgl_isi, jam_cash_in, jam_cash_out
+  const [overrides, setOverrides] = useState({});
+  const setOv = (id, field, val) =>
+    setOverrides(prev => ({ ...prev, [id]: { ...prev[id], [field]: val } }));
+
   const PAGE_SIZE = 15;
 
-  // ── Filter + sort ─────────────────────────────────────
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const resp = await getRekapReplacementAPI({
+        bulan:   filterBulan,
+        tahun:   nowTahun(),
+        wilayah: filterWilayah !== "Semua" ? filterWilayah : undefined,
+      });
+      setItems(resp.data || []);
+    } catch (e) {
+      console.error("Rekap fetch error:", e);
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchData(); }, [filterBulan, filterWilayah]);
+
+  // ── Simpan ke DB ───────────────────────────────────────
+  const handleSave = async (item) => {
+    setSavingId(item.id);
+    const ov = overrides[item.id] || {};
+    try {
+      await updateRekapAPI(item.id, {
+        tgl_isi:      ov.tgl_isi      ?? item.tgl_isi      ?? null,
+        jam_cash_in:  ov.jam_cash_in  ?? item.jam_cash_in  ?? null,
+        jam_cash_out: ov.jam_cash_out ?? item.jam_cash_out ?? null,
+        denom:        ov.denom        ?? item.denom        ?? 100_000,
+      });
+      // Update state lokal — tandai is_saved = true
+      setItems(prev => prev.map(d => d.id === item.id
+        ? {
+            ...d,
+            is_saved:     true,
+            tgl_isi:      ov.tgl_isi      ?? d.tgl_isi,
+            jam_cash_in:  ov.jam_cash_in  ?? d.jam_cash_in,
+            jam_cash_out: ov.jam_cash_out ?? d.jam_cash_out,
+            denom:        ov.denom        ?? d.denom,
+          }
+        : d
+      ));
+    } catch (e) {
+      alert("Gagal menyimpan: " + e.message);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  // ── Filter + sort ──────────────────────────────────────
   const filtered = useMemo(() => {
-    let d = doneItems;
-    if (filterWilayah !== "Semua") d = d.filter(r => r.wilayah === filterWilayah);
-    if (filterTipe    !== "Semua") d = d.filter(r => r.tipe    === filterTipe);
+    let d = items;
+    if (filterTipe   !== "Semua") d = d.filter(r => r.tipe === filterTipe);
+    if (filterStatus !== "Semua") d = d.filter(r =>
+      (r.status_done || "").toUpperCase() === filterStatus.toUpperCase()
+    );
     if (search) {
       const q = search.toLowerCase();
       d = d.filter(r =>
@@ -49,413 +141,347 @@ export default function RekapReplacement({ doneItems = [], navigateTo }) {
       );
     }
     return [...d].sort((a, b) => {
-      const va = a[sort.key] ?? 0, vb = b[sort.key] ?? 0;
+      const va = a[sort.key] ?? "", vb = b[sort.key] ?? "";
       return sort.dir * (va > vb ? 1 : va < vb ? -1 : 0);
     });
-  }, [doneItems, filterWilayah, filterTipe, search, sort]);
+  }, [items, filterTipe, filterStatus, search, sort]);
 
   const paged   = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const maxPage = Math.ceil(filtered.length / PAGE_SIZE);
+  const toggleSort = key => { setSort(s => ({ key, dir: s.key === key ? -s.dir : -1 })); setPage(0); };
 
-  const toggleSort = (key) => {
-    setSort(s => ({ key, dir: s.key === key ? -s.dir : -1 }));
-    setPage(0);
-  };
+  // ── Summary ────────────────────────────────────────────
+  const totalNominal = filtered.reduce((s, d) => s + hitungJumlahIsi(d.limit), 0);
+  const totalLembar  = filtered.reduce((s, d) => {
+    const denom = overrides[d.id]?.denom ?? d.denom ?? 100_000;
+    return s + hitungLembar(hitungJumlahIsi(d.limit), denom);
+  }, 0);
+  const totalSelesai = filtered.filter(d => (d.status_done || "").toUpperCase() === "SELESAI").length;
+  const totalBatal   = filtered.filter(d => (d.status_done || "").toUpperCase() === "BATAL").length;
+  const totalSaved   = filtered.filter(d => d.is_saved).length;
 
-  // ── Summary ───────────────────────────────────────────
-  const totalNominal = filtered.reduce((sum, d) => sum + jumlahIsi(d.saldo || 0, d.limit || 0), 0);
-  const byWilayah    = WILAYAH_LIST.slice(1).map(w => ({
+  const byWilayah = WILAYAH_LIST.slice(1).map(w => ({
     wilayah: w,
-    count:   doneItems.filter(d => d.wilayah === w).length,
-    nominal: doneItems.filter(d => d.wilayah === w).reduce((s, d) => s + jumlahIsi(d.saldo || 0, d.limit || 0), 0),
+    count:   items.filter(d => d.wilayah?.toLowerCase() === w.toLowerCase()).length,
+    nominal: items.filter(d => d.wilayah?.toLowerCase() === w.toLowerCase())
+                  .reduce((s, d) => s + hitungJumlahIsi(d.limit), 0),
   })).filter(w => w.count > 0);
 
   return (
     <div>
-      {/* ── Header ─────────────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 }}>
+      {/* Header */}
+      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:24, flexWrap:"wrap", gap:12 }}>
         <div>
-          <h1 style={{ color: "#e2e8f0", fontSize: 24, fontWeight: 700, margin: "0 0 4px", letterSpacing: "-0.02em" }}>
+          <h1 style={{ color:"#e2e8f0", fontSize:24, fontWeight:700, margin:"0 0 4px", letterSpacing:"-0.02em" }}>
             Rekap Replacement ATM
           </h1>
-          <p style={{ color: "#64748b", fontSize: 13, margin: 0 }}>
-            {filterBulan} {nowTahun()} · ATM yang sudah selesai diisi (Status DONE dari Cash Plan) · {doneItems.length} ATM terselesaikan
+          <p style={{ color:"#64748b", fontSize:13, margin:0 }}>
+            ATM yang sudah diubah status di Cash Plan ·{" "}
+            <span style={{ color:"#00e5a0" }}>{items.length} rekap</span> bulan ini ·{" "}
+            <span style={{ color:"#60a5fa" }}>{totalSaved} sudah disimpan</span>
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <select
-            value={filterBulan}
-            onChange={e => setFilterBulan(e.target.value)}
-            style={selectStyle}
-          >
+        <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+          <select value={filterBulan} onChange={e => setFilterBulan(e.target.value)} style={selectStyle}>
             {BULAN_ID.map(b => <option key={b} value={b}>{b} {nowTahun()}</option>)}
           </select>
           <button
-            onClick={() => navigateTo && navigateTo("cashplan")}
-            style={{
-              background: "rgba(59,130,246,0.1)",
-              border: "1px solid rgba(59,130,246,0.25)",
-              borderRadius: 8, color: "#60a5fa",
-              padding: "8px 16px", fontSize: 13,
-              cursor: "pointer", fontWeight: 600,
-            }}
-          >
-            ← Kembali ke Cash Plan
+            onClick={() => exportToCSV(filtered, overrides, filterBulan, nowTahun(), filterWilayah)}
+            disabled={filtered.length === 0}
+            style={{ background:filtered.length===0?"rgba(0,229,160,0.04)":"rgba(0,229,160,0.1)", border:"1px solid rgba(0,229,160,0.3)", borderRadius:8, color:"#00e5a0", padding:"8px 16px", fontSize:13, cursor:filtered.length===0?"not-allowed":"pointer", fontWeight:600, opacity:filtered.length===0?0.5:1 }}>
+            ↓ Export CSV
           </button>
+          <button onClick={fetchData} style={{ background:"rgba(59,130,246,0.1)", border:"1px solid rgba(59,130,246,0.25)", borderRadius:8, color:"#60a5fa", padding:"8px 16px", fontSize:13, cursor:"pointer", fontWeight:600 }}>↺ Refresh</button>
+          <button onClick={() => navigateTo?.("cashplan")} style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(99,179,237,0.15)", borderRadius:8, color:"#64748b", padding:"8px 16px", fontSize:13, cursor:"pointer" }}>← Cash Plan</button>
         </div>
       </div>
 
-      {/* ── Empty State ── */}
-      {doneItems.length === 0 ? (
-        <EmptyState navigateTo={navigateTo} />
-      ) : (
-        <>
-          {/* ── Summary Cards ──────────────────────────────── */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
-            {[
-              { label: "Total ATM Selesai",  value: doneItems.length, color: "#00e5a0", icon: "✓" },
-              { label: "Total Nominal Isi",   value: fmtRp(doneItems.reduce((s, d) => s + jumlahIsi(d.saldo||0, d.limit||0), 0)), color: "#a78bfa", icon: "◎", small: true },
-              { label: "Ditampilkan (Filter)", value: filtered.length, color: "#60a5fa", icon: "◈" },
-              { label: "Est. Nominal (Filter)", value: fmtRp(totalNominal), color: "#f59e0b", icon: "⊕", small: true },
-            ].map(c => (
-              <div key={c.label} style={{
-                background: "rgba(255,255,255,0.02)",
-                border: `1px solid ${c.color}28`,
-                borderRadius: 10, padding: "14px 16px", textAlign: "center",
-              }}>
-                <div style={{ fontSize: 18, color: c.color, marginBottom: 6 }}>{c.icon}</div>
-                <div style={{ color: c.color, fontSize: c.small ? 13 : 26, fontWeight: 700, lineHeight: 1 }}>{c.value}</div>
-                <div style={{ color: "#64748b", fontSize: 10, marginTop: 6, textTransform: "uppercase", letterSpacing: "0.07em" }}>{c.label}</div>
-              </div>
-            ))}
-          </div>
+      {/* Info banner */}
+      <div style={{ background:"rgba(59,130,246,0.06)", border:"1px solid rgba(59,130,246,0.15)", borderRadius:10, padding:"12px 18px", marginBottom:20, display:"flex", alignItems:"center", gap:12 }}>
+        <span style={{ fontSize:18 }}>ℹ</span>
+        <div style={{ color:"#94a3b8", fontSize:12 }}>
+          Isi <strong style={{ color:"#60a5fa" }}>Tanggal Isi</strong>, <strong style={{ color:"#a78bfa" }}>Jam Cash In</strong>, dan <strong style={{ color:"#f59e0b" }}>Jam Cash Out</strong> lalu klik <strong style={{ color:"#00e5a0" }}>Simpan</strong>.
+          Setelah disimpan, baris tidak bisa diedit lagi. Jumlah Isi = <strong style={{ color:"#a78bfa" }}>Limit ATM (100%)</strong>.
+        </div>
+      </div>
 
-          {/* ── Per Wilayah ── */}
-          {byWilayah.length > 0 && (
-            <div style={{
-              display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap",
-            }}>
-              {byWilayah.map(w => (
-                <div key={w.wilayah} style={{
-                  background: "rgba(0,229,160,0.04)",
-                  border: "1px solid rgba(0,229,160,0.15)",
-                  borderRadius: 8, padding: "10px 16px",
-                }}>
-                  <div style={{ color: "#00e5a0", fontWeight: 700, fontSize: 13 }}>{w.wilayah}</div>
-                  <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>
-                    {w.count} ATM · {fmtRp(w.nominal)}
-                  </div>
-                </div>
-              ))}
+      {/* Summary Cards */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:12, marginBottom:20 }}>
+        {[
+          { label:"Total Rekap",   value:filtered.length,                            color:"#00e5a0", icon:"✓" },
+          { label:"Selesai",       value:totalSelesai,                               color:"#00e5a0", icon:"✔" },
+          { label:"Batal",         value:totalBatal,                                 color:"#94a3b8", icon:"✕" },
+          { label:"Sudah Disimpan",value:totalSaved,                                 color:"#60a5fa", icon:"💾" },
+          { label:"Total Nominal", value:fmtRp(totalNominal),                        color:"#a78bfa", icon:"◎", small:true },
+          { label:"Total Lembar",  value:`${totalLembar.toLocaleString("id-ID")} lbr`, color:"#f59e0b", icon:"◈", small:true },
+        ].map(c => (
+          <div key={c.label} style={{ background:"rgba(255,255,255,0.02)", border:`1px solid ${c.color}28`, borderRadius:10, padding:"14px 16px", textAlign:"center" }}>
+            <div style={{ fontSize:18, color:c.color, marginBottom:6 }}>{c.icon}</div>
+            <div style={{ color:c.color, fontSize:c.small?12:22, fontWeight:700, lineHeight:1 }}>{c.value}</div>
+            <div style={{ color:"#64748b", fontSize:10, marginTop:6, textTransform:"uppercase", letterSpacing:"0.07em" }}>{c.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Per Wilayah */}
+      {byWilayah.length > 0 && (
+        <div style={{ display:"flex", gap:10, marginBottom:20, flexWrap:"wrap" }}>
+          {byWilayah.map(w => (
+            <div key={w.wilayah} style={{ background:"rgba(0,229,160,0.04)", border:"1px solid rgba(0,229,160,0.15)", borderRadius:8, padding:"10px 16px", minWidth:150 }}>
+              <div style={{ color:"#94a3b8", fontSize:11, fontWeight:600 }}>{w.wilayah}</div>
+              <div style={{ color:"#00e5a0", fontSize:18, fontWeight:700, marginTop:4 }}>{w.count} ATM</div>
+              <div style={{ color:"#64748b", fontSize:11, marginTop:2 }}>{fmtRp(w.nominal)}</div>
             </div>
-          )}
-
-          {/* ── Filter Bar ─────────────────────────────────── */}
-          <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-            <input
-              placeholder="Cari ID ATM / lokasi / wilayah..."
-              value={search}
-              onChange={e => { setSearch(e.target.value); setPage(0); }}
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(99,179,237,0.15)",
-                borderRadius: 8, color: "#e2e8f0",
-                padding: "8px 14px", fontSize: 13, width: 220, outline: "none",
-              }}
-            />
-            {[
-              { label: "Wilayah", val: filterWilayah, set: setFilterWilayah, opts: WILAYAH_LIST },
-              { label: "Tipe",    val: filterTipe,    set: setFilterTipe,    opts: ["Semua","EMV","CRM"] },
-            ].map(f => (
-              <select key={f.label} value={f.val} onChange={e => { f.set(e.target.value); setPage(0); }} style={selectStyle}>
-                {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
-              </select>
-            ))}
-            <span style={{ color: "#64748b", fontSize: 12, marginLeft: "auto" }}>
-              {filtered.length} dari {doneItems.length} ATM
-            </span>
-          </div>
-
-          {/* ── Table ──────────────────────────────────────── */}
-          <div style={{
-            background: "rgba(255,255,255,0.015)",
-            border: "1px solid rgba(0,229,160,0.1)",
-            borderRadius: 12, overflow: "hidden",
-          }}>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid rgba(0,229,160,0.15)", background: "rgba(0,229,160,0.03)" }}>
-                    {[
-                      { label: "No",             key: null },
-                      { label: "ID ATM",         key: "id_atm" },
-                      { label: "Lokasi ATM",     key: "lokasi" },
-                      { label: "Wilayah",        key: "wilayah" },
-                      { label: "EMV/CRM",        key: "tipe" },
-                      { label: "Saldo Sebelum",  key: "saldo" },
-                      { label: "Limit",          key: "limit" },
-                      { label: "Total Diisi",    key: null },
-                      { label: "Denom",          key: "denom" },
-                      { label: "Lembar",         key: null },
-                      { label: "Jam Cash Out",   key: null },
-                      { label: "Jam Cash In",    key: "tgl_isi" },
-                      { label: "Status Asal",    key: "status" },
-                      { label: "Status",         key: null },
-                      { label: "Keterangan",     key: null },
-                    ].map((col, ci) => (
-                      <th
-                        key={ci}
-                        onClick={col.key ? () => toggleSort(col.key) : undefined}
-                        style={{
-                          padding: "11px 12px",
-                          textAlign: "left",
-                          color: col.key && sort.key === col.key ? "#00e5a0" : "#64748b",
-                          fontWeight: 600, fontSize: 10,
-                          letterSpacing: "0.07em",
-                          textTransform: "uppercase",
-                          cursor: col.key ? "pointer" : "default",
-                          whiteSpace: "nowrap",
-                          userSelect: "none",
-                        }}
-                      >
-                        {col.label}
-                        {col.key && sort.key === col.key && (
-                          <span style={{ marginLeft: 3, color: "#00e5a0" }}>{sort.dir > 0 ? "↑" : "↓"}</span>
-                        )}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {paged.map((atm, i) => {
-                    const rowNo     = page * PAGE_SIZE + i + 1;
-                    const denom     = atm.denom || 100_000;
-                    const totalIsi  = jumlahIsi(atm.saldo || 0, atm.limit || 0);
-
-                    const lastUpDt   = atm.last_update ? new Date(atm.last_update) : null;
-                    const tglStr     = lastUpDt ? lastUpDt.toLocaleDateString("id-ID", { day:"2-digit", month:"2-digit", year:"numeric" }) : "—";
-                    const jamCashOut = lastUpDt ? lastUpDt.toLocaleTimeString("id-ID", { hour:"2-digit", minute:"2-digit" }) : "—";
-                    const jamCashIn  = atm.tgl_isi && atm.jam_isi
-                      ? `${atm.tgl_isi} ${atm.jam_isi}`
-                      : atm.tgl_isi || "—";
-
-                    const statusOrigStyle = {
-                      BONGKAR:        { color: "#ff3b5c", bg: "rgba(255,59,92,0.1)"  },
-                      AWAS:           { color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
-                      "PERLU PANTAU": { color: "#60a5fa", bg: "rgba(96,165,250,0.1)" },
-                    }[atm.status] || { color: "#64748b", bg: "rgba(100,116,139,0.1)" };
-
-                    return (
-                      <tr
-                        key={atm.id_atm + i}
-                        style={{
-                          background: i % 2 === 0 ? "rgba(0,229,160,0.01)" : "transparent",
-                          borderBottom: "1px solid rgba(99,179,237,0.05)",
-                          transition: "background 0.1s",
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(0,229,160,0.04)"}
-                        onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? "rgba(0,229,160,0.01)" : "transparent"}
-                      >
-                        <td style={tdStyle("#64748b")}>{rowNo}</td>
-
-                        {/* ID ATM */}
-                        <td style={{ ...tdStyle("#e2e8f0"), fontFamily: "monospace", fontWeight: 700 }}>
-                          <span
-                            style={{ cursor: "pointer", textDecoration: "underline dotted" }}
-                            onClick={() => navigateTo && navigateTo("history", atm.id_atm)}
-                          >
-                            {atm.id_atm}
-                          </span>
-                        </td>
-
-                        <td style={{ ...tdStyle("#94a3b8"), maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                          title={atm.lokasi}>{atm.lokasi || "—"}</td>
-
-                        <td style={tdStyle("#94a3b8")}>{atm.wilayah || "—"}</td>
-
-                        {/* Tipe */}
-                        <td style={{ padding: "8px 12px" }}>
-                          <span style={{
-                            fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
-                            background: atm.tipe === "CRM" ? "rgba(167,139,250,0.15)" : "rgba(96,165,250,0.12)",
-                            color: atm.tipe === "CRM" ? "#a78bfa" : "#60a5fa",
-                            border: atm.tipe === "CRM" ? "1px solid rgba(167,139,250,0.3)" : "1px solid rgba(96,165,250,0.25)",
-                          }}>
-                            {atm.tipe || "—"}
-                          </span>
-                        </td>
-
-                        {/* Saldo Sebelum */}
-                        <td style={{ padding: "8px 12px" }}>
-                          <div style={{ color: "#e2e8f0", fontWeight: 600, fontSize: 12 }}>{fmtRp(atm.saldo)}</div>
-                          <div style={{ marginTop: 3 }}>
-                            <SaldoBar pct={atm.pct_saldo} />
-                          </div>
-                        </td>
-
-                        {/* Limit */}
-                        <td style={tdStyle("#64748b")}>{fmtRp(atm.limit)}</td>
-
-                        {/* Total Diisi */}
-                        <td style={{ padding: "8px 12px" }}>
-                          <span style={{ color: "#f59e0b", fontWeight: 600, fontSize: 12 }}>{fmtRp(totalIsi)}</span>
-                        </td>
-
-                        {/* Denom */}
-                        <td style={tdStyle("#a78bfa")}>
-                          {fmtRp(denom)}
-                        </td>
-
-                        {/* Lembar */}
-                        <td style={tdStyle("#94a3b8")}>
-                          {totalIsi > 0 ? fmtLembar(totalIsi, denom) : "—"}
-                        </td>
-
-                        {/* Jam Cash Out */}
-                        <td style={tdStyle("#94a3b8")}>{jamCashOut}</td>
-
-                        {/* Jam Cash In */}
-                        <td style={{ padding: "8px 12px" }}>
-                          <span style={{ color: "#60a5fa", fontSize: 11, fontWeight: 600 }}>{jamCashIn}</span>
-                        </td>
-
-                        {/* Status Asal */}
-                        <td style={{ padding: "8px 12px" }}>
-                          <span style={{
-                            fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
-                            background: statusOrigStyle.bg, color: statusOrigStyle.color,
-                            border: `1px solid ${statusOrigStyle.color}33`,
-                          }}>
-                            {atm.status || "—"}
-                          </span>
-                        </td>
-
-                        {/* Status DONE */}
-                        <td style={{ padding: "8px 12px" }}>
-                          <span style={{
-                            fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 5,
-                            background: "rgba(0,229,160,0.12)", color: "#00e5a0",
-                            border: "1px solid rgba(0,229,160,0.3)",
-                          }}>
-                            ✓ DONE
-                          </span>
-                        </td>
-
-                        {/* Keterangan */}
-                        <td style={{ ...tdStyle("#94a3b8"), fontStyle: atm.keterangan ? "normal" : "italic" }}>
-                          {atm.keterangan || <span style={{ color: "#374151" }}>—</span>}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            {maxPage > 1 && (
-              <div style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "12px 20px", borderTop: "1px solid rgba(0,229,160,0.08)",
-              }}>
-                <span style={{ color: "#64748b", fontSize: 12 }}>
-                  Halaman {page + 1} dari {maxPage} · {filtered.length} ATM
-                </span>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <PageBtn disabled={page === 0}          onClick={() => setPage(p => p - 1)}>← Prev</PageBtn>
-                  <PageBtn disabled={page >= maxPage - 1} onClick={() => setPage(p => p + 1)}>Next →</PageBtn>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ── Legend ─────────────────────────────────────── */}
-          <div style={{ display: "flex", gap: 20, marginTop: 16, flexWrap: "wrap" }}>
-            {[
-              { label: "DONE — ATM sudah berhasil diisi",         color: "#00e5a0" },
-              { label: "Saldo Sebelum = kondisi sebelum diisi",   color: "#f59e0b" },
-              { label: "Total Diisi = target 100% - saldo awal",  color: "#a78bfa" },
-            ].map(l => (
-              <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <div style={{ width: 8, height: 8, borderRadius: 2, background: l.color }} />
-                <span style={{ color: "#64748b", fontSize: 11 }}>{l.label}</span>
-              </div>
-            ))}
-          </div>
-        </>
+          ))}
+        </div>
       )}
 
+      {/* Filter Bar */}
+      <div style={{ display:"flex", gap:10, marginBottom:16, flexWrap:"wrap", alignItems:"center" }}>
+        <input placeholder="Cari ID ATM / lokasi..." value={search}
+          onChange={e => { setSearch(e.target.value); setPage(0); }}
+          style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(99,179,237,0.15)", borderRadius:8, color:"#e2e8f0", padding:"8px 14px", fontSize:13, width:220, outline:"none" }} />
+        <select value={filterWilayah} onChange={e => setFilterWilayah(e.target.value)} style={selectStyle}>
+          {WILAYAH_LIST.map(w => <option key={w} value={w}>{w}</option>)}
+        </select>
+        <select value={filterTipe} onChange={e => setFilterTipe(e.target.value)} style={selectStyle}>
+          {["Semua","EMV","CRM"].map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={selectStyle}>
+          {["Semua","SELESAI","BATAL"].map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <span style={{ color:"#475569", fontSize:12, marginLeft:"auto" }}>{filtered.length} data</span>
+      </div>
+
+      {/* Table */}
+      {loading ? <Spinner /> : filtered.length === 0 ? <EmptyState filterBulan={filterBulan} /> : (
+        <div style={{ background:"rgba(255,255,255,0.015)", border:"1px solid rgba(99,179,237,0.08)", borderRadius:12, overflow:"hidden" }}>
+          <div style={{ overflowX:"auto" }}>
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+              <thead>
+                <tr style={{ borderBottom:"1px solid rgba(99,179,237,0.12)", background:"rgba(255,255,255,0.02)" }}>
+                  {[
+                    { label:"No",           key:null },
+                    { label:"Done At",      key:"done_at" },
+                    { label:"Bulan",        key:"bulan" },
+                    { label:"ID ATM",       key:"id_atm" },
+                    { label:"Lokasi",       key:"lokasi" },
+                    { label:"Wilayah",      key:"wilayah" },
+                    { label:"Tipe",         key:"tipe" },
+                    { label:"Saldo Akhir",  key:"saldo_awal" },
+                    { label:"Jumlah Isi",   key:"limit" },
+                    { label:"Denom",        key:null },
+                    { label:"Lembar",       key:null },
+                    { label:"Tanggal Isi",  key:"tgl_isi" },
+                    { label:"Jam Cash In",  key:null },
+                    { label:"Jam Cash Out", key:null },
+                    { label:"Status",       key:"status_done" },
+                    { label:"Keterangan",   key:null },
+                    { label:"Aksi",         key:null },
+                  ].map((col, ci) => (
+                    <th key={ci} onClick={col.key ? () => toggleSort(col.key) : undefined}
+                      style={{ padding:"11px 12px", textAlign:"left", color:col.key&&sort.key===col.key?"#60a5fa":"#64748b", fontWeight:600, fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", cursor:col.key?"pointer":"default", whiteSpace:"nowrap", userSelect:"none" }}>
+                      {col.label}
+                      {col.key && sort.key===col.key && <span style={{ marginLeft:3 }}>{sort.dir>0?"↑":"↓"}</span>}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {paged.map((item, i) => {
+                  const ov         = overrides[item.id] || {};
+                  const saved      = item.is_saved;
+                  const isSaving   = savingId === item.id;
+                  const denom      = saved ? (item.denom || 100_000)      : (ov.denom      ?? item.denom      ?? 100_000);
+                  const jumlahIsi  = hitungJumlahIsi(item.limit);
+                  const lembar     = hitungLembar(jumlahIsi, denom);
+                  const tglIsi     = saved ? (item.tgl_isi      || "")  : (ov.tgl_isi      ?? item.tgl_isi      ?? "");
+                  const cashIn     = saved ? (item.jam_cash_in  || "")  : (ov.jam_cash_in  ?? item.jam_cash_in  ?? "");
+                  const cashOut    = saved ? (item.jam_cash_out || "")  : (ov.jam_cash_out ?? item.jam_cash_out ?? "");
+                  const statusCP   = (item.status_done || "PROSES").toUpperCase();
+                  const ssColor    = statusCP==="SELESAI" ? "#00e5a0" : statusCP==="BATAL" ? "#94a3b8" : "#f59e0b";
+                  const ssBg       = statusCP==="SELESAI" ? "rgba(0,229,160,0.1)" : statusCP==="BATAL" ? "rgba(148,163,184,0.08)" : "rgba(245,158,11,0.1)";
+                  const rowBg      = saved ? "rgba(0,229,160,0.02)" : i%2===0 ? "transparent" : "rgba(255,255,255,0.01)";
+
+                  // Input style — disabled jika sudah saved
+                  const inputSt = (hasVal) => ({
+                    background: saved ? "rgba(255,255,255,0.02)" : "#0d1228",
+                    border: `1px solid ${saved ? "rgba(99,179,237,0.06)" : hasVal ? "rgba(96,165,250,0.35)" : "rgba(96,165,250,0.2)"}`,
+                    borderRadius: 6, color: saved ? "#475569" : hasVal ? "#60a5fa" : "#475569",
+                    padding: "4px 8px", fontSize: 11, outline: "none",
+                    cursor: saved ? "not-allowed" : "pointer",
+                    pointerEvents: saved ? "none" : "auto",
+                  });
+
+                  return (
+                    <tr key={item.id}
+                      style={{ background:rowBg, borderBottom:"1px solid rgba(99,179,237,0.05)", transition:"background 0.1s" }}
+                      onMouseEnter={e => !saved && (e.currentTarget.style.background="rgba(0,229,160,0.04)")}
+                      onMouseLeave={e => e.currentTarget.style.background=rowBg}
+                    >
+                      <td style={tdS("#64748b")}>{page*PAGE_SIZE+i+1}</td>
+
+                      {/* Done At */}
+                      <td style={{ padding:"8px 12px" }}>
+                        <div style={{ color:"#00e5a0", fontSize:11, fontWeight:600 }}>
+                          {item.done_at ? new Date(item.done_at).toLocaleString("id-ID",{ dateStyle:"medium", timeStyle:"short" }) : "—"}
+                        </div>
+                      </td>
+
+                      <td style={tdS("#94a3b8")}>{item.bulan || filterBulan}</td>
+
+                      {/* ID ATM */}
+                      <td style={{ padding:"8px 12px" }}>
+                        <span style={{ color:"#e2e8f0", fontFamily:"monospace", fontWeight:700, cursor:"pointer", textDecoration:"underline dotted" }}
+                          onClick={() => navigateTo?.("history", item.id_atm)}>
+                          {item.id_atm}
+                        </span>
+                        {saved && <span style={{ marginLeft:6, fontSize:9, padding:"1px 5px", borderRadius:3, background:"rgba(0,229,160,0.1)", color:"#00e5a0", border:"1px solid rgba(0,229,160,0.2)" }}>SAVED</span>}
+                      </td>
+
+                      <td style={{ ...tdS("#94a3b8"), maxWidth:160, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={item.lokasi}>{item.lokasi||"—"}</td>
+                      <td style={tdS("#94a3b8")}>{item.wilayah||"—"}</td>
+
+                      {/* Tipe */}
+                      <td style={{ padding:"8px 12px" }}>
+                        <span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4, background:item.tipe==="CRM"?"rgba(167,139,250,0.15)":"rgba(96,165,250,0.12)", color:item.tipe==="CRM"?"#a78bfa":"#60a5fa" }}>
+                          {item.tipe||"—"}
+                        </span>
+                      </td>
+
+                      <td style={tdS("#e2e8f0")}>{fmtRp(item.saldo_awal)}</td>
+
+                      {/* Jumlah Isi */}
+                      <td style={{ padding:"8px 12px" }}>
+                        <span style={{ color:"#f59e0b", fontWeight:700 }}>{fmtRp(jumlahIsi)}</span>
+                      </td>
+
+                      {/* Denom */}
+                      <td style={{ padding:"8px 10px" }}>
+                        <select value={denom}
+                          onChange={e => !saved && setOv(item.id, "denom", Number(e.target.value))}
+                          disabled={saved}
+                          style={{ background:saved?"rgba(255,255,255,0.02)":"#0d1228", border:`1px solid ${saved?"rgba(99,179,237,0.06)":"rgba(167,139,250,0.25)"}`, borderRadius:6, color:saved?"#475569":"#a78bfa", padding:"4px 6px", fontSize:11, cursor:saved?"not-allowed":"pointer", outline:"none" }}>
+                          {DENOM_OPTIONS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                        </select>
+                      </td>
+
+                      {/* Lembar */}
+                      <td style={{ padding:"8px 12px" }}>
+                        <span style={{ color:"#60a5fa", fontWeight:600 }}>{lembar ? `${lembar.toLocaleString()} lbr` : "—"}</span>
+                      </td>
+
+                      {/* Tanggal Isi */}
+                      <td style={{ padding:"8px 10px" }}>
+                        <input type="date" value={tglIsi}
+                          onChange={e => !saved && setOv(item.id, "tgl_isi", e.target.value)}
+                          style={inputSt(!!tglIsi)} />
+                      </td>
+
+                      {/* Jam Cash In */}
+                      <td style={{ padding:"8px 10px" }}>
+                        <input type="time" value={cashIn}
+                          onChange={e => !saved && setOv(item.id, "jam_cash_in", e.target.value)}
+                          style={{ ...inputSt(!!cashIn), width:90 }} />
+                      </td>
+
+                      {/* Jam Cash Out */}
+                      <td style={{ padding:"8px 10px" }}>
+                        <input type="time" value={cashOut}
+                          onChange={e => !saved && setOv(item.id, "jam_cash_out", e.target.value)}
+                          style={{ ...inputSt(!!cashOut), width:90 }} />
+                      </td>
+
+                      {/* Status */}
+                      <td style={{ padding:"8px 12px" }}>
+                        <span style={{ fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:5, background:ssBg, color:ssColor, border:`1px solid ${ssColor}33` }}>
+                          {statusCP==="SELESAI" ? "✔ Selesai" : statusCP==="BATAL" ? "✕ Batal" : "◎ Proses"}
+                        </span>
+                      </td>
+
+                      {/* Keterangan */}
+                      <td style={{ ...tdS("#64748b"), maxWidth:160, overflow:"hidden", textOverflow:"ellipsis" }}>
+                        {item.keterangan || <span style={{ color:"#374151" }}>—</span>}
+                      </td>
+
+                      {/* Aksi — Simpan / Sudah Disimpan */}
+                      <td style={{ padding:"8px 10px" }}>
+                        {saved ? (
+                          <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:700, color:"#00e5a0" }}>
+                            <span>✓</span>
+                            <span>Tersimpan</span>
+                          </div>
+                        ) : (
+                          <button onClick={() => handleSave(item)} disabled={isSaving}
+                            style={{ background:isSaving?"rgba(0,229,160,0.05)":"rgba(0,229,160,0.12)", border:"1px solid rgba(0,229,160,0.35)", borderRadius:6, color:"#00e5a0", padding:"5px 12px", fontSize:11, fontWeight:700, cursor:isSaving?"not-allowed":"pointer", whiteSpace:"nowrap", transition:"all 0.15s" }}>
+                            {isSaving ? "Menyimpan..." : "💾 Simpan"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {maxPage > 1 && (
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 20px", borderTop:"1px solid rgba(99,179,237,0.08)" }}>
+              <span style={{ color:"#64748b", fontSize:12 }}>Halaman {page+1} dari {maxPage} · {filtered.length} rekap</span>
+              <div style={{ display:"flex", gap:6 }}>
+                <PageBtn disabled={page===0}        onClick={() => setPage(p => p-1)}>← Prev</PageBtn>
+                <PageBtn disabled={page>=maxPage-1} onClick={() => setPage(p => p+1)}>Next →</PageBtn>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Footer legend */}
+      <div style={{ marginTop:16, display:"flex", gap:20, flexWrap:"wrap" }}>
+        {[
+          { label:"★ Jumlah Isi = Limit ATM (target 100%)",           color:"#f59e0b" },
+          { label:"Jam Cash In/Out diisi manual lalu klik Simpan",    color:"#a78bfa" },
+          { label:"Setelah disimpan, baris tidak bisa diedit lagi",   color:"#00e5a0" },
+          { label:"Export CSV tersedia per wilayah",                   color:"#60a5fa" },
+        ].map(l => (
+          <div key={l.label} style={{ display:"flex", alignItems:"center", gap:6 }}>
+            <div style={{ width:8, height:8, borderRadius:2, background:l.color }} />
+            <span style={{ color:"#64748b", fontSize:11 }}>{l.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Sub-components ─────────────────────────────────────────
+function EmptyState({ filterBulan }) {
+  return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:280, gap:12, background:"rgba(59,130,246,0.03)", border:"1px solid rgba(59,130,246,0.1)", borderRadius:12 }}>
+      <span style={{ fontSize:36 }}>📋</span>
+      <span style={{ color:"#94a3b8", fontWeight:600, fontSize:16 }}>Belum Ada Rekap — {filterBulan}</span>
+      <span style={{ color:"#64748b", fontSize:13, textAlign:"center", maxWidth:400 }}>
+        ATM yang sudah ditandai <strong style={{ color:"#00e5a0" }}>Selesai</strong> atau <strong style={{ color:"#94a3b8" }}>Batal</strong> di Cash Plan akan muncul di sini.
+      </span>
+    </div>
+  );
+}
+function Spinner() {
+  return (
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:200, flexDirection:"column", gap:12, color:"#64748b" }}>
+      <div style={{ width:28, height:28, border:"2px solid rgba(59,130,246,0.2)", borderTopColor:"#3b82f6", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
+      <span>Memuat rekap...</span>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }
-
-// ── Sub-components ────────────────────────────────────────
-function SaldoBar({ pct }) {
-  const color = pct <= 20 ? "#ff3b5c" : pct <= 30 ? "#f59e0b" : "#22c55e";
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-      <div style={{ width: 50, height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 2 }}>
-        <div style={{ height: "100%", width: `${Math.min(pct || 0, 100)}%`, background: color, borderRadius: 2 }} />
-      </div>
-      <span style={{ color, fontSize: 10, fontWeight: 700 }}>{pct?.toFixed(0)}%</span>
-    </div>
-  );
-}
-
 function PageBtn({ children, onClick, disabled }) {
   return (
-    <button onClick={onClick} disabled={disabled} style={{
-      background: disabled ? "transparent" : "rgba(0,229,160,0.1)",
-      border: "1px solid rgba(0,229,160,0.2)",
-      borderRadius: 6, color: disabled ? "#374151" : "#00e5a0",
-      padding: "5px 12px", fontSize: 12,
-      cursor: disabled ? "default" : "pointer",
-    }}>{children}</button>
+    <button onClick={onClick} disabled={disabled} style={{ background:disabled?"transparent":"rgba(59,130,246,0.1)", border:"1px solid rgba(59,130,246,0.2)", borderRadius:6, color:disabled?"#374151":"#60a5fa", padding:"5px 12px", fontSize:12, cursor:disabled?"default":"pointer" }}>
+      {children}
+    </button>
   );
 }
-
-function EmptyState({ navigateTo }) {
-  return (
-    <div style={{
-      display: "flex", flexDirection: "column", alignItems: "center",
-      justifyContent: "center", height: 320, gap: 16,
-      background: "rgba(0,229,160,0.02)",
-      border: "1px solid rgba(0,229,160,0.08)", borderRadius: 12,
-    }}>
-      <span style={{ fontSize: 48, opacity: 0.3 }}>✓</span>
-      <span style={{ color: "#94a3b8", fontWeight: 600, fontSize: 18 }}>Belum Ada Data Replacement</span>
-      <span style={{ color: "#64748b", fontSize: 13, textAlign: "center", maxWidth: 400 }}>
-        Rekap akan otomatis terisi ketika ATM di Cash Plan ditandai sebagai <strong style={{ color: "#00e5a0" }}>DONE</strong>.
-        Buka Cash Plan dan klik tombol status pada ATM yang sudah diisi.
-      </span>
-      <button
-        onClick={() => navigateTo && navigateTo("cashplan")}
-        style={{
-          background: "rgba(59,130,246,0.15)",
-          border: "1px solid rgba(59,130,246,0.4)",
-          borderRadius: 8, color: "#60a5fa",
-          padding: "10px 24px", fontSize: 13, fontWeight: 600,
-          cursor: "pointer",
-        }}
-      >
-        → Buka Cash Plan
-      </button>
-    </div>
-  );
-}
-
-// ── Shared styles ─────────────────────────────────────────
-const selectStyle = {
-  background: "#0d1228",
-  border: "1px solid rgba(99,179,237,0.15)",
-  borderRadius: 8, color: "#94a3b8",
-  padding: "8px 12px", fontSize: 13,
-  cursor: "pointer", outline: "none",
-};
-
-const tdStyle = (color) => ({
-  padding: "8px 12px",
-  color,
-  whiteSpace: "nowrap",
-});
+const selectStyle = { background:"#0d1228", border:"1px solid rgba(99,179,237,0.15)", borderRadius:8, color:"#94a3b8", padding:"8px 12px", fontSize:13, cursor:"pointer", outline:"none" };
+const tdS = color => ({ padding:"8px 12px", color, whiteSpace:"nowrap" });

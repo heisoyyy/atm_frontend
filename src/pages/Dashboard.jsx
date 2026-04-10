@@ -155,20 +155,45 @@ export default function Dashboard({ navigateTo }) {
         <Label>Status Sistem</Label>
         <div style={{ display: "flex", gap: 32, marginTop: 12, flexWrap: "wrap" }}>
           {[
-            { label: "Data", ok: status?.has_data },
-            { label: "Model XGBoost", ok: status?.has_model },
-            { label: "Cache Prediksi", ok: status?.has_cache },
-            { label: "V6 Config", ok: !!status?.config?.STATUS_AMAN_PCT },
+            { label: "Data",         ok: status?.has_data },
+            { label: "Model XGBoost",ok: status?.has_model },
+            { label: "Cache Prediksi",ok: status?.has_cache },
+            { label: "V6 Config",    ok: !!status?.config?.STATUS_AMAN_PCT },
           ].map(s => (
             <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: s.ok ? "#00e5a0" : "#ff3b5c", boxShadow: `0 0 6px ${s.ok ? "#00e5a0" : "#ff3b5c"}` }} />
-              <span style={{ color: s.ok ? "#94a3b8" : "#ff3b5c", fontSize: 13 }}>{s.label}</span>
+              <div style={{
+                width: 8, height: 8, borderRadius: "50%",
+                background: s.ok ? "#00e5a0" : "#ff3b5c",
+                boxShadow: `0 0 6px ${s.ok ? "#00e5a0" : "#ff3b5c"}`
+              }} />
+              <span style={{ color: s.ok ? "#94a3b8" : "#ff3b5c", fontSize: 13 }}>
+                {s.label}
+                {/* Tampilkan info tambahan jika tidak OK */}
+                {!s.ok && s.label === "Model XGBoost" && (
+                  <span style={{ fontSize: 11, marginLeft: 6, opacity: 0.7 }}>
+                    (belum di-train)
+                  </span>
+                )}
+                {!s.ok && s.label === "Data" && (
+                  <span style={{ fontSize: 11, marginLeft: 6, opacity: 0.7 }}>
+                    (upload dulu)
+                  </span>
+                )}
+              </span>
             </div>
           ))}
-          {status?.date_range && (
+          {/* Info rows & date range */}
+          {(status?.date_range || status?.total_atm) && (
             <div style={{ color: "#64748b", fontSize: 12, marginLeft: "auto" }}>
-              Data: {status.date_range.from} → {status.date_range.to}
-              <span style={{ marginLeft: 16 }}>{status.total_atm} ATM · {status.total_rows?.toLocaleString()} rows</span>
+              {status.date_range && (
+                <span>Data: {status.date_range.from} → {status.date_range.to}</span>
+              )}
+              {status.total_atm && (
+                <span style={{ marginLeft: 16 }}>{status.total_atm} ATM</span>
+              )}
+              {status.total_rows && (
+                <span style={{ marginLeft: 8 }}>· {status.total_rows.toLocaleString()} rows</span>
+              )}
             </div>
           )}
         </div>

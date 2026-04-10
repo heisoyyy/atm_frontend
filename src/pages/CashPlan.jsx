@@ -15,15 +15,10 @@ const fmtRp          = v => v == null || isNaN(v) ? "—" : "Rp " + Number(v).to
 const fmtLembar      = (total, denom) => !total || !denom ? "—" : Math.ceil(total / denom).toLocaleString("id-ID") + " lembar";
 const jumlahIsi      = (saldo, limit) => Math.max(0, limit - saldo);
 
-const STATUS_STYLE = {
-  BONGKAR: { color: "#ff3b5c", bg: "rgba(255,59,92,0.12)",  border: "rgba(255,59,92,0.3)"  },
-  AWAS:    { color: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.3)" },
-};
 const PROSES_STYLE  = { color: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.3)" };
 const SELESAI_STYLE = { color: "#00e5a0", bg: "rgba(0,229,160,0.12)",  border: "rgba(0,229,160,0.3)" };
 const BATAL_STYLE   = { color: "#94a3b8", bg: "rgba(148,163,184,0.1)", border: "rgba(148,163,184,0.25)" };
 
-// ── Download CSV ──────────────────────────────────────────
 function downloadCSVPerWilayah(data, wilayah, bulan, tahun) {
   const rows = wilayah === "Semua"
     ? data
@@ -33,7 +28,6 @@ function downloadCSVPerWilayah(data, wilayah, bulan, tahun) {
     "No","Tgl Masuk Cash Plan","Bulan","Tahun","ID ATM","Lokasi","Wilayah","Tipe",
     "Denom","Saldo Terakhir","Total Isi","Lembar","Status","Keterangan",
   ];
-
   const csvRows = rows.map((d, i) => {
     const denom    = d._denom || 100_000;
     const totalIsi = jumlahIsi(d.saldo, d.limit);
@@ -41,41 +35,34 @@ function downloadCSVPerWilayah(data, wilayah, bulan, tahun) {
       ? new Date(d.added_at).toLocaleString("id-ID", { dateStyle:"short", timeStyle:"short" })
       : "-";
     return [
-      i + 1,
-      `"${addedAt}"`,
-      bulan, tahun,
+      i + 1, `"${addedAt}"`, bulan, tahun,
       d.id_atm || "-",
       `"${(d.lokasi || "-").replace(/"/g,'""')}"`,
-      d.wilayah || "-",
-      d.tipe || "-",
+      d.wilayah || "-", d.tipe || "-",
       `Rp ${Number(denom).toLocaleString("id-ID")}`,
-      d.saldo || 0,
-      totalIsi,
+      d.saldo || 0, totalIsi,
       fmtLembar(totalIsi, denom),
       d._status_done || "PROSES",
       `"${(d._keterangan || "-").replace(/"/g,'""')}"`,
     ].join(",");
   });
-
   const csv  = [headers.join(","), ...csvRows].join("\n");
   const blob = new Blob(["\uFEFF" + csv], { type:"text/csv;charset=utf-8;" });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement("a");
-
-  const now   = new Date();
+  const now  = new Date();
   const tglDl = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}`;
-  const fn    = `CashPlan_${wilayah === "Semua" ? "Semua_Wilayah" : wilayah}_${bulan}_${tahun}_dl${tglDl}.csv`;
-
+  const fn   = `CashPlan_${wilayah === "Semua" ? "Semua_Wilayah" : wilayah}_${bulan}_${tahun}_dl${tglDl}.csv`;
   a.href = url; a.download = fn; a.click();
   URL.revokeObjectURL(url);
   alert(`✅ File berhasil didownload!\n\nNama file: ${fn}\n\n⚠️ Pindahkan manual ke:\n${SAVE_PATH}`);
 }
 
-// ════════════════════════════════════════════════════════
 export default function CashPlan({ navigateTo }) {
   const [predData,      setPredData]      = useState([]);
   const [cashplanData,  setCashplanData]  = useState([]);
-  // FIX: track id_atm yang sudah di-remove murni agar tidak muncul lagi dari predData
+  // FIX UTAMA: track id_atm yg di-remove murni (status_done='REMOVED' di DB)
+  // Berbeda dengan BATAL (status_done='BATAL') yg tetap tampil
   const [removedAtmIds, setRemovedAtmIds] = useState(new Set());
   const [loading,       setLoading]       = useState(true);
   const [genAt,         setGenAt]         = useState(null);
@@ -88,12 +75,11 @@ export default function CashPlan({ navigateTo }) {
   const [showDlModal,   setShowDlModal]   = useState(false);
   const [denomGlobal,   setDenomGlobal]   = useState(100_000);
 
-  // Per-row overrides: denom, keterangan
   const [overrides, setOverrides] = useState({});
-  const setOverride   = (id, field, val) =>
+  const setOverride = (id, field, val) =>
     setOverrides(prev => ({ ...prev, [id]: { ...prev[id], [field]: val } }));
-  const getDenom      = id => overrides[id]?.denom ?? denomGlobal;
-  const getKet        = id => overrides[id]?.keterangan ?? "";
+  const getDenom = id => overrides[id]?.denom ?? denomGlobal;
+  const getKet   = id => overrides[id]?.keterangan ?? "";
 
   const [sort,  setSort]  = useState({ key: "skor_urgensi", dir: -1 });
   const [page,  setPage]  = useState(0);
@@ -122,20 +108,20 @@ export default function CashPlan({ navigateTo }) {
         getCashplanAPI("REMOVED"),
       ]);
 
-      // FIX: Kumpulkan id_atm yang di-remove murni (bukan Batal)
-      // agar bisa di-exclude dari predData di allData
-      const removedMurni = new Set(
+      // FIX: status_done='REMOVED' → di-remove via tombol Remove (bukan Batal)
+      //      Kumpulkan id_atm-nya → akan di-exclude di allData
+      //      status_done='BATAL'   → via tombol Batal → tetap tampil di tabel
+      const murniRemovedIds = new Set(
         (cpRemoved.data || [])
-          .filter(d => d.status_done !== "BATAL")
+          .filter(d => d.status_done === "REMOVED")
           .map(d => d.id_atm)
       );
-      setRemovedAtmIds(removedMurni);
+      setRemovedAtmIds(murniRemovedIds);
 
       const allCp = [
         ...(cpPending.data || []),
-        ...(cpDone.data    || []).map(d => ({ ...d, status_done: d.status_done || "SELESAI" })),
-        // FIX: REMOVED hanya ditampilkan jika status_done='BATAL' (ada rekam jejak)
-        // REMOVED murni (tombol ✕ Remove) tidak ditampilkan sama sekali
+        ...(cpDone.data || []).map(d => ({ ...d, status_done: d.status_done || "SELESAI" })),
+        // Hanya REMOVED yg status_done='BATAL' yg ditampilkan (ada rekam jejak)
         ...(cpRemoved.data || [])
           .filter(d => d.status_done === "BATAL")
           .map(d => ({ ...d, status_done: "BATAL" })),
@@ -154,7 +140,7 @@ export default function CashPlan({ navigateTo }) {
   const allData = useMemo(() => {
     const map = {};
     for (const p of predData) {
-      // FIX: skip ATM yang sudah di-remove murni — jangan tampilkan lagi
+      // FIX: ATM yg sudah di-remove murni → skip, tidak masuk tabel
       if (removedAtmIds.has(p.id_atm)) continue;
       map[p.id_atm] = { ...p, _in_db: false };
     }
@@ -231,7 +217,7 @@ export default function CashPlan({ navigateTo }) {
       await updateCashplanStatusAPI(cpId, newStatus, getKet(atm.id_atm), getDenom(atm.id_atm));
       alert(
         newStatus === "SELESAI"
-          ? `✅ ATM ${atm.id_atm} ditandai Selesai.\n\nData otomatis masuk ke Rekap Replacement dan akan hilang dari Cash Plan setelah upload data baru.`
+          ? `✅ ATM ${atm.id_atm} ditandai Selesai.\n\nData otomatis masuk ke Rekap Replacement.`
           : `🚫 ATM ${atm.id_atm} dibatalkan.\n\nData masuk ke Rekap Replacement dengan status Batal.`
       );
       await fetchData();
@@ -242,7 +228,6 @@ export default function CashPlan({ navigateTo }) {
 
   // ── Remove ─────────────────────────────────────────────
   const handleRemove = async (atm) => {
-    // FIX: fallback 0 bukan 100 — null/undefined tetap diblokir
     const pct = atm.pct_saldo ?? 0;
     const sd  = atm.status_done;
 
@@ -262,11 +247,10 @@ export default function CashPlan({ navigateTo }) {
 
     try {
       if (atm._in_db && atm._cp_id) {
-        // Hapus dari antrian — tidak masuk rekap_replacement
+        // Backend: set status_done='REMOVED', tidak insert ke rekap_replacement
         await removeCashplanAPI(atm._cp_id);
       }
-      // FIX: fetchData refresh semua state termasuk removedAtmIds
-      // sehingga ATM hilang dari allData meskipun masih ada di predData
+      // fetchData → removedAtmIds diupdate → ATM hilang dari allData
       await fetchData();
     } catch (e) {
       alert("Gagal hapus: " + e.message);
@@ -276,14 +260,11 @@ export default function CashPlan({ navigateTo }) {
   // ── Bulk remove ────────────────────────────────────────
   const handleBulkRemove = async () => {
     const selected = allData.filter(d => selectedRows.includes(d.id_atm));
-
-    // FIX: fallback 0 bukan 100
-    const blocked = selected.filter(d => {
+    const blocked  = selected.filter(d => {
       const pct = d.pct_saldo ?? 0;
       const sd  = d.status_done;
       return pct <= 25 && sd !== "SELESAI" && sd !== "BATAL";
     });
-
     if (blocked.length > 0) {
       alert(
         `⚠️ ${blocked.length} ATM tidak bisa dihapus (saldo ≤ 25%):\n\n` +
@@ -292,16 +273,11 @@ export default function CashPlan({ navigateTo }) {
       );
       return;
     }
-
     if (!window.confirm(`Hapus ${selected.length} ATM dari antrian Cash Plan?`)) return;
-
     try {
-      // Paralel — hanya yang sudah ada di DB
       const dbItems = selected.filter(atm => atm._in_db && atm._cp_id);
       await Promise.all(dbItems.map(atm => removeCashplanAPI(atm._cp_id)));
-
       setSelectedRows([]);
-      // FIX: satu kali fetchData setelah semua selesai
       await fetchData();
     } catch (e) {
       alert("Gagal hapus: " + e.message);
@@ -343,7 +319,6 @@ export default function CashPlan({ navigateTo }) {
   const totalNominal   = filtered.reduce((s, d) => s + jumlahIsi(d.saldo, d.limit), 0);
   const doneBatalCount = allData.filter(d => d.status_done === "SELESAI" || d.status_done === "BATAL").length;
 
-  // Data diperkaya untuk download CSV
   const enrichedForCsv = filtered.map(d => ({
     ...d,
     _denom:       getDenom(d.id_atm),
@@ -393,16 +368,14 @@ export default function CashPlan({ navigateTo }) {
         ))}
       </div>
 
-      {/* Notif done/batal */}
+      {/* Notif */}
       {doneBatalCount > 0 && (
         <div style={{ background:"rgba(59,130,246,0.06)", border:"1px solid rgba(59,130,246,0.2)", borderRadius:10, padding:"12px 18px", marginBottom:16, display:"flex", alignItems:"flex-start", gap:12 }}>
           <span style={{ fontSize:18, marginTop:1 }}>ℹ️</span>
           <div>
-            <div style={{ color:"#93c5fd", fontWeight:700, fontSize:13, marginBottom:4 }}>
-              {doneBatalCount} ATM sudah Selesai/Batal
-            </div>
+            <div style={{ color:"#93c5fd", fontWeight:700, fontSize:13, marginBottom:4 }}>{doneBatalCount} ATM sudah Selesai/Batal</div>
             <div style={{ color:"#94a3b8", fontSize:12 }}>
-              Data akan <strong style={{ color:"#60a5fa" }}>otomatis hilang</strong> dari daftar ini setelah ada upload data baru dari Colab dan masuk ke <strong style={{ color:"#a78bfa" }}>Rekap Replacement</strong>.
+              Data akan <strong style={{ color:"#60a5fa" }}>otomatis hilang</strong> dari daftar ini setelah upload data baru dan masuk ke <strong style={{ color:"#a78bfa" }}>Rekap Replacement</strong>.
             </div>
           </div>
         </div>
@@ -410,10 +383,8 @@ export default function CashPlan({ navigateTo }) {
 
       {/* Filter Bar */}
       <div style={{ display:"flex", gap:10, marginBottom:16, flexWrap:"wrap", alignItems:"center" }}>
-        <input
-          placeholder="Cari ID ATM / lokasi / wilayah..."
-          value={search}
-          onChange={e => { setSearch(e.target.value); setPage(0); }}
+        <input placeholder="Cari ID ATM / lokasi / wilayah..."
+          value={search} onChange={e => { setSearch(e.target.value); setPage(0); }}
           style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(99,179,237,0.15)", borderRadius:8, color:"#e2e8f0", padding:"8px 14px", fontSize:13, width:220, outline:"none" }}
         />
         {[
@@ -427,9 +398,7 @@ export default function CashPlan({ navigateTo }) {
         ))}
         <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8 }}>
           <span style={{ color:"#64748b", fontSize:12 }}>Denom default:</span>
-          <select
-            value={denomGlobal}
-            onChange={e => setDenomGlobal(Number(e.target.value))}
+          <select value={denomGlobal} onChange={e => setDenomGlobal(Number(e.target.value))}
             style={{ ...selectStyle, border:"1px solid rgba(167,139,250,0.3)", color:"#a78bfa" }}>
             {DENOM_OPTIONS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
           </select>
@@ -472,10 +441,8 @@ export default function CashPlan({ navigateTo }) {
                     { label:"Keterangan",     key:null },
                     { label:"Aksi",           key:null },
                   ].map((col, ci) => (
-                    <th
-                      key={ci}
-                      onClick={col.key ? () => toggleSort(col.key) : undefined}
-                      style={{ padding:"11px 12px", textAlign:"left", color:col.key && sort.key===col.key ? "#60a5fa" : "#64748b", fontWeight:600, fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", cursor:col.key?"pointer":"default", whiteSpace:"nowrap", userSelect:"none" }}>
+                    <th key={ci} onClick={col.key ? () => toggleSort(col.key) : undefined}
+                      style={{ padding:"11px 12px", textAlign:"left", color:col.key && sort.key===col.key?"#60a5fa":"#64748b", fontWeight:600, fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", cursor:col.key?"pointer":"default", whiteSpace:"nowrap", userSelect:"none" }}>
                       {col.label}
                       {col.key && sort.key===col.key && <span style={{ marginLeft:3, color:"#60a5fa" }}>{sort.dir>0?"↑":"↓"}</span>}
                     </th>
@@ -484,35 +451,23 @@ export default function CashPlan({ navigateTo }) {
               </thead>
               <tbody>
                 {paged.map((atm, i) => {
-                  const rowNo     = page * PAGE_SIZE + i + 1;
-                  const denom     = getDenom(atm.id_atm);
-                  const totalIsiV = jumlahIsi(atm.saldo, atm.limit);
-                  const ket       = getKet(atm.id_atm);
+                  const rowNo      = page * PAGE_SIZE + i + 1;
+                  const denom      = getDenom(atm.id_atm);
+                  const totalIsiV  = jumlahIsi(atm.saldo, atm.limit);
+                  const ket        = getKet(atm.id_atm);
                   const statusDone = atm.status_done || null;
                   const isDone     = statusDone === "SELESAI" || statusDone === "BATAL";
                   const isSelected = selectedRows.includes(atm.id_atm);
                   const ss         = statusDone === "SELESAI" ? SELESAI_STYLE : statusDone === "BATAL" ? BATAL_STYLE : PROSES_STYLE;
-                  const rowBg      = isSelected
-                    ? "rgba(59,130,246,0.08)"
-                    : isDone
-                      ? "rgba(0,229,160,0.02)"
-                      : (atm.status || atm.status_awal) === "BONGKAR"
-                        ? "rgba(255,59,92,0.025)"
-                        : "transparent";
+                  const rowBg      = isSelected ? "rgba(59,130,246,0.08)" : isDone ? "rgba(0,229,160,0.02)" : (atm.status||atm.status_awal)==="BONGKAR" ? "rgba(255,59,92,0.025)" : "transparent";
 
                   return (
-                    <tr
-                      key={atm.id_atm}
+                    <tr key={atm.id_atm}
                       style={{ background:rowBg, borderBottom:isSelected?"1px solid rgba(59,130,246,0.15)":"1px solid rgba(99,179,237,0.05)", transition:"all 0.1s" }}
                       onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background="rgba(59,130,246,0.04)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background=rowBg; }}
-                    >
-                      <td style={{ padding:"8px 14px" }}>
-                        <Checkbox checked={isSelected} onChange={() => toggleSelect(atm.id_atm)} />
-                      </td>
+                      onMouseLeave={e => { e.currentTarget.style.background=rowBg; }}>
+                      <td style={{ padding:"8px 14px" }}><Checkbox checked={isSelected} onChange={() => toggleSelect(atm.id_atm)} /></td>
                       <td style={td("#64748b")}>{rowNo}</td>
-
-                      {/* Tgl Masuk */}
                       <td style={{ padding:"8px 12px" }}>
                         {atm.added_at ? (
                           <div>
@@ -523,19 +478,12 @@ export default function CashPlan({ navigateTo }) {
                               {new Date(atm.added_at).toLocaleTimeString("id-ID", { hour:"2-digit", minute:"2-digit" })}
                             </div>
                           </div>
-                        ) : (
-                          <span style={{ color:"#374151", fontSize:11 }}>—</span>
-                        )}
+                        ) : <span style={{ color:"#374151", fontSize:11 }}>—</span>}
                       </td>
-
-                      {/* ID ATM */}
                       <td style={{ padding:"8px 12px" }}>
                         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                          <span
-                            style={{ color:"#e2e8f0", fontFamily:"monospace", fontWeight:700, cursor:"pointer", textDecoration:"underline dotted" }}
-                            onClick={() => navigateTo?.("history", atm.id_atm)}>
-                            {atm.id_atm}
-                          </span>
+                          <span style={{ color:"#e2e8f0", fontFamily:"monospace", fontWeight:700, cursor:"pointer", textDecoration:"underline dotted" }}
+                            onClick={() => navigateTo?.("history", atm.id_atm)}>{atm.id_atm}</span>
                           {isDone && (
                             <span style={{ fontSize:8, padding:"1px 5px", borderRadius:3, background:ss.bg, color:ss.color, border:`1px solid ${ss.border}` }}>
                               {statusDone}
@@ -543,43 +491,28 @@ export default function CashPlan({ navigateTo }) {
                           )}
                         </div>
                       </td>
-
                       <td style={{ ...td("#94a3b8"), maxWidth:160, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={atm.lokasi}>{atm.lokasi||"—"}</td>
                       <td style={td("#94a3b8")}>{atm.wilayah||"—"}</td>
-
-                      {/* Tipe */}
                       <td style={{ padding:"8px 12px" }}>
                         <span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4, background:atm.tipe==="CRM"?"rgba(167,139,250,0.15)":"rgba(96,165,250,0.12)", color:atm.tipe==="CRM"?"#a78bfa":"#60a5fa", border:atm.tipe==="CRM"?"1px solid rgba(167,139,250,0.3)":"1px solid rgba(96,165,250,0.25)" }}>
                           {atm.tipe||"—"}
                         </span>
                       </td>
-
-                      {/* Denom */}
                       <td style={{ padding:"8px 10px" }}>
-                        <select
-                          value={denom}
-                          onChange={e => setOverride(atm.id_atm, "denom", Number(e.target.value))}
+                        <select value={denom} onChange={e => setOverride(atm.id_atm, "denom", Number(e.target.value))}
                           style={{ background:"#0d1228", border:"1px solid rgba(167,139,250,0.25)", borderRadius:6, color:"#a78bfa", padding:"4px 6px", fontSize:11, cursor:"pointer", outline:"none" }}>
                           {DENOM_OPTIONS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
                         </select>
                       </td>
-
-                      {/* Total Isi */}
                       <td style={{ padding:"8px 12px" }}>
                         <span style={{ color:"#f59e0b", fontWeight:600 }}>{fmtRp(totalIsiV)}</span>
                         <div style={{ color:"#64748b", fontSize:10, marginTop:1 }}>target: {fmtRp(atm.limit)}</div>
                       </td>
-
-                      {/* Lembar */}
                       <td style={td("#94a3b8")}>{totalIsiV > 0 ? fmtLembar(totalIsiV, denom) : "—"}</td>
-
-                      {/* Saldo */}
                       <td style={{ padding:"8px 12px" }}>
                         <div style={{ color:"#e2e8f0", fontWeight:600 }}>{fmtRp(atm.saldo)}</div>
                         <SaldoBar pct={atm.pct_saldo} />
                       </td>
-
-                      {/* Status */}
                       <td style={{ padding:"8px 12px" }}>
                         {isDone ? (
                           <div style={{ fontSize:11, fontWeight:700, padding:"4px 12px", borderRadius:6, ...ss, textAlign:"center", border:`1px solid ${ss.border}`, display:"inline-block" }}>
@@ -587,37 +520,26 @@ export default function CashPlan({ navigateTo }) {
                           </div>
                         ) : (
                           <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                            <div style={{ fontSize:10, fontWeight:700, padding:"3px 10px", borderRadius:5, ...PROSES_STYLE, border:`1px solid ${PROSES_STYLE.border}`, textAlign:"center" }}>
-                              ◎ Proses
-                            </div>
+                            <div style={{ fontSize:10, fontWeight:700, padding:"3px 10px", borderRadius:5, ...PROSES_STYLE, border:`1px solid ${PROSES_STYLE.border}`, textAlign:"center" }}>◎ Proses</div>
                             <div style={{ display:"flex", gap:4 }}>
-                              <button
-                                onClick={() => handleUpdateStatus(atm, "SELESAI")}
+                              <button onClick={() => handleUpdateStatus(atm, "SELESAI")}
                                 style={{ flex:1, fontSize:10, fontWeight:700, padding:"3px 6px", borderRadius:5, background:"rgba(0,229,160,0.1)", color:"#00e5a0", border:"1px solid rgba(0,229,160,0.3)", cursor:"pointer" }}>✔</button>
-                              <button
-                                onClick={() => handleUpdateStatus(atm, "BATAL")}
+                              <button onClick={() => handleUpdateStatus(atm, "BATAL")}
                                 style={{ flex:1, fontSize:10, fontWeight:700, padding:"3px 6px", borderRadius:5, background:"rgba(148,163,184,0.1)", color:"#94a3b8", border:"1px solid rgba(148,163,184,0.25)", cursor:"pointer" }}>✕</button>
                             </div>
                             <div style={{ color:"#374151", fontSize:9, textAlign:"center" }}>✔ selesai · ✕ batal</div>
                           </div>
                         )}
                       </td>
-
-                      {/* Keterangan */}
                       <td style={{ padding:"8px 10px" }}>
-                        <select
-                          value={ket}
-                          onChange={e => setOverride(atm.id_atm, "keterangan", e.target.value)}
+                        <select value={ket} onChange={e => setOverride(atm.id_atm, "keterangan", e.target.value)}
                           style={{ background:"#0d1228", border:"1px solid rgba(99,179,237,0.15)", borderRadius:6, color:ket?"#e2e8f0":"#475569", padding:"5px 8px", fontSize:11, width:150, outline:"none", cursor:"pointer" }}>
                           <option value="">— pilih keterangan —</option>
                           {KET_OPTIONS.map(k => <option key={k} value={k}>{k}</option>)}
                         </select>
                       </td>
-
-                      {/* Aksi */}
                       <td style={{ padding:"8px 10px" }}>
-                        <button
-                          onClick={() => handleRemove(atm)}
+                        <button onClick={() => handleRemove(atm)}
                           style={{ background:"rgba(255,59,92,0.08)", border:"1px solid rgba(255,59,92,0.25)", borderRadius:6, color:"#ff3b5c", padding:"4px 10px", fontSize:11, cursor:"pointer", fontWeight:600, whiteSpace:"nowrap" }}>
                           ✕ Remove
                         </button>
@@ -628,7 +550,6 @@ export default function CashPlan({ navigateTo }) {
               </tbody>
             </table>
           </div>
-
           {maxPage > 1 && (
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 20px", borderTop:"1px solid rgba(99,179,237,0.08)" }}>
               <span style={{ color:"#64748b", fontSize:12 }}>Halaman {page+1} dari {maxPage} · {filtered.length} ATM</span>
@@ -666,19 +587,13 @@ export default function CashPlan({ navigateTo }) {
             </div>
             <div style={{ color:"#94a3b8", fontSize:13, marginBottom:20 }}>
               Pilih wilayah. File akan didownload ke browser, lalu pindahkan manual ke:
-              <div style={{ marginTop:8, padding:"6px 12px", background:"rgba(167,139,250,0.08)", border:"1px solid rgba(167,139,250,0.25)", borderRadius:6, color:"#a78bfa", fontFamily:"monospace", fontSize:12 }}>
-                {SAVE_PATH}
-              </div>
+              <div style={{ marginTop:8, padding:"6px 12px", background:"rgba(167,139,250,0.08)", border:"1px solid rgba(167,139,250,0.25)", borderRadius:6, color:"#a78bfa", fontFamily:"monospace", fontSize:12 }}>{SAVE_PATH}</div>
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               {["Semua","PEKANBARU","BATAM","DUMAI","Tanjung Pinang"].map(w => {
-                const cnt = w === "Semua"
-                  ? enrichedForCsv.length
-                  : enrichedForCsv.filter(d => d.wilayah?.toUpperCase() === w.toUpperCase()).length;
+                const cnt = w === "Semua" ? enrichedForCsv.length : enrichedForCsv.filter(d => d.wilayah?.toUpperCase() === w.toUpperCase()).length;
                 return (
-                  <button
-                    key={w}
-                    onClick={() => downloadCSVPerWilayah(enrichedForCsv, w, filterBulan, nowTahun())}
+                  <button key={w} onClick={() => downloadCSVPerWilayah(enrichedForCsv, w, filterBulan, nowTahun())}
                     disabled={cnt === 0}
                     style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 16px", borderRadius:8, background:cnt===0?"rgba(255,255,255,0.02)":"rgba(167,139,250,0.08)", border:`1px solid ${cnt===0?"rgba(99,179,237,0.1)":"rgba(167,139,250,0.25)"}`, color:cnt===0?"#374151":"#a78bfa", cursor:cnt===0?"not-allowed":"pointer", fontSize:13, fontWeight:600 }}>
                     <span>📥 {w === "Semua" ? "Semua Wilayah" : w}</span>
@@ -701,28 +616,18 @@ export default function CashPlan({ navigateTo }) {
               <button onClick={() => { setShowAddModal(false); setAddError(""); setAddIdInput(""); }} style={{ background:"none", border:"none", color:"#64748b", fontSize:20, cursor:"pointer" }}>×</button>
             </div>
             <label style={{ color:"#94a3b8", fontSize:12, display:"block", marginBottom:6 }}>ID ATM</label>
-            <input
-              value={addIdInput}
-              onChange={e => { setAddIdInput(e.target.value.toUpperCase()); setAddError(""); }}
+            <input value={addIdInput} onChange={e => { setAddIdInput(e.target.value.toUpperCase()); setAddError(""); }}
               onKeyDown={e => e.key === "Enter" && handleAddManual()}
-              placeholder="Contoh: CRM10101 atau EMV82901"
-              autoFocus
+              placeholder="Contoh: CRM10101 atau EMV82901" autoFocus
               style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(99,179,237,0.2)", borderRadius:8, color:"#e2e8f0", padding:"10px 14px", fontSize:14, width:"100%", outline:"none", boxSizing:"border-box", fontFamily:"monospace" }}
             />
-            {addError && (
-              <div style={{ marginTop:10, padding:"8px 12px", background:"rgba(255,59,92,0.08)", border:"1px solid rgba(255,59,92,0.25)", borderRadius:8, color:"#ff3b5c", fontSize:12 }}>
-                ⚠ {addError}
-              </div>
-            )}
+            {addError && <div style={{ marginTop:10, padding:"8px 12px", background:"rgba(255,59,92,0.08)", border:"1px solid rgba(255,59,92,0.25)", borderRadius:8, color:"#ff3b5c", fontSize:12 }}>⚠ {addError}</div>}
             <div style={{ display:"flex", gap:10, marginTop:20 }}>
-              <button
-                onClick={handleAddManual}
-                disabled={addLoading || !addIdInput.trim()}
+              <button onClick={handleAddManual} disabled={addLoading || !addIdInput.trim()}
                 style={{ flex:1, background:addLoading||!addIdInput.trim()?"rgba(0,229,160,0.05)":"rgba(0,229,160,0.15)", border:"1px solid rgba(0,229,160,0.3)", borderRadius:8, color:"#00e5a0", padding:"10px 0", fontSize:13, fontWeight:700, cursor:addLoading||!addIdInput.trim()?"not-allowed":"pointer" }}>
                 {addLoading ? "Menyimpan..." : "+ Tambahkan"}
               </button>
-              <button
-                onClick={() => { setShowAddModal(false); setAddError(""); setAddIdInput(""); }}
+              <button onClick={() => { setShowAddModal(false); setAddError(""); setAddIdInput(""); }}
                 style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(99,179,237,0.12)", borderRadius:8, color:"#64748b", padding:"10px 18px", fontSize:13, cursor:"pointer" }}>
                 Batal
               </button>
@@ -734,22 +639,14 @@ export default function CashPlan({ navigateTo }) {
   );
 }
 
-// ── Sub-components ─────────────────────────────────────────
 function Checkbox({ checked, indeterminate, onChange }) {
   return (
-    <div
-      onClick={onChange}
-      style={{ width:16, height:16, borderRadius:4, cursor:"pointer", border:checked||indeterminate?"2px solid #3b82f6":"2px solid rgba(99,179,237,0.3)", background:checked?"#3b82f6":indeterminate?"rgba(59,130,246,0.3)":"transparent", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.15s" }}>
-      {checked && (
-        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-          <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      )}
+    <div onClick={onChange} style={{ width:16, height:16, borderRadius:4, cursor:"pointer", border:checked||indeterminate?"2px solid #3b82f6":"2px solid rgba(99,179,237,0.3)", background:checked?"#3b82f6":indeterminate?"rgba(59,130,246,0.3)":"transparent", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.15s" }}>
+      {checked && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
       {indeterminate && !checked && <div style={{ width:8, height:2, background:"#60a5fa", borderRadius:1 }} />}
     </div>
   );
 }
-
 function SaldoBar({ pct }) {
   const color = pct <= 20 ? "#ff3b5c" : pct <= 30 ? "#f59e0b" : "#22c55e";
   return (
@@ -761,7 +658,6 @@ function SaldoBar({ pct }) {
     </div>
   );
 }
-
 function EmptyState() {
   return (
     <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:280, gap:12, background:"rgba(0,229,160,0.03)", border:"1px solid rgba(0,229,160,0.1)", borderRadius:12 }}>
@@ -771,7 +667,6 @@ function EmptyState() {
     </div>
   );
 }
-
 function Spinner() {
   return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"60vh", flexDirection:"column", gap:12, color:"#64748b" }}>
@@ -781,13 +676,9 @@ function Spinner() {
     </div>
   );
 }
-
 function PageBtn({ children, onClick, disabled }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{ background:disabled?"transparent":"rgba(59,130,246,0.1)", border:"1px solid rgba(59,130,246,0.2)", borderRadius:6, color:disabled?"#374151":"#60a5fa", padding:"5px 12px", fontSize:12, cursor:disabled?"default":"pointer" }}>
+    <button onClick={onClick} disabled={disabled} style={{ background:disabled?"transparent":"rgba(59,130,246,0.1)", border:"1px solid rgba(59,130,246,0.2)", borderRadius:6, color:disabled?"#374151":"#60a5fa", padding:"5px 12px", fontSize:12, cursor:disabled?"default":"pointer" }}>
       {children}
     </button>
   );

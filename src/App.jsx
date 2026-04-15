@@ -1,4 +1,4 @@
-// src/App.jsx — MySQL version (cashplan state tidak lagi di React state)
+// src/App.jsx
 import { useState } from "react";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
@@ -12,28 +12,47 @@ import CashPlan from "./pages/CashPlan";
 import RekapReplacement from "./pages/Rekapreplacement";
 
 export default function App() {
-  const [page, setPage]               = useState("dashboard");
+  const [page,       setPage]       = useState("dashboard");
   const [selectedAtm, setSelectedAtm] = useState(null);
+  const [collapsed,  setCollapsed]  = useState(false);
 
   const navigateTo = (p, atmId = null) => {
     setPage(p);
     if (atmId) setSelectedAtm(atmId);
   };
 
+  const sidebarWidth = collapsed ? 64 : 240;
+
   return (
     <div style={{
-      display: "flex", minHeight: "100vh",
-      background: "#0a0f1e", fontFamily: "'IBM Plex Sans', sans-serif",
+      display:     "flex",
+      minHeight:   "100vh",
+      background:  "#0a0f1e",
+      fontFamily:  "'IBM Plex Sans', sans-serif",
     }}>
-      <Sidebar page={page} setPage={navigateTo} />
-      <main style={{ flex: 1, marginLeft: 240, padding: "32px", overflowY: "auto", minHeight: "100vh" }}>
+      <Sidebar
+        page={page}
+        setPage={navigateTo}
+        collapsed={collapsed}
+        setCollapsed={setCollapsed}
+      />
+
+      <main
+        style={{
+          flex:       1,
+          marginLeft: sidebarWidth,
+          padding:    "32px",
+          overflowY:  "auto",
+          minHeight:  "100vh",
+          transition: "margin-left 0.3s cubic-bezier(.4,0,.2,1)",
+        }}
+      >
         {page === "dashboard"        && <Dashboard navigateTo={navigateTo} />}
         {page === "monitoring"       && <Monitoring navigateTo={navigateTo} />}
         {page === "alerts"           && <Alerts navigateTo={navigateTo} />}
         {page === "history"          && (
           <History
             atmId={selectedAtm}
-            // onAddCashPlan kini langsung memanggil /api/cashplan dari History
             navigateTo={navigateTo}
           />
         )}

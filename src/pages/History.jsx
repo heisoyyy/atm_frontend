@@ -429,6 +429,7 @@ function PredCard({ pred, saldoLatest, limit, atmSepi, isLajuTinggi, alreadyAdde
         est_jam:      atmInfo.est_jam   || null,
         skor_urgensi: atmInfo.skor_urgensi || 0,
         added_by:     "user",
+        denom_options: predData?.denom_options || "100000",
       });
       onAdded?.(atmInfo.id_atm);
     } catch (e) {

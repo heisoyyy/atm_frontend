@@ -7,7 +7,7 @@ import Alerts from "./pages/Alerts";
 import History from "./pages/History";
 import Upload from "./pages/Upload";
 import Training from "./pages/Training";
-import Wilayah from "./pages/Wilayah";
+import Data from "./pages/Data";
 import CashPlan from "./pages/CashPlan";
 import RekapReplacement from "./pages/Rekapreplacement";
 
@@ -56,7 +56,7 @@ export default function App() {
             navigateTo={navigateTo}
           />
         )}
-        {page === "wilayah"          && <Wilayah navigateTo={navigateTo} />}
+        {page === "data"          && <Data navigateTo={navigateTo} />}
         {page === "cashplan"         && <CashPlan navigateTo={navigateTo} />}
         {page === "rekapreplacement" && <RekapReplacement navigateTo={navigateTo} />}
         {page === "upload"           && <Upload />}

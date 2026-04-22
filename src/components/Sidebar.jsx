@@ -3,16 +3,8 @@ import { useState } from "react";
 
 const NAV = [
   { id: "dashboard", label: "Dashboard", icon: "⬡" },
-  {
-    id: "group-monitoring",
-    label: "Monitoring",
-    icon: "◈",
-    children: [
-      { id: "monitoring", label: "Monitoring" },
-      { id: "alerts",     label: "Alerts", hasAlert: true },
-      { id: "wilayah",    label: "Wilayah" },
-    ],
-  },
+  { id: "data",          label: "Data ATM",          icon: "◷" },
+  { id: "monitoring",       label: "Monitoring",          icon: "◈" },
   { id: "history",          label: "Historis",          icon: "◷" },
   { id: "cashplan",         label: "Cash Plan",          icon: "◳" },
   { id: "rekapreplacement", label: "Rekap Replacement",  icon: "◳" },

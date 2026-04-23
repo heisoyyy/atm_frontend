@@ -793,16 +793,44 @@ function SaldoChart({ data, limit }) {
 
 // ── PredictionFutureChart ──────────────────────────────────
 function PredictionFutureChart({ currentSaldo, tarikPerJam, estJamHabis, limit }) {
+  // ── Guard: sanitize semua input ──────────────────────────
+  const safeSaldo   = (isFinite(currentSaldo) && currentSaldo > 0) ? currentSaldo : 0;
+  const safeTarik   = (isFinite(tarikPerJam)  && tarikPerJam  > 0) ? tarikPerJam  : 0;
+  const safeLimit   = (isFinite(limit)        && limit        > 0) ? limit        : 0;
+
+  // Jangan render kalau tidak ada data bermakna
+  if (safeSaldo === 0 && safeLimit === 0) {
+    return (
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "center",
+        height: 200, color: "#64748b", fontSize: 13,
+        border: "1px dashed rgba(99,179,237,0.1)", borderRadius: 8,
+      }}>
+        Data saldo tidak tersedia untuk chart prediksi
+      </div>
+    );
+  }
+
   const W = 920, H = 260, PAD = { t: 20, b: 50, l: 100, r: 30 };
   const w = W - PAD.l - PAD.r, h = H - PAD.t - PAD.b;
+
   const hours    = Array.from({ length: 25 }, (_, i) => i);
-  const maxSaldo = limit || currentSaldo * 1.3;
-  const getSaldo = hr => Math.max(0, currentSaldo - hr * tarikPerJam);
-  const xs       = i => PAD.l + (i / 24) * w;
-  const ys       = v => PAD.t + h - (v / maxSaldo) * h;
+  // ── maxSaldo: pakai limit jika ada, fallback ke saldo * 1.3, minimum 1 ──
+  const maxSaldo = safeLimit > 0 ? safeLimit
+                 : safeSaldo > 0 ? safeSaldo * 1.3
+                 : 1; // hindari division by zero
+
+  const getSaldo = (hr) => Math.max(0, safeSaldo - hr * safeTarik);
+  const xs       = (i) => PAD.l + (i / 24) * w;
+  const ys       = (v) => {
+    const val = PAD.t + h - (v / maxSaldo) * h;
+    return isFinite(val) ? val : PAD.t + h; // fallback ke bottom
+  };
+
   const points   = hours.map(i => `${xs(i)},${ys(getSaldo(i))}`).join(" ");
   const awasY    = ys(maxSaldo * (THR_AWAS / 100));
   const bongkarY = ys(maxSaldo * (THR_BONGKAR / 100));
+  const startY   = ys(safeSaldo);
 
   return (
     <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
@@ -812,31 +840,48 @@ function PredictionFutureChart({ currentSaldo, tarikPerJam, estJamHabis, limit }
           <stop offset="100%" stopColor="#a78bfa" stopOpacity="0" />
         </linearGradient>
       </defs>
+
       {[0, 0.25, 0.5, 0.75, 1].map((p, idx) => {
         const y = PAD.t + h * (1 - p);
         return (
           <g key={idx}>
-            <line x1={PAD.l} x2={PAD.l + w} y1={y} y2={y} stroke="rgba(99,179,237,0.08)" strokeDasharray="4,4" />
-            <text x={PAD.l - 12} y={y + 4} fontSize="10" fill="#64748b" textAnchor="end">{fmt.rupiah(Math.round(p * maxSaldo))}</text>
+            <line x1={PAD.l} x2={PAD.l + w} y1={y} y2={y}
+              stroke="rgba(99,179,237,0.08)" strokeDasharray="4,4" />
+            <text x={PAD.l - 12} y={y + 4} fontSize="10" fill="#64748b" textAnchor="end">
+              {fmt.rupiah(Math.round(p * maxSaldo))}
+            </text>
           </g>
         );
       })}
-      <rect x={PAD.l} y={awasY} width={w} height={bongkarY - awasY} fill="rgba(239,159,39,0.05)" />
-      <rect x={PAD.l} y={bongkarY} width={w} height={h - (bongkarY - PAD.t)} fill="rgba(226,75,74,0.08)" />
-      <line x1={PAD.l} x2={PAD.l + w} y1={awasY} y2={awasY} stroke="rgba(239,159,39,0.5)" strokeWidth="1" strokeDasharray="5,3" />
-      <text x={PAD.l + w + 4} y={awasY + 4} fontSize="9" fill="#EF9F27">{THR_AWAS}%</text>
+
+      <rect x={PAD.l} y={awasY}    width={w} height={Math.max(0, bongkarY - awasY)}          fill="rgba(239,159,39,0.05)" />
+      <rect x={PAD.l} y={bongkarY} width={w} height={Math.max(0, h - (bongkarY - PAD.t))}    fill="rgba(226,75,74,0.08)" />
+
+      <line x1={PAD.l} x2={PAD.l + w} y1={awasY}    y2={awasY}    stroke="rgba(239,159,39,0.5)" strokeWidth="1"   strokeDasharray="5,3" />
+      <text x={PAD.l + w + 4} y={awasY + 4}    fontSize="9" fill="#EF9F27">{THR_AWAS}%</text>
       <line x1={PAD.l} x2={PAD.l + w} y1={bongkarY} y2={bongkarY} stroke="rgba(226,75,74,0.5)" strokeWidth="1.5" strokeDasharray="5,3" />
       <text x={PAD.l + w + 4} y={bongkarY + 4} fontSize="9" fill="#E24B4A">{THR_BONGKAR}%</text>
-      <path d={`M ${PAD.l},${ys(currentSaldo)} L ${points} L ${xs(24)},${PAD.t + h} L ${PAD.l},${PAD.t + h} Z`} fill="url(#futureGrad)" />
-      <polyline points={points} fill="none" stroke="#a78bfa" strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx={xs(0)} cy={ys(currentSaldo)} r="7" fill="#60a5fa" stroke="#0f172a" strokeWidth="2" />
+
+      <path
+        d={`M ${PAD.l},${startY} L ${points} L ${xs(24)},${PAD.t + h} L ${PAD.l},${PAD.t + h} Z`}
+        fill="url(#futureGrad)"
+      />
+      <polyline points={points} fill="none" stroke="#a78bfa" strokeWidth="3.5"
+        strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={xs(0)} cy={startY} r="7" fill="#60a5fa" stroke="#0f172a" strokeWidth="2" />
+
       {[0, 4, 8, 12, 16, 20, 24].map(i => (
-        <text key={i} x={xs(i)} y={H - 12} fontSize="11" fill="#64748b" textAnchor="middle">+{i}j</text>
+        <text key={i} x={xs(i)} y={H - 12} fontSize="11" fill="#64748b" textAnchor="middle">
+          +{i}j
+        </text>
       ))}
-      {estJamHabis && estJamHabis <= 24 && (
+
+      {estJamHabis != null && isFinite(estJamHabis) && estJamHabis > 0 && estJamHabis <= 24 && (
         <>
-          <line x1={xs(estJamHabis)} x2={xs(estJamHabis)} y1={PAD.t} y2={PAD.t + h} stroke="#ff3b5c" strokeWidth="2.5" strokeDasharray="5,3" />
-          <text x={xs(estJamHabis)} y={PAD.t - 10} fontSize="12" fill="#ff3b5c" fontWeight="700" textAnchor="middle">HABIS</text>
+          <line x1={xs(estJamHabis)} x2={xs(estJamHabis)} y1={PAD.t} y2={PAD.t + h}
+            stroke="#ff3b5c" strokeWidth="2.5" strokeDasharray="5,3" />
+          <text x={xs(estJamHabis)} y={PAD.t - 10} fontSize="12" fill="#ff3b5c"
+            fontWeight="700" textAnchor="middle">HABIS</text>
         </>
       )}
     </svg>

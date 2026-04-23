@@ -25,7 +25,19 @@ const BULAN_ID      = ["Januari","Februari","Maret","April","Mei","Juni","Juli",
 const nowBulan      = () => BULAN_ID[new Date().getMonth()];
 const nowTahun      = () => new Date().getFullYear();
 const fmtRp         = v => v == null || isNaN(v) ? "—" : "Rp " + Number(v).toLocaleString("id-ID");
-const fmtLembar     = (total, denom) => !total || !denom ? "—" : Math.ceil(total / denom).toLocaleString("id-ID") + " lembar";
+const fmtLembar = (total, denomStr) => {
+  if (!total || !denomStr) return "—";
+  const parts = String(denomStr).split(",").map(Number).filter(v => v > 0);
+  if (!parts.length) return "—";
+  const denomCalc = Math.min(...parts);
+  const lembar = Math.ceil(total / denomCalc);
+  if (parts.length > 1) {
+    const lembarMax = Math.ceil(total / Math.min(...parts));
+    const lembarMin = Math.ceil(total / Math.max(...parts));
+    return `${lembarMin.toLocaleString("id-ID")}–${lembarMax.toLocaleString("id-ID")} lembar`;
+  }
+  return lembar.toLocaleString("id-ID") + " lembar";
+};
 const jumlahIsiCalc = (saldo, limit) => Math.max(0, (limit || 0) - (saldo || 0));
 
 const PROSES_STYLE  = { color: "#f59e0b", bg: "rgba(245,158,11,0.12)",  border: "rgba(245,158,11,0.3)"  };
@@ -34,21 +46,53 @@ const BATAL_STYLE   = { color: "#94a3b8", bg: "rgba(148,163,184,0.1)",  border: 
 const PENDING_STYLE = { color: "#60a5fa", bg: "rgba(96,165,250,0.08)",  border: "rgba(96,165,250,0.25)" };
 
 // ─── DENOM HELPERS ─────────────────────────────────────────────────────────────
+function parseDenomValue(raw) {
+  if (!raw) return [100_000];
+  const str = String(raw).trim();
+  const parts = str.split(/\s*[,&\/]\s*/).map(s => s.trim()).filter(Boolean);
+  const results = [];
+  for (const p of parts) {
+    const num = parseInt(p.replace(/\./g, ""), 10);
+    if (isNaN(num) || num <= 0) continue;
+    const val = num <= 1_000 ? num * 1_000 : num;
+    if (!results.includes(val)) results.push(val);
+  }
+  results.sort((a, b) => a - b);
+  return results.length > 0 ? results : [100_000];
+}
+
 function getDenomOptionsForAtm(atm) {
   const raw  = atm?.denom_options || "100000";
-  const vals = String(raw).split(",").map(v => parseInt(v.trim(), 10)).filter(v => !isNaN(v) && v > 0);
-  const opts = ALL_DENOM_OPTIONS.filter(o => vals.includes(o.value));
-  return opts.length > 0 ? opts : [{ label: "Rp 100.000", value: 100_000 }];
+  const vals = parseDenomValue(raw);
+
+  const opts = vals.map(v => ({
+    label: `Rp ${Number(v).toLocaleString("id-ID")}`,
+    value: String(v),
+  }));
+
+  if (vals.length > 1) {
+    const valsDesc = [...vals].sort((a, b) => b - a);
+    opts.push({
+      label: vals.map(v => `Rp ${Number(v).toLocaleString("id-ID")}`).join(" & "),
+      value: valsDesc.join(","),
+    });
+  }
+
+  return opts;
 }
+
 function getDefaultDenomForAtm(atm) {
   const opts = getDenomOptionsForAtm(atm);
-  return opts[opts.length - 1]?.value ?? 100_000;
+  const nonMix = opts.filter(o => !o.value.includes(","));
+  return nonMix[nonMix.length - 1]?.value ?? "100000";
 }
+
 function getDenomLabel(atm) {
   const opts = getDenomOptionsForAtm(atm);
   if (!opts.length) return "—";
-  if (opts.length === 1) return opts[0].label;
-  return opts.map(o => o.label.replace("Rp ", "")).join(" & ");
+  const nonMix = opts.filter(o => !o.value.includes(","));
+  if (nonMix.length === 1) return nonMix[0].label;
+  return nonMix.map(o => o.label).join(" & ");
 }
 
 // ─── EXPORT EXCEL ──────────────────────────────────────────────────────────────
@@ -89,12 +133,11 @@ function exportExcel(data, wilayah, bulan, tahun, getDenomFn, getKetFn) {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function CashPlan({ navigateTo }) {
-  const [cashplanItems, setCashplanItems] = useState([]);  // hanya PENDING dari DB
-  const [notifItems,    setNotifItems]    = useState([]);  // dari /api/notif-cashplan
+  const [cashplanItems, setCashplanItems] = useState([]);
+  const [notifItems,    setNotifItems]    = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [genAt,         setGenAt]         = useState(null);
 
-  // Filter
   const [filterWilayah, setFilterWilayah] = useState("Semua");
   const [filterStatus,  setFilterStatus]  = useState("Semua");
   const [filterBulan,   setFilterBulan]   = useState(nowBulan());
@@ -102,31 +145,25 @@ export default function CashPlan({ navigateTo }) {
   const [search,        setSearch]        = useState("");
   const [showDlModal,   setShowDlModal]   = useState(false);
 
-  // Per-row overrides denom & keterangan
   const [overrides, setOverrides] = useState({});
   const setOverride = (id, field, val) =>
     setOverrides(prev => ({ ...prev, [id]: { ...prev[id], [field]: val } }));
   const getDenom = (id, atm) => overrides[id]?.denom !== undefined ? overrides[id].denom : getDefaultDenomForAtm(atm);
   const getKet   = id => overrides[id]?.keterangan ?? "";
 
-  // Table
   const [sort,         setSort]         = useState({ key: "skor_urgensi", dir: -1 });
   const [page,         setPage]         = useState(0);
   const [selectedRows, setSelectedRows] = useState([]);
   const PAGE_SIZE = 15;
 
-  // Tambah Manual
   const [showAddModal, setShowAddModal] = useState(false);
   const [addIdInput,   setAddIdInput]   = useState("");
   const [addLoading,   setAddLoading]   = useState(false);
   const [addError,     setAddError]     = useState("");
 
-  // Notif bell
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const notifRef = useRef(null);
 
-  // Validasi / konfirmasi modal
-  // Setiap item di validasiList bisa punya _notif_id jika asalnya dari notif
   const [validasiList,      setValidasiList]      = useState([]);
   const [showValidasiModal, setShowValidasiModal] = useState(false);
   const [validasiLoading,   setValidasiLoading]   = useState(false);
@@ -141,15 +178,12 @@ export default function CashPlan({ navigateTo }) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. CashPlan PENDING saja — DONE/REMOVED sudah pindah ke Rekap
       const cpResp = await getCashplanAPI("PENDING");
       setCashplanItems(cpResp.data || []);
 
-      // 2. Notif dari backend (prediksi sistem yang belum diputuskan)
       const notifResp = await getNotifCashplanAPI();
       setNotifItems(notifResp.data || []);
 
-      // genAt dari prediksi
       try {
         const predResp = await apiFetch("/api/predictions?limit=1");
         setGenAt(predResp.generated_at || null);
@@ -196,7 +230,6 @@ export default function CashPlan({ navigateTo }) {
   };
 
   // ─── BUKA VALIDASI MODAL ────────────────────────────────────────────────────
-  // atmList: array item, masing-masing boleh punya _notif_id (jika dari bell)
   const openValidasiModal = (atmList) => {
     setValidasiList(atmList);
     const init = {};
@@ -218,12 +251,8 @@ export default function CashPlan({ navigateTo }) {
         validasiList.map(async atm => {
           try {
             if (atm._notif_id) {
-              // Dari bell notif → approve via notif endpoint
               await approveNotifAPI(atm._notif_id);
-              // Update denom & keterangan setelah approve (cashplan baru dibuat)
-              // denom bisa di-patch via cashplan jika perlu
             } else {
-              // Manual / history → langsung addCashplanAPI
               await addCashplanAPI({
                 id_atm:        atm.id_atm,
                 lokasi:        atm.lokasi,
@@ -262,9 +291,7 @@ export default function CashPlan({ navigateTo }) {
     }
   };
 
-  // ─── DATA: tabel hanya PENDING ──────────────────────────────────────────────
-  // cashplanItems = PENDING saja dari backend
-  // Tidak ada merge dengan DONE/REMOVED — mereka sudah di Rekap
+  // ─── DATA ───────────────────────────────────────────────────────────────────
   const tableData = useMemo(() => {
     return cashplanItems.map(c => ({
       ...c,
@@ -305,7 +332,6 @@ export default function CashPlan({ navigateTo }) {
   const isSomePage = paged.some(d => selectedRows.includes(d.id_atm));
 
   // ─── UPDATE STATUS ──────────────────────────────────────────────────────────
-  // Setelah SELESAI/BATAL → row hilang dari cashplan (backend ubah status, frontend fetchData ulang)
   const handleUpdateStatus = async (atm, newStatus) => {
     if (!window.confirm(`Tandai ATM ${atm.id_atm} sebagai ${newStatus}?`)) return;
 
@@ -324,7 +350,6 @@ export default function CashPlan({ navigateTo }) {
         newStatus === "SELESAI" ? "" : getKet(atm.id_atm),
         getDenom(atm.id_atm, atm),
       );
-      // Row langsung hilang dari tabel (status bukan PENDING lagi)
       alert(newStatus === "SELESAI"
         ? `✅ ATM ${atm.id_atm} ditandai Selesai — data masuk ke Rekap Replacement.`
         : `🚫 ATM ${atm.id_atm} dibatalkan — data masuk ke Rekap Replacement.`
@@ -333,8 +358,7 @@ export default function CashPlan({ navigateTo }) {
     } catch (e) { alert("Gagal update status: " + e.message); }
   };
 
-  // ─── REMOVE (✕ Remove) ──────────────────────────────────────────────────────
-  // Remove = data salah input → status_done='REMOVED' → tidak masuk rekap
+  // ─── REMOVE ─────────────────────────────────────────────────────────────────
   const handleRemove = async (atm) => {
     const pct = parseFloat(atm.pct_saldo ?? 0);
     if (pct <= 25) {
@@ -421,7 +445,6 @@ export default function CashPlan({ navigateTo }) {
 
             {showNotifPanel && (
               <div style={{ position:"absolute", right:0, top:"calc(100% + 10px)", width:400, maxHeight:520, background:"#0d1228", border:"1px solid rgba(245,158,11,0.25)", borderRadius:14, boxShadow:"0 20px 60px rgba(0,0,0,0.7)", zIndex:500, overflow:"hidden", display:"flex", flexDirection:"column" }}>
-                {/* Panel header */}
                 <div style={{ padding:"14px 18px", borderBottom:"1px solid rgba(99,179,237,0.1)", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, gap:8, flexWrap:"wrap" }}>
                   <div>
                     <span style={{ color:"#e2e8f0", fontWeight:700, fontSize:14 }}>🔔 Rekomendasi Sistem</span>
@@ -444,7 +467,6 @@ export default function CashPlan({ navigateTo }) {
                   </div>
                 </div>
 
-                {/* Panel list */}
                 <div style={{ overflowY:"auto", flex:1 }}>
                   {notifItems.length === 0 ? (
                     <div style={{ padding:"40px 20px", textAlign:"center", color:"#475569" }}>
@@ -610,7 +632,6 @@ export default function CashPlan({ navigateTo }) {
                       <td style={{padding:"8px 14px"}}><Checkbox checked={isSelected} onChange={()=>toggleSelect(atm.id_atm)} /></td>
                       <td style={td("#64748b")}>{rowNo}</td>
 
-                      {/* Tgl Masuk */}
                       <td style={{padding:"8px 12px"}}>
                         {atm.added_at ? (
                           <div>
@@ -620,7 +641,6 @@ export default function CashPlan({ navigateTo }) {
                         ) : <span style={{color:"#374151",fontSize:11}}>—</span>}
                       </td>
 
-                      {/* ID ATM */}
                       <td style={{padding:"8px 12px"}}>
                         <span style={{color:"#e2e8f0",fontFamily:"monospace",fontWeight:700,cursor:"pointer",textDecoration:"underline dotted"}} onClick={()=>navigateTo?.("history",atm.id_atm)}>{atm.id_atm}</span>
                       </td>
@@ -628,16 +648,15 @@ export default function CashPlan({ navigateTo }) {
                       <td style={{...td("#94a3b8"),maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={atm.lokasi}>{atm.lokasi||"—"}</td>
                       <td style={td("#94a3b8")}>{atm.wilayah||"—"}</td>
 
-                      {/* Tipe */}
                       <td style={{padding:"8px 12px"}}>
                         <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:4,background:atm.tipe==="CRM"?"rgba(167,139,250,0.15)":"rgba(96,165,250,0.12)",color:atm.tipe==="CRM"?"#a78bfa":"#60a5fa",border:atm.tipe==="CRM"?"1px solid rgba(167,139,250,0.3)":"1px solid rgba(96,165,250,0.25)"}}>
                           {atm.tipe||"—"}
                         </span>
                       </td>
 
-                      {/* Denom */}
+                      {/* Denom — FIXED: onChange tanpa Number() */}
                       <td style={{padding:"8px 10px"}}>
-                        <select value={denom} onChange={e=>setOverride(atm.id_atm,"denom",Number(e.target.value))}
+                        <select value={denom} onChange={e=>setOverride(atm.id_atm,"denom",e.target.value)}
                           style={{background:"#0d1228",border:"1px solid rgba(167,139,250,0.25)",borderRadius:6,color:"#a78bfa",padding:"4px 6px",fontSize:11,cursor:"pointer",outline:"none",width:"100%"}}>
                           {denomOpts.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
                         </select>
@@ -655,14 +674,12 @@ export default function CashPlan({ navigateTo }) {
                         <SaldoBar pct={atm.pct_saldo} />
                       </td>
 
-                      {/* Sumber */}
                       <td style={{padding:"8px 10px"}}>
                         <span style={{fontSize:9,padding:"2px 7px",borderRadius:4,fontWeight:700,background:addedBy==="system"?"rgba(96,165,250,0.1)":addedBy==="notif"?"rgba(245,158,11,0.1)":addedBy==="manual"?"rgba(0,229,160,0.1)":"rgba(167,139,250,0.1)",color:addedBy==="system"?"#60a5fa":addedBy==="notif"?"#f59e0b":addedBy==="manual"?"#00e5a0":"#a78bfa",border:"none"}}>
                           {addedBy}
                         </span>
                       </td>
 
-                      {/* Status + tombol aksi */}
                       <td style={{padding:"8px 12px"}}>
                         <div style={{display:"flex",flexDirection:"column",gap:4}}>
                           <div style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:5,...PROSES_STYLE,border:`1px solid ${PROSES_STYLE.border}`,textAlign:"center"}}>◎ Proses</div>
@@ -678,7 +695,6 @@ export default function CashPlan({ navigateTo }) {
                         </div>
                       </td>
 
-                      {/* Keterangan */}
                       <td style={{padding:"8px 10px"}}>
                         <select value={ket} onChange={e=>setOverride(atm.id_atm,"keterangan",e.target.value)}
                           style={{background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:6,color:ket?"#e2e8f0":"#475569",padding:"5px 8px",fontSize:11,width:150,outline:"none",cursor:"pointer"}}>
@@ -687,7 +703,6 @@ export default function CashPlan({ navigateTo }) {
                         </select>
                       </td>
 
-                      {/* ✕ Remove */}
                       <td style={{padding:"8px 10px"}}>
                         <button onClick={()=>handleRemove(atm)}
                           style={{background:"rgba(255,59,92,0.08)",border:"1px solid rgba(255,59,92,0.25)",borderRadius:6,color:"#ff3b5c",padding:"4px 10px",fontSize:11,cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"}}>
@@ -750,14 +765,14 @@ export default function CashPlan({ navigateTo }) {
                 <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
                   <span style={{color:"#a78bfa",fontSize:12,fontWeight:600}}>⚙️ Set Denom Semua yang Support:</span>
                   {ALL_DENOM_OPTIONS.map(d=>{
-                    const cnt = validasiList.filter(a=>getDenomOptionsForAtm(a).some(o=>o.value===d.value)).length;
+                    const cnt = validasiList.filter(a=>getDenomOptionsForAtm(a).some(o=>o.value===String(d.value))).length;
                     return (
                       <button key={d.value}
                         onClick={()=>{
                           const upd={};
                           validasiList.forEach(a=>{
-                            if(getDenomOptionsForAtm(a).some(o=>o.value===d.value))
-                              upd[a.id_atm]={...validasiOverrides[a.id_atm],denom:d.value};
+                            if(getDenomOptionsForAtm(a).some(o=>o.value===String(d.value)))
+                              upd[a.id_atm]={...validasiOverrides[a.id_atm],denom:String(d.value)};
                           });
                           setValidasiOverrides(prev=>({...prev,...upd}));
                         }}
@@ -811,7 +826,8 @@ export default function CashPlan({ navigateTo }) {
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
                       <div>
                         <label style={{color:"#64748b",fontSize:11,display:"block",marginBottom:5}}>Denominasi {dOpts.length>1&&<span style={{color:"#f59e0b"}}>*pilih salah satu</span>}</label>
-                        <select value={vd} onChange={e=>setVOv(atm.id_atm,"denom",Number(e.target.value))}
+                        {/* FIXED: onChange tanpa Number() */}
+                        <select value={vd} onChange={e=>setVOv(atm.id_atm,"denom",e.target.value)}
                           style={{width:"100%",background:"#0d1228",border:"1px solid rgba(167,139,250,0.3)",borderRadius:8,color:"#a78bfa",padding:"8px 10px",fontSize:12,outline:"none",cursor:"pointer"}}>
                           {dOpts.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
                         </select>
@@ -865,8 +881,9 @@ export default function CashPlan({ navigateTo }) {
                           <td style={{padding:"7px 8px"}}>
                             <span style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:"rgba(167,139,250,0.1)",color:"#a78bfa",border:"1px solid rgba(167,139,250,0.2)",whiteSpace:"nowrap"}}>{getDenomLabel(atm)}</span>
                           </td>
+                          {/* FIXED: onChange tanpa Number() */}
                           <td style={{padding:"7px 8px"}}>
-                            <select value={vd} onChange={e=>setVOv(atm.id_atm,"denom",Number(e.target.value))}
+                            <select value={vd} onChange={e=>setVOv(atm.id_atm,"denom",e.target.value)}
                               style={{background:"#0d1228",border:"1px solid rgba(167,139,250,0.25)",borderRadius:6,color:"#a78bfa",padding:"3px 6px",fontSize:10,cursor:"pointer",outline:"none"}}>
                               {dOpts.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
                             </select>

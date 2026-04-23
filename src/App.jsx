@@ -10,11 +10,23 @@ import Training from "./pages/Training";
 import Data from "./pages/Data";
 import CashPlan from "./pages/CashPlan";
 import RekapReplacement from "./pages/Rekapreplacement";
+import AdminPanel from "./pages/AdminPanel";
+
+// ── Deteksi route /admin dari hash URL ─────────────────────────────────────
+// Akses via: http://localhost:3000/#/admin
+function isAdminRoute() {
+  return window.location.hash === "#/admin" || window.location.hash.startsWith("#/admin?");
+}
 
 export default function App() {
-  const [page,       setPage]       = useState("dashboard");
+  const [page,        setPage]        = useState("dashboard");
   const [selectedAtm, setSelectedAtm] = useState(null);
-  const [collapsed,  setCollapsed]  = useState(false);
+  const [collapsed,   setCollapsed]   = useState(false);
+
+  // Render AdminPanel langsung tanpa sidebar jika URL = /#/admin
+  if (isAdminRoute()) {
+    return <AdminPanel />;
+  }
 
   const navigateTo = (p, atmId = null) => {
     setPage(p);
@@ -25,10 +37,10 @@ export default function App() {
 
   return (
     <div style={{
-      display:     "flex",
-      minHeight:   "100vh",
-      background:  "#0a0f1e",
-      fontFamily:  "'IBM Plex Sans', sans-serif",
+      display:    "flex",
+      minHeight:  "100vh",
+      background: "#0a0f1e",
+      fontFamily: "'IBM Plex Sans', sans-serif",
     }}>
       <Sidebar
         page={page}
@@ -37,26 +49,21 @@ export default function App() {
         setCollapsed={setCollapsed}
       />
 
-      <main
-        style={{
-          flex:       1,
-          marginLeft: sidebarWidth,
-          padding:    "32px",
-          overflowY:  "auto",
-          minHeight:  "100vh",
-          transition: "margin-left 0.3s cubic-bezier(.4,0,.2,1)",
-        }}
-      >
+      <main style={{
+        flex:       1,
+        marginLeft: sidebarWidth,
+        padding:    "32px",
+        overflowY:  "auto",
+        minHeight:  "100vh",
+        transition: "margin-left 0.3s cubic-bezier(.4,0,.2,1)",
+      }}>
         {page === "dashboard"        && <Dashboard navigateTo={navigateTo} />}
         {page === "monitoring"       && <Monitoring navigateTo={navigateTo} />}
         {page === "alerts"           && <Alerts navigateTo={navigateTo} />}
         {page === "history"          && (
-          <History
-            atmId={selectedAtm}
-            navigateTo={navigateTo}
-          />
+          <History atmId={selectedAtm} navigateTo={navigateTo} />
         )}
-        {page === "data"          && <Data navigateTo={navigateTo} />}
+        {page === "data"             && <Data navigateTo={navigateTo} />}
         {page === "cashplan"         && <CashPlan navigateTo={navigateTo} />}
         {page === "rekapreplacement" && <RekapReplacement navigateTo={navigateTo} />}
         {page === "upload"           && <Upload />}

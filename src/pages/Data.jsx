@@ -1,16 +1,24 @@
-// src/pages/Wilayah.jsx  →  Master ATM (CRUD)
+// src/pages/Data.jsx  →  Master ATM (CRUD)
 import { useState, useEffect, useCallback, useRef } from "react";
 
 const API_BASE = import.meta.env?.VITE_API_URL || "";
 
 async function masterFetch(path, options = {}) {
+  const { headers: extraHeaders, ...restOptions } = options;
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...options.headers },
-    ...options,
+    ...restOptions,
+    headers: {
+      "Content-Type": "application/json",
+      ...extraHeaders,
+    },
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    // detail bisa string atau object (dari _raise500)
+    // Handle array detail dari Pydantic 422
+    if (Array.isArray(err.detail)) {
+      const msg = err.detail.map(e => `${e.loc?.slice(-1)[0]}: ${e.msg}`).join(", ");
+      throw new Error(msg);
+    }
     const msg = typeof err.detail === "object"
       ? `[${err.detail.type}] ${err.detail.error}`
       : (err.detail || `HTTP ${res.status}`);
@@ -151,13 +159,34 @@ export default function Wilayah() {
   const openDel  = row => { setEditData({ ...row });         setModal("delete"); };
 
   const handleSave = async (formData, mode) => {
+    // Sanitize: konversi string kosong ke null, number field ke angka
+    // Field yang harus selalu string meski nilainya angka
+    const FORCE_STRING_FIELDS = ["lembar", "sisa_hari", "nilai_inventaris", "is_tms"];
+
+    const cleaned = {};
+    MASTER_COLS.forEach(col => {
+      const val = formData[col.key];
+      if (val === "" || val === undefined || val === null) {
+        cleaned[col.key] = null;
+      } else if (FORCE_STRING_FIELDS.includes(col.key)) {
+        // Paksa jadi string
+        const s = String(val).trim();
+        cleaned[col.key] = s === "" ? null : s;
+      } else if (col.type === "number") {
+        const n = Number(val);
+        cleaned[col.key] = isNaN(n) ? null : n;
+      } else {
+        cleaned[col.key] = String(val).trim() === "" ? null : val;
+      }
+    });
+
     try {
       if (mode === "add") {
-        await masterFetch("/api/atm-masters", { method: "POST", body: JSON.stringify(formData) });
-        showToast(`ATM ${formData.id_atm} berhasil ditambahkan`);
+        await masterFetch("/api/atm-masters", { method: "POST", body: JSON.stringify(cleaned) });
+        showToast(`ATM ${cleaned.id_atm} berhasil ditambahkan`);
       } else {
-        await masterFetch(`/api/atm-masters/${formData.id_atm}`, { method: "PUT", body: JSON.stringify(formData) });
-        showToast(`ATM ${formData.id_atm} berhasil diperbarui`);
+        await masterFetch(`/api/atm-masters/${cleaned.id_atm}`, { method: "PUT", body: JSON.stringify(cleaned) });
+        showToast(`ATM ${cleaned.id_atm} berhasil diperbarui`);
       }
       setModal(null); load();
     } catch (e) { showToast(e.message, "error"); }

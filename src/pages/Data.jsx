@@ -14,7 +14,6 @@ async function masterFetch(path, options = {}) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    // Handle array detail dari Pydantic 422
     if (Array.isArray(err.detail)) {
       const msg = err.detail.map(e => `${e.loc?.slice(-1)[0]}: ${e.msg}`).join(", ");
       throw new Error(msg);
@@ -27,56 +26,56 @@ async function masterFetch(path, options = {}) {
   return res.json();
 }
 
-// ── Column definitions — nama key HARUS sama dengan kolom DB ─
+// ── Column definitions ────────────────────────────────────────
 const MASTER_COLS = [
-  { key: "id_atm",            label: "ID ATM",                type: "text",     required: true,  group: "Identitas" },
-  { key: "kode_cabang",       label: "Kode Cabang",           type: "number",   required: false, group: "Identitas" },
-  { key: "merk_atm",          label: "Merk ATM",              type: "text",     required: false, group: "Identitas" },
-  { key: "lokasi_atm",        label: "Lokasi ATM",            type: "text",     required: false, group: "Identitas" },
-  { key: "sn",                label: "Serial Number",         type: "text",     required: false, group: "Identitas" },
-  { key: "denom_options",     label: "Denom",                 type: "text",     required: false, group: "Identitas", placeholder: "50000,100000" },
-  { key: "join",              label: "Join Date",             type: "number",   required: false, group: "Identitas" },  // ← "join" bukan "join_date"
-  { key: "limit",             label: "Limit (Rp)",            type: "number",   required: false, group: "Keuangan" },
-  { key: "pct_saldo",         label: "Persentase (%)",        type: "number",   required: false, group: "Keuangan" },
-  { key: "wilayah",           label: "Wilayah",               type: "text",     required: false, group: "Lokasi" },
-  { key: "alamat_atm",        label: "Alamat ATM",            type: "textarea", required: false, group: "Lokasi" },
-  { key: "tipe_mesin",        label: "Tipe Mesin",            type: "text",     required: false, group: "Mesin" },
-  { key: "off_on_bank",       label: "Off/On Bank",           type: "text",     required: false, group: "Mesin" },
-  { key: "status_pemilik",    label: "Status Pemilik",        type: "text",     required: false, group: "Mesin" },
-  { key: "nama_vendor",       label: "Nama Vendor",           type: "text",     required: false, group: "Vendor" },
-  { key: "maintenance",       label: "Maintenance",           type: "text",     required: false, group: "Vendor" },
-  { key: "vendor_maintenance",label: "Vendor Maintenance",    type: "text",     required: false, group: "Vendor" },
-  { key: "last_maintenance",  label: "Jadwal Terakhir",       type: "text",     required: false, group: "Jadwal & CIT" },  // ← "last_maintenance" bukan "jadwal_terakhir"
-  { key: "cit_mulai",         label: "Periode CIT/CIS Mulai", type: "text",     required: false, group: "Jadwal & CIT" },
-  { key: "cit_akhir",         label: "Periode CIT/CIS Akhir", type: "text",     required: false, group: "Jadwal & CIT" },
-  { key: "sisa_hari",         label: "Sisa Waktu (Hari)",     type: "text",     required: false, group: "Jadwal & CIT" },  // text di DB
-  { key: "nama_asuransi",     label: "Nama Asuransi",         type: "text",     required: false, group: "Jaringan & Asuransi" },
-  { key: "link_komunikasi",   label: "Link Komunikasi",       type: "text",     required: false, group: "Jaringan & Asuransi" },
-  { key: "bw",                label: "BW",                    type: "text",     required: false, group: "Jaringan & Asuransi" },
-  { key: "media",             label: "Media",                 type: "text",     required: false, group: "Jaringan & Asuransi" },
-  { key: "isp",               label: "ISP",                   type: "text",     required: false, group: "Jaringan & Asuransi" },
-  { key: "no_inventaris",     label: "No. Inventaris",        type: "text",     required: false, group: "Inventaris" },
-  { key: "nilai_inventaris",  label: "Nilai Inventaris (Rp)", type: "text",     required: false, group: "Inventaris" },  // text di DB
-  { key: "unit_pengisian",    label: "Unit Pengisian",        type: "text",     required: false, group: "Inventaris" },
-  { key: "is_vendor",         label: "Is Vendor",             type: "number",   required: false, group: "Inventaris", placeholder: "0 atau 1" },
-  { key: "lembar",            label: "Lembar",                type: "text",     required: false, group: "Inventaris" },
-  { key: "is_tms",            label: "Is TMS",                type: "text",     required: false, group: "Inventaris" },
-  { key: "no",                label: "No",                    type: "number",   required: false, group: "Inventaris" },
-  { key: "nomor",             label: "Nomor",                 type: "number",   required: false, group: "Inventaris" },
+  { key: "id_atm",             label: "ID ATM",                type: "text",     required: true,  group: "Identitas" },
+  { key: "kode_cabang",        label: "Kode Cabang",           type: "number",   required: false, group: "Identitas" },
+  { key: "merk_atm",           label: "Merk ATM",              type: "text",     required: false, group: "Identitas" },
+  { key: "lokasi_atm",         label: "Lokasi ATM",            type: "text",     required: false, group: "Identitas" },
+  { key: "sn",                 label: "Serial Number",         type: "text",     required: false, group: "Identitas" },
+  { key: "denom_options",      label: "Denom",                 type: "text",     required: false, group: "Identitas", placeholder: "50000,100000" },
+  { key: "join",               label: "Join Date",             type: "number",   required: false, group: "Identitas" },
+  { key: "limit",              label: "Limit (Rp)",            type: "number",   required: false, group: "Keuangan" },
+  { key: "pct_saldo",          label: "Persentase (%)",        type: "number",   required: false, group: "Keuangan" },
+  { key: "wilayah",            label: "Wilayah",               type: "text",     required: false, group: "Lokasi" },
+  { key: "alamat_atm",         label: "Alamat ATM",            type: "textarea", required: false, group: "Lokasi" },
+  { key: "tipe_mesin",         label: "Tipe Mesin",            type: "text",     required: false, group: "Mesin" },
+  { key: "off_on_bank",        label: "Off/On Bank",           type: "text",     required: false, group: "Mesin" },
+  { key: "status_pemilik",     label: "Status Pemilik",        type: "text",     required: false, group: "Mesin" },
+  { key: "nama_vendor",        label: "Nama Vendor",           type: "text",     required: false, group: "Vendor" },
+  { key: "maintenance",        label: "Maintenance",           type: "text",     required: false, group: "Vendor" },
+  { key: "vendor_maintenance", label: "Vendor Maintenance",    type: "text",     required: false, group: "Vendor" },
+  { key: "last_maintenance",   label: "Jadwal Terakhir",       type: "text",     required: false, group: "Jadwal & CIT" },
+  { key: "cit_mulai",          label: "Periode CIT/CIS Mulai", type: "text",     required: false, group: "Jadwal & CIT" },
+  { key: "cit_akhir",          label: "Periode CIT/CIS Akhir", type: "text",     required: false, group: "Jadwal & CIT" },
+  { key: "sisa_hari",          label: "Sisa Waktu (Hari)",     type: "text",     required: false, group: "Jadwal & CIT" },
+  { key: "nama_asuransi",      label: "Nama Asuransi",         type: "text",     required: false, group: "Jaringan & Asuransi" },
+  { key: "link_komunikasi",    label: "Link Komunikasi",       type: "text",     required: false, group: "Jaringan & Asuransi" },
+  { key: "bw",                 label: "BW",                    type: "text",     required: false, group: "Jaringan & Asuransi" },
+  { key: "media",              label: "Media",                 type: "text",     required: false, group: "Jaringan & Asuransi" },
+  { key: "isp",                label: "ISP",                   type: "text",     required: false, group: "Jaringan & Asuransi" },
+  { key: "no_inventaris",      label: "No. Inventaris",        type: "text",     required: false, group: "Inventaris" },
+  { key: "nilai_inventaris",   label: "Nilai Inventaris (Rp)", type: "text",     required: false, group: "Inventaris" },
+  { key: "unit_pengisian",     label: "Unit Pengisian",        type: "text",     required: false, group: "Inventaris" },
+  { key: "is_vendor",          label: "Is Vendor",             type: "number",   required: false, group: "Inventaris", placeholder: "0 atau 1" },
+  { key: "lembar",             label: "Lembar",                type: "text",     required: false, group: "Inventaris" },
+  { key: "is_tms",             label: "Is TMS",                type: "text",     required: false, group: "Inventaris" },
+  { key: "no",                 label: "No",                    type: "number",   required: false, group: "Inventaris" },
+  { key: "nomor",              label: "Nomor",                 type: "number",   required: false, group: "Inventaris" },
 ];
 
+// Kolom yang ditampilkan di tabel + konfigurasi filter per kolom
 const TABLE_COLS = [
-  { key: "id_atm",        label: "ID ATM" },
-  { key: "kode_cabang",     label: "Kode Cabang" },
-  { key: "merk_atm",      label: "Merk" },
-  { key: "lokasi_atm",    label: "Lokasi" },
-  { key: "wilayah",       label: "Wilayah" },
-  { key: "tipe_mesin",    label: "Tipe" },
-  { key: "denom_options", label: "Denom" },
-  { key: "limit",         label: "Limit" },
-  { key: "off_on_bank",   label: "OFF ON BANK" },
-  { key: "unit_pengisian",   label: "Unit Pengisian" },
-  
+  { key: "id_atm",         label: "ID ATM",        filterType: "text"   },
+  { key: "kode_cabang",    label: "Kode Cabang",   filterType: "text"   },
+  { key: "merk_atm",       label: "Merk",          filterType: "select" },
+  { key: "lokasi_atm",     label: "Lokasi",        filterType: "text"   },
+  { key: "wilayah",        label: "Wilayah",       filterType: "select" },
+  { key: "tipe_mesin",     label: "Tipe",          filterType: "select" },
+  { key: "denom_options",  label: "Denom",         filterType: "select" },
+  { key: "limit",          label: "Limit",         filterType: "none"   },
+  { key: "off_on_bank",    label: "OFF ON BANK",   filterType: "select" },
+  { key: "unit_pengisian", label: "Unit Pengisian",filterType: "select" },
 ];
 
 const EMPTY_FORM = Object.fromEntries(MASTER_COLS.map(c => [c.key, ""]));
@@ -109,18 +108,35 @@ const thSt = {
 };
 const tdSt = (color = "#94a3b8") => ({ padding: "9px 12px", color });
 
+// ── Helper: get unique values dari rows untuk dropdown filter ──
+function getUniques(rows, key) {
+  const vals = rows
+    .map(r => r[key])
+    .filter(v => v != null && v !== "");
+  return [...new Set(vals)].sort();
+}
+
 // ════════════════════════════════════════════════════════════
 export default function Wilayah() {
   const [rows,        setRows]        = useState([]);
+  const [allRows,     setAllRows]     = useState([]); // semua data (tanpa pagination server) untuk filter lokal
   const [total,       setTotal]       = useState(0);
   const [loading,     setLoading]     = useState(true);
   const [search,      setSearch]      = useState("");
   const [filterWil,   setFilterWil]   = useState("");
+  const [filterUnit,  setFilterUnit]  = useState("");   // ← BARU: filter unit pengisian
   const [page,        setPage]        = useState(1);
   const [wilayahOpts, setWilayahOpts] = useState([]);
+  const [unitOpts,    setUnitOpts]    = useState([]);   // ← BARU
   const [modal,       setModal]       = useState(null);
   const [editData,    setEditData]    = useState(null);
   const [toast,       setToast]       = useState(null);
+
+  // ── Column header filters (lokal, diterapkan ke rows) ──────
+  const [colFilters,    setColFilters]    = useState({});   // { key: value }
+  const [activeColMenu, setActiveColMenu] = useState(null); // key kolom yang menu-nya terbuka
+  const colMenuRef = useRef(null);
+
   const PAGE_SIZE = 20;
 
   const showToast = (msg, type = "success") => {
@@ -128,24 +144,44 @@ export default function Wilayah() {
     setTimeout(() => setToast(null), 3500);
   };
 
+  // Tutup col-filter dropdown kalau klik di luar
+  useEffect(() => {
+    const h = e => {
+      if (colMenuRef.current && !colMenuRef.current.contains(e.target))
+        setActiveColMenu(null);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const p = new URLSearchParams({ limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
-      if (search)    p.set("search",  search);
-      if (filterWil) p.set("wilayah", filterWil);
+      // Minta semua data tanpa limit supaya filter kolom lokal bisa jalan
+      // (ganti limit ke nilai besar, atau tambahkan endpoint khusus jika perlu)
+      const p = new URLSearchParams({ limit: 9999, offset: 0 });
+      if (search)     p.set("search",  search);
+      if (filterWil)  p.set("wilayah", filterWil);
+      if (filterUnit) p.set("unit_pengisian", filterUnit);
       const r = await masterFetch(`/api/atm-masters?${p}`);
-      setRows(r.data || []);
-      setTotal(r.total || 0);
+      const data = r.data || [];
+      setAllRows(data);
+      setTotal(r.total || data.length);
       if (r.wilayah_options) setWilayahOpts(r.wilayah_options);
+
+      // Build unit_pengisian options dari data
+      if (r.unit_pengisian_options) setUnitOpts(r.unit_pengisian_options);
+      else setUnitOpts(getUniques(data, "unit_pengisian"));
     } catch (e) {
       showToast(e.message, "error");
     } finally {
       setLoading(false);
     }
-  }, [page, search, filterWil]);
+  }, [search, filterWil, filterUnit]);
 
   useEffect(() => { load(); }, [load]);
+  // Reset page ke 1 saat filter berubah
+  useEffect(() => { setPage(1); }, [search, filterWil, filterUnit, colFilters]);
 
   const timer = useRef(null);
   const onSearchInput = v => {
@@ -153,23 +189,40 @@ export default function Wilayah() {
     timer.current = setTimeout(() => { setSearch(v); setPage(1); }, 380);
   };
 
+  // ── Terapkan column header filters secara lokal ────────────
+  const filteredRows = allRows.filter(row => {
+    return Object.entries(colFilters).every(([key, val]) => {
+      if (!val) return true;
+      const cell = String(row[key] ?? "").toLowerCase();
+      return cell.includes(val.toLowerCase());
+    });
+  });
+
+  const totalFiltered = filteredRows.length;
+  const totalPages    = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
+  const pagedRows     = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const setColFilter = (key, val) =>
+    setColFilters(prev => ({ ...prev, [key]: val }));
+
+  const clearColFilter = key =>
+    setColFilters(prev => { const n = { ...prev }; delete n[key]; return n; });
+
+  const hasAnyColFilter = Object.values(colFilters).some(v => !!v);
+
   const openAdd  = ()  => { setEditData({ ...EMPTY_FORM }); setModal("add"); };
   const openEdit = row => { setEditData({ ...row });         setModal("edit"); };
   const openView = row => { setEditData({ ...row });         setModal("view"); };
   const openDel  = row => { setEditData({ ...row });         setModal("delete"); };
 
   const handleSave = async (formData, mode) => {
-    // Sanitize: konversi string kosong ke null, number field ke angka
-    // Field yang harus selalu string meski nilainya angka
     const FORCE_STRING_FIELDS = ["lembar", "sisa_hari", "nilai_inventaris", "is_tms"];
-
     const cleaned = {};
     MASTER_COLS.forEach(col => {
       const val = formData[col.key];
       if (val === "" || val === undefined || val === null) {
         cleaned[col.key] = null;
       } else if (FORCE_STRING_FIELDS.includes(col.key)) {
-        // Paksa jadi string
         const s = String(val).trim();
         cleaned[col.key] = s === "" ? null : s;
       } else if (col.type === "number") {
@@ -199,8 +252,6 @@ export default function Wilayah() {
       setModal(null); load();
     } catch (e) { showToast(e.message, "error"); }
   };
-
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div>
@@ -232,53 +283,220 @@ export default function Wilayah() {
         <input
           placeholder="Cari ID ATM, lokasi, vendor..."
           onChange={e => onSearchInput(e.target.value)}
-          style={{ ...S.input, width: 260, flex: "0 0 260px" }}
+          style={{ ...S.input, width: 240, flex: "0 0 240px" }}
         />
+
+        {/* Filter Wilayah */}
         <select
           value={filterWil}
           onChange={e => { setFilterWil(e.target.value); setPage(1); }}
-          style={{ ...S.input, width: 160, flex: "0 0 160px" , background: "#0d1228", border: "1px solid rgba(99,179,237,0.15)",}}
+          style={{ ...S.input, width: 160, flex: "0 0 160px", background: "#0d1228", border: "1px solid rgba(99,179,237,0.15)" }}
         >
           <option value="">Semua Wilayah</option>
           {wilayahOpts.map(w => <option key={w} value={w}>{w}</option>)}
         </select>
 
-        {(search || filterWil) && (
+        {/* ── BARU: Filter Unit Pengisian ── */}
+        <select
+          value={filterUnit}
+          onChange={e => { setFilterUnit(e.target.value); setPage(1); }}
+          style={{ ...S.input, width: 180, flex: "0 0 180px", background: "#0d1228", border: "1px solid rgba(99,179,237,0.15)" }}
+        >
+          <option value="">Semua Unit Pengisian</option>
+          {unitOpts.map(u => <option key={u} value={u}>{u}</option>)}
+        </select>
+
+        {(search || filterWil || filterUnit || hasAnyColFilter) && (
           <button
-            onClick={() => { setSearch(""); setFilterWil(""); setPage(1); }}
+            onClick={() => {
+              setSearch(""); setFilterWil(""); setFilterUnit("");
+              setColFilters({}); setPage(1);
+            }}
             style={{ ...S.btn("#EF9F27"), padding: "6px 12px" }}
           >
-            ✕ Reset
+            ✕ Reset Semua
           </button>
         )}
 
         <div style={{ flex: 1 }} />
-
-        <button onClick={() => setModal("import")} style={S.btn("#7F77DD")}>
-          ↑ Import Excel/CSV
-        </button>
-        <button onClick={openAdd} style={S.btn("#1D9E75")}>
-          + Tambah ATM
-        </button>
+        <button onClick={() => setModal("import")} style={S.btn("#7F77DD")}>↑ Import Excel/CSV</button>
+        <button onClick={openAdd}                  style={S.btn("#1D9E75")}>+ Tambah ATM</button>
       </div>
+
+      {/* Active col-filters summary chips */}
+      {hasAnyColFilter && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+          {Object.entries(colFilters).filter(([,v]) => !!v).map(([key, val]) => {
+            const col = TABLE_COLS.find(c => c.key === key);
+            return (
+              <div key={key} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.25)", borderRadius: 6, padding: "3px 8px 3px 10px", fontSize: 11 }}>
+                <span style={{ color: "#94a3b8" }}>{col?.label}:</span>
+                <span style={{ color: "#60a5fa", fontWeight: 600 }}>{val}</span>
+                <button onClick={() => clearColFilter(key)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", padding: "0 2px", fontSize: 12, lineHeight: 1 }}>✕</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Count bar */}
       <div style={{ color: "#475569", fontSize: 12, marginBottom: 12 }}>
         Menampilkan{" "}
-        <strong style={{ color: "#94a3b8" }}>{rows.length}</strong> dari{" "}
-        <strong style={{ color: "#94a3b8" }}>{total}</strong> ATM
+        <strong style={{ color: "#94a3b8" }}>{pagedRows.length}</strong> dari{" "}
+        <strong style={{ color: "#94a3b8" }}>{totalFiltered}</strong>
+        {totalFiltered !== total && <span style={{ color: "#64748b" }}> (total: {total})</span>}
+        {" "}ATM
       </div>
 
       {/* Table */}
-      <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid rgba(99,179,237,0.1)" }}>
+      <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid rgba(99,179,237,0.1)" }} ref={colMenuRef}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
+            {/* ── Row 1: Label + filter icon ── */}
             <tr style={{ background: "rgba(59,130,246,0.06)", borderBottom: "1px solid rgba(99,179,237,0.12)" }}>
               <th style={thSt}>#</th>
-              {TABLE_COLS.map(c => <th key={c.key} style={thSt}>{c.label}</th>)}
+              {TABLE_COLS.map(col => {
+                const hasFilter = !!colFilters[col.key];
+                return (
+                  <th key={col.key} style={{ ...thSt, position: "relative" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, userSelect: "none" }}>
+                      <span>{col.label}</span>
+                      {col.filterType !== "none" && (
+                        <button
+                          onClick={() => setActiveColMenu(prev => prev === col.key ? null : col.key)}
+                          title={`Filter ${col.label}`}
+                          style={{
+                            background: hasFilter ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)",
+                            border: `1px solid ${hasFilter ? "rgba(96,165,250,0.5)" : "rgba(99,179,237,0.15)"}`,
+                            borderRadius: 4, color: hasFilter ? "#60a5fa" : "#475569",
+                            width: 18, height: 18, fontSize: 9, cursor: "pointer",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {hasFilter ? "●" : "▾"}
+                        </button>
+                      )}
+                      {hasFilter && (
+                        <button onClick={() => clearColFilter(col.key)} title="Hapus filter"
+                          style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", padding: 0, fontSize: 10, lineHeight: 1 }}>
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Dropdown filter menu */}
+                    {activeColMenu === col.key && (
+                      <div style={{
+                        position: "absolute", top: "100%", left: 0, zIndex: 300,
+                        background: "#0f172a", border: "1px solid rgba(99,179,237,0.2)",
+                        borderRadius: 8, padding: "10px 12px", minWidth: 200,
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                        animation: "fadeIn 0.15s ease",
+                      }}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <div style={{ color: "#64748b", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                          Filter — {col.label}
+                        </div>
+
+                        {col.filterType === "text" ? (
+                          <input
+                            autoFocus
+                            placeholder={`Cari ${col.label}...`}
+                            value={colFilters[col.key] || ""}
+                            onChange={e => setColFilter(col.key, e.target.value)}
+                            onKeyDown={e => e.key === "Enter" && setActiveColMenu(null)}
+                            style={{ ...S.input, fontSize: 12, padding: "6px 10px" }}
+                          />
+                        ) : (
+                          // select — opsi dari data yang ada
+                          <div style={{ display: "flex", flexDirection: "column", gap: 3, maxHeight: 220, overflowY: "auto" }}>
+                            <div
+                              onClick={() => { clearColFilter(col.key); setActiveColMenu(null); }}
+                              style={{ padding: "5px 8px", borderRadius: 5, cursor: "pointer", color: !colFilters[col.key] ? "#60a5fa" : "#94a3b8", background: !colFilters[col.key] ? "rgba(59,130,246,0.1)" : "transparent", fontSize: 12 }}
+                            >
+                              — Semua —
+                            </div>
+                            {getUniques(allRows, col.key).map(opt => (
+                              <div
+                                key={opt}
+                                onClick={() => { setColFilter(col.key, String(opt)); setActiveColMenu(null); }}
+                                style={{
+                                  padding: "5px 8px", borderRadius: 5, cursor: "pointer",
+                                  color: colFilters[col.key] === String(opt) ? "#60a5fa" : "#94a3b8",
+                                  background: colFilters[col.key] === String(opt) ? "rgba(59,130,246,0.12)" : "transparent",
+                                  fontSize: 12, whiteSpace: "nowrap",
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = "rgba(59,130,246,0.07)"}
+                                onMouseLeave={e => e.currentTarget.style.background = colFilters[col.key] === String(opt) ? "rgba(59,130,246,0.12)" : "transparent"}
+                              >
+                                {opt}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {colFilters[col.key] && (
+                          <button
+                            onClick={() => { clearColFilter(col.key); setActiveColMenu(null); }}
+                            style={{ ...S.btn("#EF9F27"), marginTop: 8, padding: "4px 10px", fontSize: 11, width: "100%" }}
+                          >
+                            ✕ Hapus Filter
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </th>
+                );
+              })}
               <th style={{ ...thSt, textAlign: "center" }}>Aksi</th>
             </tr>
+
+            {/* ── Row 2: Quick inline filter inputs (hanya text filter) ── */}
+            <tr style={{ background: "rgba(0,0,0,0.2)", borderBottom: "1px solid rgba(99,179,237,0.08)" }}>
+              <td style={{ padding: "5px 12px" }} />
+              {TABLE_COLS.map(col => (
+                <td key={col.key} style={{ padding: "5px 8px" }}>
+                  {col.filterType === "text" ? (
+                    <input
+                      placeholder="cari..."
+                      value={colFilters[col.key] || ""}
+                      onChange={e => setColFilter(col.key, e.target.value)}
+                      style={{
+                        background: "rgba(255,255,255,0.03)",
+                        border: `1px solid ${colFilters[col.key] ? "rgba(96,165,250,0.4)" : "rgba(99,179,237,0.1)"}`,
+                        borderRadius: 5, color: "#94a3b8",
+                        padding: "4px 8px", fontSize: 11, outline: "none",
+                        width: "100%", boxSizing: "border-box", fontFamily: "inherit",
+                      }}
+                    />
+                  ) : col.filterType === "select" ? (
+                    <select
+                      value={colFilters[col.key] || ""}
+                      onChange={e => setColFilter(col.key, e.target.value)}
+                      style={{
+                        background: colFilters[col.key] ? "rgba(59,130,246,0.08)" : "rgba(255,255,255,0.02)",
+                        border: `1px solid ${colFilters[col.key] ? "rgba(96,165,250,0.35)" : "rgba(99,179,237,0.1)"}`,
+                        borderRadius: 5, color: colFilters[col.key] ? "#60a5fa" : "#475569",
+                        padding: "4px 6px", fontSize: 11, outline: "none",
+                        width: "100%", cursor: "pointer", fontFamily: "inherit",
+                      }}
+                    >
+                      <option value="">Semua</option>
+                      {getUniques(allRows, col.key).map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div style={{ height: 24 }} /> // spacer untuk kolom tanpa filter
+                  )}
+                </td>
+              ))}
+              <td style={{ padding: "5px 8px" }} />
+            </tr>
           </thead>
+
           <tbody>
             {loading ? (
               <tr>
@@ -289,13 +507,16 @@ export default function Wilayah() {
                   </div>
                 </td>
               </tr>
-            ) : rows.length === 0 ? (
+            ) : pagedRows.length === 0 ? (
               <tr>
                 <td colSpan={TABLE_COLS.length + 2} style={{ padding: "44px 0", textAlign: "center", color: "#475569", fontSize: 13 }}>
-                  Tidak ada data. Klik <strong style={{ color: "#1D9E75" }}>+ Tambah ATM</strong> atau import file.
+                  {hasAnyColFilter || search || filterWil || filterUnit
+                    ? <>Tidak ada data yang cocok. <button onClick={() => { setColFilters({}); setSearch(""); setFilterWil(""); setFilterUnit(""); }} style={{ ...S.btn("#EF9F27"), padding: "4px 10px", fontSize: 12 }}>Reset Filter</button></>
+                    : <>Tidak ada data. Klik <strong style={{ color: "#1D9E75" }}>+ Tambah ATM</strong> atau import file.</>
+                  }
                 </td>
               </tr>
-            ) : rows.map((row, i) => (
+            ) : pagedRows.map((row, i) => (
               <tr
                 key={row.id_atm || i}
                 style={{ borderBottom: "1px solid rgba(99,179,237,0.05)", transition: "background 0.1s" }}
@@ -316,6 +537,8 @@ export default function Wilayah() {
                       ? <PctBadge val={row[c.key]} />
                       : c.key === "sisa_hari"
                       ? <SisaHariBadge val={row[c.key]} />
+                      : c.key === "unit_pengisian" && row[c.key]
+                      ? <UnitBadge val={row[c.key]} />
                       : row[c.key] != null && row[c.key] !== ""
                       ? row[c.key]
                       : <span style={{ color: "#2d3f55" }}>—</span>
@@ -417,6 +640,22 @@ function SisaHariBadge({ val }) {
   if (isNaN(v)) return <span style={{ color: "#94a3b8" }}>{val}</span>;
   const color = v <= 7 ? "#E24B4A" : v <= 30 ? "#EF9F27" : "#1D9E75";
   return <span style={{ color, fontWeight: 600 }}>{v} hr</span>;
+}
+
+function UnitBadge({ val }) {
+  if (!val) return <span style={{ color: "#2d3f55" }}>—</span>;
+  // SSI → hijau, lainnya → biru muda
+  const isSSI = String(val).toUpperCase() === "SSI";
+  return (
+    <span style={{
+      fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
+      background: isSSI ? "rgba(0,229,160,0.12)" : "rgba(96,165,250,0.1)",
+      color: isSSI ? "#00e5a0" : "#60a5fa",
+      border: `1px solid ${isSSI ? "rgba(0,229,160,0.3)" : "rgba(96,165,250,0.25)"}`,
+    }}>
+      {val}
+    </span>
+  );
 }
 
 // ════════════════════════════════════════════════════════════
@@ -629,7 +868,7 @@ function ImportModal({ onClose, onSuccess }) {
         <input ref={ref} type="file" accept=".xlsx,.xls,.csv" hidden onChange={e => setFile(e.target.files[0])} />
       </div>
 
-      {error  && (
+      {error && (
         <div style={{ color: "#E24B4A", background: "rgba(226,75,74,0.07)", border: "1px solid rgba(226,75,74,0.2)", borderRadius: 7, padding: "10px 14px", fontSize: 12, marginBottom: 12, wordBreak: "break-word" }}>
           ✕ {error}
         </div>

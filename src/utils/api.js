@@ -17,8 +17,32 @@ export async function apiFetch(path, options = {}) {
     let msg = `HTTP ${res.status}`;
     try {
       const j = await res.json();
-      msg = j.detail || j.message || msg;
-    } catch {}
+
+      if (j.detail) {
+        // FastAPI validation error → array of objects
+        if (Array.isArray(j.detail)) {
+          msg = j.detail.map(d => `${d.loc?.join(".")}: ${d.msg}`).join("; ");
+        }
+        // FastAPI HTTPException → string
+        else if (typeof j.detail === "string") {
+          msg = j.detail;
+        }
+        // FastAPI custom error → object (misal dari _raise500)
+        else if (typeof j.detail === "object") {
+          msg = j.detail.error || j.detail.context || JSON.stringify(j.detail);
+        }
+        else {
+          msg = String(j.detail);
+        }
+      } else if (j.message) {
+        msg = j.message;
+      } else {
+        msg = JSON.stringify(j);
+      }
+    } catch {
+      // response bukan JSON, pakai status text
+      msg = res.statusText || msg;
+    }
     throw new Error(msg);
   }
 
@@ -44,21 +68,21 @@ export const fmt = {
 
 // ================== STATUS ==================
 export const STATUS_COLOR = {
-  "BONGKAR": "#E24B4A",
-  "AWAS": "#EF9F27",
+  "BONGKAR":      "#E24B4A",
+  "AWAS":         "#EF9F27",
   "PERLU PANTAU": "#d4b800",
-  "AMAN": "#1D9E75",
-  "OVERFUND": "#7F77DD",
-  "NO DATA": "#888780",
+  "AMAN":         "#1D9E75",
+  "OVERFUND":     "#7F77DD",
+  "NO DATA":      "#888780",
 };
 
 export const STATUS_BG = {
-  "BONGKAR": "rgba(226,75,74,0.12)",
-  "AWAS": "rgba(239,159,39,0.12)",
+  "BONGKAR":      "rgba(226,75,74,0.12)",
+  "AWAS":         "rgba(239,159,39,0.12)",
   "PERLU PANTAU": "rgba(212,184,0,0.12)",
-  "AMAN": "rgba(29,158,117,0.10)",
-  "OVERFUND": "rgba(127,119,221,0.12)",
-  "NO DATA": "rgba(136,135,128,0.12)",
+  "AMAN":         "rgba(29,158,117,0.10)",
+  "OVERFUND":     "rgba(127,119,221,0.12)",
+  "NO DATA":      "rgba(136,135,128,0.12)",
 };
 
 // ================== CASHPLAN ==================
@@ -114,8 +138,8 @@ export const updateRekapAPI = (rekapId, data) =>
 export const downloadRekapAPI = ({ wilayah, bulan, tahun, format = "xlsx" } = {}) => {
   const params = new URLSearchParams({ format });
   if (wilayah) params.append("wilayah", wilayah);
-  if (bulan) params.append("bulan", bulan);
-  if (tahun) params.append("tahun", tahun);
+  if (bulan)   params.append("bulan", bulan);
+  if (tahun)   params.append("tahun", tahun);
 
   window.open(
     `${BASE_URL}/api/rekap-replacement/download?${params.toString()}`,
@@ -128,14 +152,14 @@ export const getPredictionsAPI = ({
   wilayah,
   status,
   tipe,
-  limit = 500,
+  limit  = 500,
   offset = 0,
 } = {}) => {
   const params = new URLSearchParams({ limit, offset });
 
   if (wilayah) params.append("wilayah", wilayah);
-  if (status) params.append("status", status);
-  if (tipe) params.append("tipe", tipe);
+  if (status)  params.append("status", status);
+  if (tipe)    params.append("tipe", tipe);
 
   return apiFetch(`/api/predictions?${params.toString()}`);
 };
@@ -153,7 +177,19 @@ export const uploadDataAPI = (file, retrain = true) => {
       let msg = `HTTP ${res.status}`;
       try {
         const j = await res.json();
-        msg = j.detail || j.message || msg;
+        if (j.detail) {
+          if (Array.isArray(j.detail)) {
+            msg = j.detail.map(d => `${d.loc?.join(".")}: ${d.msg}`).join("; ");
+          } else if (typeof j.detail === "string") {
+            msg = j.detail;
+          } else if (typeof j.detail === "object") {
+            msg = j.detail.error || j.detail.context || JSON.stringify(j.detail);
+          } else {
+            msg = String(j.detail);
+          }
+        } else if (j.message) {
+          msg = j.message;
+        }
       } catch {}
       throw new Error(msg);
     }

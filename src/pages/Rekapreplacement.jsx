@@ -6,32 +6,82 @@ import { getRekapReplacementAPI, updateRekapAPI } from "../utils/api";
 const BULAN_ID     = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 const WILAYAH_LIST = ["Semua","Pekanbaru","Batam","Dumai","Tanjung Pinang"];
 
-const ALL_DENOM_OPTIONS = [
-  { label: "Rp 50.000",  value: 50_000  },
-  { label: "Rp 100.000", value: 100_000 },
-];
-
 const fmtRp    = v => v == null || isNaN(v) ? "—" : "Rp " + Number(v).toLocaleString("id-ID");
 const nowBulan = () => BULAN_ID[new Date().getMonth()];
 const nowTahun = () => new Date().getFullYear();
 
 // jumlah_isi langsung dari kolom DB (sudah dihitung backend: limit - saldo)
 const getJumlahIsi = item => item.jumlah_isi || 0;
-const hitungLembar = (jumlah, denom) => (!jumlah || !denom) ? 0 : Math.ceil(jumlah / denom);
 
 // ── Denom Helpers ──────────────────────────────────────────────────────────────
+
+/**
+ * Parse denom_options dari atm_masters ke array nilai rupiah penuh.
+ * Handle format: "50", "100", "50000", "100000", "100 & 50", "100000,50000"
+ */
+function parseDenomOptions(raw) {
+  if (!raw) return [100_000];
+  const str = String(raw).trim();
+  const parts = str.split(/\s*[,&\/]\s*/).map(s => s.trim()).filter(Boolean);
+  const results = [];
+  for (const p of parts) {
+    const num = parseInt(p.replace(/\./g, ""), 10);
+    if (isNaN(num) || num <= 0) continue;
+    // "50" / "100" → ribuan → kalikan 1000; "50000"/"100000" → sudah full
+    const val = num <= 1_000 ? num * 1_000 : num;
+    if (!results.includes(val)) results.push(val);
+  }
+  results.sort((a, b) => a - b);
+  return results.length > 0 ? results : [100_000];
+}
+
+/**
+ * Build opsi dropdown denom berdasarkan denom_options item.
+ * Return array { label, value: number }
+ */
 function getDenomOptionsForItem(item) {
-  const raw  = item?.denom_options || "100000";
-  const vals = String(raw).split(",").map(v => parseInt(v.trim(),10)).filter(v => !isNaN(v) && v > 0);
-  const opts = ALL_DENOM_OPTIONS.filter(o => vals.includes(o.value));
-  return opts.length > 0 ? opts : [{ label:"Rp 100.000", value:100_000 }];
+  const vals = parseDenomOptions(item?.denom_options || "100000");
+  return vals.map(v => ({
+    label: `Rp ${Number(v).toLocaleString("id-ID")}`,
+    value: v,
+  }));
 }
+
+/**
+ * Label teks untuk kolom "Denom Tersedia" (read-only info).
+ */
 function getDenomLabel(item) {
-  const opts = getDenomOptionsForItem(item);
-  if (!opts.length) return "—";
-  if (opts.length === 1) return opts[0].label;
-  return opts.map(o => o.label.replace("Rp ","")).join(" & ");
+  const vals = parseDenomOptions(item?.denom_options || "100000");
+  if (!vals.length) return "—";
+  if (vals.length === 1) return `Rp ${Number(vals[0]).toLocaleString("id-ID")}`;
+  return vals.map(v => `Rp ${Number(v).toLocaleString("id-ID")}`).join(" & ");
 }
+
+/**
+ * Parse denom dari DB ke number untuk kalkulasi lembar.
+ * denom di DB bisa berupa:
+ *   - number: 100000
+ *   - string: "100000" | "50000" | "100000,50000"
+ * Jika multi-denom → ambil terkecil (worst case / max lembar).
+ */
+function parseDenomForCalc(denomRaw) {
+  if (!denomRaw) return 100_000;
+  const str = String(denomRaw).trim();
+  if (str.includes(",")) {
+    const parts = str.split(",").map(v => parseInt(v.trim(), 10)).filter(v => !isNaN(v) && v > 0);
+    return parts.length > 0 ? Math.min(...parts) : 100_000;
+  }
+  const val = parseInt(str, 10);
+  if (isNaN(val) || val <= 0) return 100_000;
+  // handle nilai ribuan ("50", "100")
+  return val <= 1_000 ? val * 1_000 : val;
+}
+
+const hitungLembar = (jumlah, denomRaw) => {
+  if (!jumlah) return 0;
+  const denom = typeof denomRaw === "number" ? denomRaw : parseDenomForCalc(denomRaw);
+  return denom > 0 ? Math.ceil(jumlah / denom) : 0;
+};
 
 // ── Export XLSX ────────────────────────────────────────────────────────────────
 function exportToXLSX(data, overrides, bulan, tahun, wilayah) {
@@ -41,9 +91,11 @@ function exportToXLSX(data, overrides, bulan, tahun, wilayah) {
 
   const sheetData = rows.map((item, i) => {
     const ov        = overrides[item.id] || {};
-    const denom     = item.is_saved ? (item.denom || 100_000) : (ov.denom ?? item.denom ?? 100_000);
+    const denomCalc = item.is_saved
+      ? parseDenomForCalc(item.denom || 100_000)
+      : parseDenomForCalc(ov.denom ?? item.denom ?? 100_000);
     const jumlahIsi = getJumlahIsi(item);
-    const lembar    = hitungLembar(jumlahIsi, denom);
+    const lembar    = hitungLembar(jumlahIsi, denomCalc);
     const tglIsi    = item.is_saved ? (item.tgl_isi||"-")      : (ov.tgl_isi     ||item.tgl_isi||"-");
     const cashIn    = item.is_saved ? (item.jam_cash_in||"-")  : (ov.jam_cash_in ||item.jam_cash_in||"-");
     const cashOut   = item.is_saved ? (item.jam_cash_out||"-") : (ov.jam_cash_out||item.jam_cash_out||"-");
@@ -60,7 +112,7 @@ function exportToXLSX(data, overrides, bulan, tahun, wilayah) {
       "Saldo Akhir (Rp)":  item.saldo_awal || 0,
       "Limit (Rp)":        item.limit || 0,
       "Jumlah Isi (Rp)":   jumlahIsi,
-      "Denominasi":        `Rp ${Number(denom).toLocaleString("id-ID")}`,
+      "Denominasi":        `Rp ${Number(denomCalc).toLocaleString("id-ID")}`,
       "Lembar":            lembar,
       "Tanggal Isi":       tglIsi,
       "Jam Cash In":       cashIn,
@@ -123,21 +175,23 @@ export default function RekapReplacement({ navigateTo }) {
   const handleSave = async (item) => {
     setSavingId(item.id);
     const ov = overrides[item.id] || {};
+    // denom dikirim sebagai int ke backend (RekapUpdateRequest.denom: Optional[int])
+    const denomToSave = parseDenomForCalc(ov.denom ?? item.denom ?? 100_000);
     try {
       await updateRekapAPI(item.id, {
         tgl_isi:      ov.tgl_isi      ?? item.tgl_isi      ?? null,
         jam_cash_in:  ov.jam_cash_in  ?? item.jam_cash_in  ?? null,
         jam_cash_out: ov.jam_cash_out ?? item.jam_cash_out ?? null,
-        denom:        ov.denom        ?? item.denom        ?? 100_000,
+        denom:        denomToSave,
       });
       // Tandai is_saved di local state agar UI langsung update tanpa refetch
       setItems(prev => prev.map(d => d.id === item.id
         ? {
-            ...d, is_saved:true,
-            tgl_isi:     ov.tgl_isi     ?? d.tgl_isi,
-            jam_cash_in: ov.jam_cash_in ?? d.jam_cash_in,
-            jam_cash_out:ov.jam_cash_out?? d.jam_cash_out,
-            denom:       ov.denom       ?? d.denom,
+            ...d, is_saved: true,
+            tgl_isi:      ov.tgl_isi     ?? d.tgl_isi,
+            jam_cash_in:  ov.jam_cash_in ?? d.jam_cash_in,
+            jam_cash_out: ov.jam_cash_out ?? d.jam_cash_out,
+            denom:        denomToSave,
           }
         : d
       ));
@@ -169,9 +223,9 @@ export default function RekapReplacement({ navigateTo }) {
 
   // ── Summary ──────────────────────────────────────────────────────────────────
   const totalNominal = filtered.reduce((s,d) => s + getJumlahIsi(d), 0);
-  const totalLembar  = filtered.reduce((s,d) => {
-    const denom = overrides[d.id]?.denom ?? d.denom ?? 100_000;
-    return s + hitungLembar(getJumlahIsi(d), denom);
+  const totalLembar  = filtered.reduce((s, d) => {
+    const denomRaw = overrides[d.id]?.denom ?? d.denom ?? 100_000;
+    return s + hitungLembar(getJumlahIsi(d), denomRaw);
   }, 0);
   const totalSelesai = filtered.filter(d => (d.status_done||"").toUpperCase() === "SELESAI").length;
   const totalBatal   = filtered.filter(d => (d.status_done||"").toUpperCase() === "BATAL").length;
@@ -285,7 +339,7 @@ export default function RekapReplacement({ navigateTo }) {
                     {label:"No",key:null},{label:"Done At",key:"done_at"},{label:"Bulan",key:"bulan"},
                     {label:"ID ATM",key:"id_atm"},{label:"Lokasi",key:"lokasi"},{label:"Wilayah",key:"wilayah"},
                     {label:"Tipe",key:"tipe"},{label:"Saldo Akhir",key:"saldo_awal"},{label:"Jumlah Isi",key:"jumlah_isi"},
-                    {label:"Denom Tersedia",key:null},{label:"Pilih Denom",key:null},{label:"Lembar",key:null},
+                    {label:"Denom Tersedia",key:null},{label:"Lembar",key:null},
                     {label:"Tanggal Isi",key:"tgl_isi"},{label:"Jam Cash In",key:null},{label:"Jam Cash Out",key:null},
                     {label:"Status",key:"status_done"},{label:"Keterangan",key:null},{label:"Aksi",key:null},
                   ].map((col,ci)=>(
@@ -298,20 +352,29 @@ export default function RekapReplacement({ navigateTo }) {
               </thead>
               <tbody>
                 {paged.map((item,i)=>{
-                  const ov         = overrides[item.id] || {};
-                  const saved      = item.is_saved;
-                  const isSaving   = savingId === item.id;
-                  const denomOpts  = getDenomOptionsForItem(item);
-                  const denom      = saved ? (item.denom||100_000) : (ov.denom ?? item.denom ?? 100_000);
-                  const jumlahIsi  = getJumlahIsi(item);
-                  const lembar     = hitungLembar(jumlahIsi, denom);
-                  const tglIsi     = saved ? (item.tgl_isi||"")      : (ov.tgl_isi      ?? item.tgl_isi      ?? "");
-                  const cashIn     = saved ? (item.jam_cash_in||"")  : (ov.jam_cash_in  ?? item.jam_cash_in  ?? "");
-                  const cashOut    = saved ? (item.jam_cash_out||"") : (ov.jam_cash_out ?? item.jam_cash_out ?? "");
-                  const statusCP   = (item.status_done||"").toUpperCase();
-                  const ssColor    = statusCP==="SELESAI"?"#00e5a0":statusCP==="BATAL"?"#94a3b8":"#f59e0b";
-                  const ssBg       = statusCP==="SELESAI"?"rgba(0,229,160,0.1)":statusCP==="BATAL"?"rgba(148,163,184,0.08)":"rgba(245,158,11,0.1)";
-                  const rowBg      = saved?"rgba(0,229,160,0.02)":i%2===0?"transparent":"rgba(255,255,255,0.01)";
+                  const ov        = overrides[item.id] || {};
+                  const saved     = item.is_saved;
+                  const isSaving  = savingId === item.id;
+
+                  // ── Denom ─────────────────────────────────────────────────
+                  // denomRaw: nilai yang sedang dipilih user (number) atau dari DB (number/string)
+                  const denomRaw  = saved
+                    ? parseDenomForCalc(item.denom || 100_000)
+                    : (ov.denom !== undefined ? Number(ov.denom) : parseDenomForCalc(item.denom || 100_000));
+                  const denomCalc = denomRaw; // sudah number dari parseDenomForCalc atau Number()
+                  const denomOpts = getDenomOptionsForItem(item);
+
+                  const jumlahIsi = getJumlahIsi(item);
+                  const lembar    = hitungLembar(jumlahIsi, denomCalc);
+
+                  const tglIsi  = saved ? (item.tgl_isi||"")      : (ov.tgl_isi      ?? item.tgl_isi      ?? "");
+                  const cashIn  = saved ? (item.jam_cash_in||"")  : (ov.jam_cash_in  ?? item.jam_cash_in  ?? "");
+                  const cashOut = saved ? (item.jam_cash_out||"") : (ov.jam_cash_out ?? item.jam_cash_out ?? "");
+
+                  const statusCP = (item.status_done||"").toUpperCase();
+                  const ssColor  = statusCP==="SELESAI"?"#00e5a0":statusCP==="BATAL"?"#94a3b8":"#f59e0b";
+                  const ssBg     = statusCP==="SELESAI"?"rgba(0,229,160,0.1)":statusCP==="BATAL"?"rgba(148,163,184,0.08)":"rgba(245,158,11,0.1)";
+                  const rowBg    = saved?"rgba(0,229,160,0.02)":i%2===0?"transparent":"rgba(255,255,255,0.01)";
 
                   const inputSt = (hasVal) => ({
                     background: saved?"rgba(255,255,255,0.02)":"#0d1228",
@@ -357,7 +420,7 @@ export default function RekapReplacement({ navigateTo }) {
 
                       <td style={tdS("#e2e8f0")}>{fmtRp(item.saldo_awal)}</td>
 
-                      {/* Jumlah Isi dari DB (bukan limit saja) */}
+                      {/* Jumlah Isi dari DB */}
                       <td style={{padding:"8px 12px"}}>
                         <span style={{color:"#f59e0b",fontWeight:700}}>{fmtRp(jumlahIsi)}</span>
                       </td>
@@ -367,17 +430,6 @@ export default function RekapReplacement({ navigateTo }) {
                         <span style={{fontSize:10,padding:"2px 8px",borderRadius:4,background:"rgba(167,139,250,0.1)",color:"#a78bfa",border:"1px solid rgba(167,139,250,0.2)",whiteSpace:"nowrap"}}>
                           {getDenomLabel(item)}
                         </span>
-                      </td>
-
-                      {/* Pilih Denom — dropdown difilter sesuai denom_options */}
-                      <td style={{padding:"8px 10px"}}>
-                        <select
-                          value={denom}
-                          onChange={e=>!saved&&setOv(item.id,"denom",Number(e.target.value))}
-                          disabled={saved}
-                          style={{ background:saved?"rgba(255,255,255,0.02)":"#0d1228", border:`1px solid ${saved?"rgba(99,179,237,0.06)":"rgba(167,139,250,0.25)"}`, borderRadius:6, color:saved?"#475569":"#a78bfa", padding:"4px 6px", fontSize:11, cursor:saved?"not-allowed":"pointer", outline:"none" }}>
-                          {denomOpts.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
-                        </select>
                       </td>
 
                       <td style={{padding:"8px 12px"}}>
@@ -445,10 +497,10 @@ export default function RekapReplacement({ navigateTo }) {
       {/* Legend */}
       <div style={{marginTop:16,display:"flex",gap:20,flexWrap:"wrap"}}>
         {[
-          {label:"Denom Tersedia = dari data ATM (EMV: 50rb/100rb, CRM: bisa keduanya)",color:"#a78bfa"},
-          {label:"Jumlah Isi dari DB = limit − saldo saat cashplan dibuat",              color:"#f59e0b"},
-          {label:"Data permanen — tidak berubah saat upload ulang",                      color:"#00e5a0"},
-          {label:"Setelah disimpan, baris tidak bisa diedit lagi (SAVED)",               color:"#60a5fa"},
+          {label:"Denom Tersedia = dari data ATM master (EMV: 50rb/100rb, CRM: bisa keduanya)", color:"#a78bfa"},
+          {label:"Jumlah Isi dari DB = limit − saldo saat cashplan dibuat",                     color:"#f59e0b"},
+          {label:"Data permanen — tidak berubah saat upload ulang",                             color:"#00e5a0"},
+          {label:"Setelah disimpan, baris tidak bisa diedit lagi (SAVED)",                      color:"#60a5fa"},
         ].map(l=>(
           <div key={l.label} style={{display:"flex",alignItems:"center",gap:6}}>
             <div style={{width:8,height:8,borderRadius:2,background:l.color}} />

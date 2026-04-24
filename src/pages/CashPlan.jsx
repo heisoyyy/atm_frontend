@@ -83,8 +83,9 @@ function getDenomOptionsForAtm(atm) {
 
 function getDefaultDenomForAtm(atm) {
   const opts = getDenomOptionsForAtm(atm);
-  const nonMix = opts.filter(o => !o.value.includes(","));
-  return nonMix[nonMix.length - 1]?.value ?? "100000";
+  const mixOpt = opts.find(o => o.value.includes(","));
+  if (mixOpt) return mixOpt.value;
+  return opts[opts.length - 1]?.value ?? "100000";
 }
 
 function getDenomLabel(atm) {
@@ -797,6 +798,7 @@ export default function CashPlan({ navigateTo }) {
                       <span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:"rgba(167,139,250,0.1)",color:"#a78bfa"}}>Denom: {getDenomLabel(atm)}</span>
                       {atm._notif_id && <span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:"rgba(245,158,11,0.1)",color:"#f59e0b"}}>🔔 Rekomendasi Sistem</span>}
                     </div>
+                    {/* Isi Table Modal */}
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
                       {[
                         {label:"ID ATM",value:atm.id_atm,mono:true,color:"#e2e8f0"},

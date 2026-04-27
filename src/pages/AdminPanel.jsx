@@ -114,7 +114,7 @@ export default function AdminPanel() {
           <button key={t.key} onClick={() => setTab(t.key)} style={{
             ...styles.tabBtn,
             borderBottomColor: tab === t.key ? t.accent : "transparent",
-            color:             tab === t.key ? t.accent : "#475569",
+            color:             tab === t.key ? t.accent : "#ffffff",
             background:        tab === t.key ? `${t.accent}10` : "transparent",
           }}>{t.label}</button>
         ))}
@@ -214,7 +214,7 @@ function CashplanCRUD({ showToast }) {
       {/* Toolbar */}
       <div style={styles.toolbar}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="⌕  Cari ID ATM / Lokasi..." style={styles.searchInput} />
-        <span style={{ color:"#475569", fontSize:12, fontFamily:"monospace" }}>{filtered.length} rows</span>
+        <span style={{ color:"#ffffff", fontSize:12, fontFamily:"monospace" }}>{filtered.length} rows</span>
         <button onClick={() => setShowAdd(true)} style={styles.addBtn}>+ Tambah Baru</button>
         <button onClick={load} style={styles.refreshBtn} disabled={loading}>↺</button>
       </div>
@@ -465,7 +465,7 @@ function RekapCRUD({ showToast }) {
         <select value={filterWil} onChange={e=>setFilterWil(e.target.value)} style={styles.filterSelect}>
           {WILAYAH_LIST.map(w=><option key={w} value={w}>{w}</option>)}
         </select>
-        <span style={{ color:"#475569", fontSize:12, fontFamily:"monospace" }}>{filtered.length} rows</span>
+        <span style={{ color:"#ffffff", fontSize:12, fontFamily:"monospace" }}>{filtered.length} rows</span>
         <button onClick={load} style={styles.refreshBtn} disabled={loading}>↺</button>
       </div>
 
@@ -506,7 +506,7 @@ function RekapCRUD({ showToast }) {
                         <select value={ed.denom} onChange={e=>setEditRow(r=>({...r,denom:Number(e.target.value)}))} style={styles.inlineSelect}>
                           {denomOpts.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
                         </select>
-                      ) : <span style={{ color:"#94a3b8", fontSize:11 }}>{fmtRp(item.denom)}</span>}
+                      ) : <span style={{ color:"#ffffff", fontSize:11 }}>{fmtRp(item.denom)}</span>}
                     </Td>
                     <Td>{item.lembar ? `${item.lembar} lbr` : "—"}</Td>
 
@@ -538,7 +538,7 @@ function RekapCRUD({ showToast }) {
                     <Td>
                       {item.is_saved
                         ? <span style={{ fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:4, background:"rgba(74,222,128,0.1)", color:"#4ade80", border:"1px solid rgba(74,222,128,0.25)" }}>✓ SAVED</span>
-                        : <span style={{ fontSize:10, color:"#475569" }}>—</span>
+                        : <span style={{ fontSize:10, color:"#ffffff" }}>—</span>
                       }
                     </Td>
 
@@ -615,7 +615,7 @@ function Modal({ title, children, onClose }) {
       <div style={styles.modalBox}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
           <h2 style={{ color:"#38bdf8", fontSize:16, fontWeight:700, margin:0, fontFamily:"'IBM Plex Mono', monospace" }}>{title}</h2>
-          <button onClick={onClose} style={{ background:"none", border:"none", color:"#475569", fontSize:20, cursor:"pointer" }}>×</button>
+          <button onClick={onClose} style={{ background:"none", border:"none", color:"#ffffff", fontSize:20, cursor:"pointer" }}>×</button>
         </div>
         {children}
       </div>
@@ -629,14 +629,14 @@ function ConfirmModal({ title, desc, danger, onOk, onCancel, loading }) {
       <div style={{ ...styles.modalBox, maxWidth:420 }}>
         <div style={{ fontSize:28, marginBottom:12, textAlign:"center" }}>{danger ? "⚠️" : "❓"}</div>
         <h3 style={{ color: danger?"#f87171":"#e2e8f0", fontSize:15, fontWeight:700, margin:"0 0 8px", textAlign:"center" }}>{title}</h3>
-        <p style={{ color:"#64748b", fontSize:12, textAlign:"center", margin:"0 0 20px" }}>{desc}</p>
+        <p style={{ color:"#ffffff", fontSize:12, textAlign:"center", margin:"0 0 20px" }}>{desc}</p>
         <div style={{ display:"flex", gap:10 }}>
           <button onClick={onOk} disabled={loading}
             style={{ flex:1, padding:"10px", borderRadius:8, fontWeight:700, fontSize:13, cursor:loading?"not-allowed":"pointer", background:danger?"rgba(248,113,113,0.15)":"rgba(74,222,128,0.15)", border:danger?"1px solid rgba(248,113,113,0.4)":"1px solid rgba(74,222,128,0.4)", color:danger?"#f87171":"#4ade80" }}>
             {loading ? "Proses..." : danger ? "⌫ Hapus" : "✓ Konfirmasi"}
           </button>
           <button onClick={onCancel}
-            style={{ padding:"10px 20px", borderRadius:8, fontSize:13, cursor:"pointer", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(99,179,237,0.15)", color:"#64748b" }}>
+            style={{ padding:"10px 20px", borderRadius:8, fontSize:13, cursor:"pointer", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(99,179,237,0.15)", color:"#ffffff" }}>
             Batal
           </button>
         </div>
@@ -647,7 +647,7 @@ function ConfirmModal({ title, desc, danger, onOk, onCancel, loading }) {
 
 function Th({ children }) {
   return (
-    <th style={{ padding:"10px 12px", textAlign:"left", color:"#334155", fontWeight:700, fontSize:9, letterSpacing:"0.1em", textTransform:"uppercase", whiteSpace:"nowrap", borderBottom:"1px solid rgba(56,189,248,0.1)", fontFamily:"'IBM Plex Mono', monospace", background:"rgba(0,0,0,0.2)" }}>
+    <th style={{ padding:"10px 12px", textAlign:"left", color:"#ffffff", fontWeight:700, fontSize:9, letterSpacing:"0.1em", textTransform:"uppercase", whiteSpace:"nowrap", borderBottom:"1px solid rgba(56,189,248,0.1)", fontFamily:"'IBM Plex Mono', monospace", background:"rgba(0,0,0,0.2)" }}>
       {children}
     </th>
   );
@@ -655,7 +655,7 @@ function Th({ children }) {
 
 function Td({ children, mono, bold, dim, accent, small, truncate }) {
   return (
-    <td style={{ padding:"8px 12px", color: accent || (dim?"#475569":"#94a3b8"), fontSize: small?10:12, fontWeight: bold?700:400, fontFamily: mono?"'IBM Plex Mono',monospace":"inherit", whiteSpace:"nowrap", maxWidth: truncate?140:"none", overflow: truncate?"hidden":"visible", textOverflow: truncate?"ellipsis":"clip", borderBottom:"1px solid rgba(255,255,255,0.03)" }}>
+    <td style={{ padding:"8px 12px", color: accent || (dim?"#ffffff":"#ffffff"), fontSize: small?10:12, fontWeight: bold?700:400, fontFamily: mono?"'IBM Plex Mono',monospace":"inherit", whiteSpace:"nowrap", maxWidth: truncate?140:"none", overflow: truncate?"hidden":"visible", textOverflow: truncate?"ellipsis":"clip", borderBottom:"1px solid rgba(255,255,255,0.03)" }}>
       {children}
     </td>
   );
@@ -676,18 +676,18 @@ function TypeBadge({ tipe }) {
 }
 function StatusBadge({ status }) {
   const map = { BONGKAR:["#f87171","rgba(248,113,113,0.12)"], AWAS:["#fbbf24","rgba(251,191,36,0.1)"], "PERLU PANTAU":["#d4b800","rgba(212,184,0,0.1)"], AMAN:["#4ade80","rgba(74,222,128,0.1)"] };
-  const [c,bg] = map[status] || ["#64748b","rgba(100,116,139,0.1)"];
+  const [c,bg] = map[status] || ["#ffffff","rgba(100,116,139,0.1)"];
   return <span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4, background:bg, color:c, border:`1px solid ${c}33` }}>{status||"—"}</span>;
 }
 function RekapStatusBadge({ status }) {
   const s = (status||"").toUpperCase();
-  const map = { SELESAI:["#4ade80","rgba(74,222,128,0.1)"], BATAL:["#94a3b8","rgba(148,163,184,0.08)"], REMOVED:["#f87171","rgba(248,113,113,0.08)"] };
-  const [c,bg] = map[s] || ["#64748b","rgba(100,116,139,0.1)"];
+  const map = { SELESAI:["#4ade80","rgba(74,222,128,0.1)"], BATAL:["#ffffff","rgba(148,163,184,0.08)"], REMOVED:["#f87171","rgba(248,113,113,0.08)"] };
+  const [c,bg] = map[s] || ["#ffffff","rgba(100,116,139,0.1)"];
   return <span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4, background:bg, color:c }}>{s||"—"}</span>;
 }
 function SourceBadge({ src }) {
   const map = { system:["#38bdf8","rgba(56,189,248,0.1)"], notif:["#f59e0b","rgba(245,158,11,0.1)"], manual:["#4ade80","rgba(74,222,128,0.1)"], history:["#a78bfa","rgba(167,139,250,0.1)"] };
-  const [c,bg] = map[src] || ["#64748b","rgba(100,116,139,0.1)"];
+  const [c,bg] = map[src] || ["#ffffff","rgba(100,116,139,0.1)"];
   return <span style={{ fontSize:9, fontWeight:700, padding:"2px 7px", borderRadius:4, background:bg, color:c }}>{src||"—"}</span>;
 }
 function PctBadge({ pct }) {
@@ -717,13 +717,13 @@ function TableSkeleton() {
 //  STYLES
 // ══════════════════════════════════════════════════════════════════════════════
 const styles = {
-  root:         { minHeight:"100vh", background:"#050b18", fontFamily:"'IBM Plex Sans',sans-serif", color:"#94a3b8", position:"relative", overflowX:"hidden" },
+  root:         { minHeight:"100vh", background:"#050b18", fontFamily:"'IBM Plex Sans',sans-serif", color:"#ffffff", position:"relative", overflowX:"hidden" },
   scanlines:    { position:"fixed", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,200,0.012) 2px,rgba(0,255,200,0.012) 4px)", pointerEvents:"none", zIndex:0 },
   header:       { position:"sticky", top:0, zIndex:100, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 32px", background:"rgba(5,11,24,0.95)", backdropFilter:"blur(12px)", borderBottom:"1px solid rgba(56,189,248,0.12)" },
   headerLeft:   { display:"flex", alignItems:"center", gap:14 },
   logo:         { fontSize:28, color:"#38bdf8", lineHeight:1 },
   logoTitle:    { color:"#38bdf8", fontSize:13, fontWeight:700, fontFamily:"'IBM Plex Mono',monospace", letterSpacing:"0.15em" },
-  logoSub:      { color:"#334155", fontSize:10, marginTop:2, letterSpacing:"0.05em" },
+  logoSub:      { color:"#ffffff", fontSize:10, marginTop:2, letterSpacing:"0.05em" },
   statusDot:    { width:7, height:7, borderRadius:"50%", background:"#4ade80", boxShadow:"0 0 6px #4ade80", animation:"glow 2s ease infinite alternate" },
   logoutBtn:    { background:"rgba(248,113,113,0.08)", border:"1px solid rgba(248,113,113,0.25)", borderRadius:7, color:"#f87171", padding:"6px 14px", fontSize:12, cursor:"pointer", fontFamily:"'IBM Plex Mono',monospace" },
   tabBar:       { display:"flex", gap:0, padding:"0 32px", borderBottom:"1px solid rgba(56,189,248,0.08)", background:"rgba(5,11,24,0.8)", position:"sticky", top:57, zIndex:90 },
@@ -731,12 +731,12 @@ const styles = {
   content:      { padding:"28px 32px", position:"relative", zIndex:1 },
   toolbar:      { display:"flex", gap:10, alignItems:"center", marginBottom:16, flexWrap:"wrap" },
   searchInput:  { background:"rgba(255,255,255,0.04)", border:"1px solid rgba(56,189,248,0.15)", borderRadius:8, color:"#e2e8f0", padding:"8px 14px", fontSize:12, outline:"none", width:240, fontFamily:"'IBM Plex Sans',sans-serif" },
-  filterSelect: { background:"#0a0f1e", border:"1px solid rgba(56,189,248,0.15)", borderRadius:8, color:"#94a3b8", padding:"8px 12px", fontSize:12, cursor:"pointer", outline:"none" },
+  filterSelect: { background:"#0a0f1e", border:"1px solid rgba(56,189,248,0.15)", borderRadius:8, color:"#ffffff", padding:"8px 12px", fontSize:12, cursor:"pointer", outline:"none" },
   addBtn:       { background:"rgba(74,222,128,0.1)", border:"1px solid rgba(74,222,128,0.3)", borderRadius:8, color:"#4ade80", padding:"8px 16px", fontSize:12, cursor:"pointer", fontWeight:700, fontFamily:"'IBM Plex Mono',monospace" },
   refreshBtn:   { background:"rgba(56,189,248,0.08)", border:"1px solid rgba(56,189,248,0.2)", borderRadius:8, color:"#38bdf8", padding:"8px 12px", fontSize:14, cursor:"pointer" },
   tableWrap:    { overflowX:"auto", borderRadius:10, border:"1px solid rgba(56,189,248,0.08)", background:"rgba(5,11,24,0.6)" },
   table:        { width:"100%", borderCollapse:"collapse", fontSize:12 },
-  empty:        { padding:"60px 20px", textAlign:"center", color:"#334155", fontSize:13 },
+  empty:        { padding:"60px 20px", textAlign:"center", color:"#ffffff", fontSize:13 },
   inlineInput:  { background:"#0a0f1e", border:"1px solid rgba(56,189,248,0.3)", borderRadius:5, color:"#e2e8f0", padding:"3px 7px", fontSize:11, outline:"none" },
   inlineSelect: { background:"#0a0f1e", border:"1px solid rgba(167,139,250,0.3)", borderRadius:5, color:"#a78bfa", padding:"3px 6px", fontSize:11, outline:"none", cursor:"pointer" },
   saveSmBtn:    { background:"rgba(74,222,128,0.12)", border:"1px solid rgba(74,222,128,0.35)", borderRadius:5, color:"#4ade80", padding:"3px 8px", fontSize:11, cursor:"pointer", fontWeight:700 },
@@ -746,17 +746,17 @@ const styles = {
   modalBox:     { background:"#080e1d", border:"1px solid rgba(56,189,248,0.2)", borderRadius:16, padding:"28px 32px", width:600, maxWidth:"95vw", maxHeight:"90vh", overflowY:"auto", boxShadow:"0 30px 80px rgba(0,0,0,0.7)" },
   formGrid:     { display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 },
   formField:    { display:"flex", flexDirection:"column", gap:5 },
-  formLabel:    { color:"#475569", fontSize:11, textTransform:"uppercase", letterSpacing:"0.07em" },
+  formLabel:    { color:"#ffffff", fontSize:11, textTransform:"uppercase", letterSpacing:"0.07em" },
   formInput:    { background:"rgba(255,255,255,0.04)", border:"1px solid rgba(56,189,248,0.2)", borderRadius:8, color:"#e2e8f0", padding:"9px 12px", fontSize:13, outline:"none" },
   formSelect:   { background:"#0a0f1e", border:"1px solid rgba(56,189,248,0.2)", borderRadius:8, color:"#e2e8f0", padding:"9px 12px", fontSize:13, outline:"none", cursor:"pointer" },
   confirmOkBtn: { flex:1, padding:"11px", borderRadius:9, fontWeight:700, fontSize:13, cursor:"pointer", background:"rgba(74,222,128,0.15)", border:"1px solid rgba(74,222,128,0.4)", color:"#4ade80", fontFamily:"'IBM Plex Mono',monospace" },
-  confirmCancelBtn:{ padding:"11px 20px", borderRadius:9, fontSize:13, cursor:"pointer", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(99,179,237,0.12)", color:"#64748b" },
+  confirmCancelBtn:{ padding:"11px 20px", borderRadius:9, fontSize:13, cursor:"pointer", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(99,179,237,0.12)", color:"#ffffff" },
   // Login
   loginRoot:    { minHeight:"100vh", background:"#050b18", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'IBM Plex Sans',sans-serif", position:"relative" },
   loginCard:    { background:"rgba(8,14,29,0.95)", border:"1px solid rgba(56,189,248,0.2)", borderRadius:18, padding:"40px 44px", width:360, textAlign:"center", boxShadow:"0 0 60px rgba(56,189,248,0.06)" },
   loginLogo:    { fontSize:48, color:"#38bdf8", marginBottom:12, textShadow:"0 0 30px rgba(56,189,248,0.5)" },
   loginTitle:   { color:"#38bdf8", fontSize:18, fontWeight:700, letterSpacing:"0.2em", fontFamily:"'IBM Plex Mono',monospace", margin:"0 0 4px" },
-  loginSub:     { color:"#334155", fontSize:11, margin:"0 0 28px", letterSpacing:"0.05em" },
+  loginSub:     { color:"#ffffff", fontSize:11, margin:"0 0 28px", letterSpacing:"0.05em" },
   loginInput:   { width:"100%", background:"rgba(255,255,255,0.04)", border:"1px solid", borderRadius:9, color:"#e2e8f0", padding:"11px 14px", fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"'IBM Plex Mono',monospace", letterSpacing:"0.1em", textAlign:"center", marginBottom:8 },
   loginErr:     { color:"#f87171", fontSize:12, fontFamily:"'IBM Plex Mono',monospace", margin:"0 0 8px" },
   loginBtn:     { width:"100%", padding:"12px", borderRadius:9, background:"rgba(56,189,248,0.12)", border:"1px solid rgba(56,189,248,0.35)", color:"#38bdf8", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"'IBM Plex Mono',monospace", letterSpacing:"0.1em" },

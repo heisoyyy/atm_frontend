@@ -30,7 +30,7 @@ export default function MonitoringHub({ navigateTo }) {
         <h1 style={{ color: "#e2e8f0", fontSize: 24, fontWeight: 700, margin: "0 0 4px", letterSpacing: "-0.02em" }}>
           Monitoring & Wilayah
         </h1>
-        <p style={{ color: "#64748b", fontSize: 13, margin: 0 }}>Status real-time ATM BRK Syariah</p>
+        <p style={{ color: "#ffffff", fontSize: 13, margin: 0 }}>Status real-time ATM BRK Syariah</p>
       </div>
 
       <div style={{
@@ -46,7 +46,7 @@ export default function MonitoringHub({ navigateTo }) {
             <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
               background:   isActive ? "rgba(59,130,246,0.18)" : "transparent",
               border:       isActive ? "1px solid rgba(59,130,246,0.35)" : "1px solid transparent",
-              borderRadius: 9, color: isActive ? "#60a5fa" : "#64748b",
+              borderRadius: 9, color: isActive ? "#60a5fa" : "#ffffff",
               padding: "8px 20px", fontSize: 13, fontWeight: isActive ? 600 : 400,
               cursor: "pointer", transition: "all 0.15s",
               display: "flex", alignItems: "center", gap: 7,
@@ -137,7 +137,7 @@ function TabMonitoring({ navigateTo }) {
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <p style={{ color: "#64748b", fontSize: 13, margin: 0 }}>
+        <p style={{ color: "#ffffff", fontSize: 13, margin: 0 }}>
           {filtered.length} dari {data.length} ATM ditampilkan
         </p>
       </div>
@@ -163,13 +163,13 @@ function TabMonitoring({ navigateTo }) {
               <span style={{ color: s.color, fontSize: 18, fontWeight: 700, lineHeight: 1 }}>{counts[s.key] ?? 0}</span>
               <span style={{ color: s.color, fontSize: 11, fontWeight: 600 }}>{s.key}</span>
             </div>
-            <span style={{ color: "#475569", fontSize: 10 }}>{s.desc}</span>
+            <span style={{ color: "#ffffff", fontSize: 10 }}>{s.desc}</span>
           </button>
         ))}
         {status !== "Semua" && (
           <button onClick={() => { setStatus("Semua"); setPage(0); }} style={{
             background: "transparent", border: "1px solid rgba(99,179,237,0.12)",
-            borderRadius: 8, padding: "8px 12px", color: "#64748b", fontSize: 11, cursor: "pointer",
+            borderRadius: 8, padding: "8px 12px", color: "#ffffff", fontSize: 11, cursor: "pointer",
           }}>✕ Reset filter</button>
         )}
       </div>
@@ -191,20 +191,20 @@ function TabMonitoring({ navigateTo }) {
           <select key={f.label} value={f.val} onChange={e => { f.set(e.target.value); setPage(0); }}
             style={{
               background: "#0d1228", border: "1px solid rgba(99,179,237,0.15)",
-              borderRadius: 8, color: "#94a3b8", padding: "8px 12px", fontSize: 13, cursor: "pointer", outline: "none",
+              borderRadius: 8, color: "#ffffff", padding: "8px 12px", fontSize: 13, cursor: "pointer", outline: "none",
             }}>
             {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
         ))}
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ color: "#64748b", fontSize: 12 }}>Tampilkan:</span>
+          <span style={{ color: "#ffffff", fontSize: 12 }}>Tampilkan:</span>
           <div style={{ display: "flex", gap: 4 }}>
             {[10, 50, 100, "all"].map(v => (
               <button key={v} onClick={() => { setPageSize(v); setPage(0); }} style={{
                 padding: "5px 10px", borderRadius: 6,
                 border:     pageSize === v ? "1px solid rgba(59,130,246,0.4)"  : "1px solid rgba(99,179,237,0.12)",
                 background: pageSize === v ? "rgba(59,130,246,0.15)"           : "rgba(255,255,255,0.02)",
-                color:      pageSize === v ? "#60a5fa"                         : "#64748b",
+                color:      pageSize === v ? "#60a5fa"                         : "#ffffff",
                 fontSize: 12, fontWeight: pageSize === v ? 700 : 400,
                 cursor: "pointer", transition: "all 0.15s",
               }}>
@@ -212,7 +212,7 @@ function TabMonitoring({ navigateTo }) {
               </button>
             ))}
           </div>
-          <span style={{ color: "#475569", fontSize: 12 }}>
+          <span style={{ color: "#ffffff", fontSize: 12 }}>
             {pageSize === "all"
               ? filtered.length + " ATM"
               : (page * pageSize + 1) + "–" + Math.min((page + 1) * pageSize, filtered.length) + " / " + filtered.length
@@ -241,19 +241,19 @@ function TabMonitoring({ navigateTo }) {
                 ].map(col => (
                   <th key={col.key} onClick={() => toggleSort(col.key)} style={{
                     padding: "12px 14px", textAlign: "left",
-                    color: sort.key === col.key ? "#60a5fa" : "#64748b",
+                    color: sort.key === col.key ? "#60a5fa" : "#ffffff",
                     fontWeight: 600, fontSize: 11, letterSpacing: "0.08em",
                     textTransform: "uppercase", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap",
                   }}>
                     {col.label}<SortIcon k={col.key} />
                   </th>
                 ))}
-                <th style={{ padding: "12px 14px", color: "#64748b", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Aksi</th>
+                <th style={{ padding: "12px 14px", color: "#ffffff", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
               {paged.length === 0 ? (
-                <tr><td colSpan={11} style={{ padding: "40px 20px", textAlign: "center", color: "#64748b", fontSize: 13 }}>Tidak ada ATM yang sesuai filter</td></tr>
+                <tr><td colSpan={11} style={{ padding: "40px 20px", textAlign: "center", color: "#ffffff", fontSize: 13 }}>Tidak ada ATM yang sesuai filter</td></tr>
               ) : paged.map((row, i) => {
                 const sc        = STATUS_COLOR[row.status] || "#6b7280";
                 const sb        = STATUS_BG[row.status]   || "transparent";
@@ -269,19 +269,19 @@ function TabMonitoring({ navigateTo }) {
                     onMouseEnter={e => e.currentTarget.style.background = "rgba(59,130,246,0.06)"}
                     onMouseLeave={e => e.currentTarget.style.background = isBongkar ? "rgba(226,75,74,0.04)" : isAwas ? "rgba(239,159,39,0.03)" : rowBg}
                   >
-                    <td style={{ padding: "10px 14px", color: "#64748b" }}>#{row.ranking}</td>
+                    <td style={{ padding: "10px 14px", color: "#ffffff" }}>#{row.ranking}</td>
                     <td style={{ padding: "10px 14px", fontWeight: 600, color: "#e2e8f0", fontFamily: "monospace" }}>
                       {row.id_atm}
                       {row.atm_sepi && <span style={{ marginLeft: 6, fontSize: 9, color: "#7F77DD", background: "rgba(127,119,221,0.1)", padding: "1px 5px", borderRadius: 3 }}>SEPI</span>}
                     </td>
-                    <td style={{ padding: "10px 14px", color: "#94a3b8", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.lokasi}>{row.lokasi || "-"}</td>
-                    <td style={{ padding: "10px 14px", color: "#94a3b8" }}>{row.wilayah || "-"}</td>
+                    <td style={{ padding: "10px 14px", color: "#ffffff", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.lokasi}>{row.lokasi || "-"}</td>
+                    <td style={{ padding: "10px 14px", color: "#ffffff" }}>{row.wilayah || "-"}</td>
                     <td style={{ padding: "10px 14px", color: "#e2e8f0", fontWeight: 600 }}>{fmt.rupiah(row.saldo)}</td>
                     <td style={{ padding: "10px 14px" }}><SaldoBar pct={row.pct_saldo} /></td>
-                    <td style={{ padding: "10px 14px", color: row.est_jam != null && row.est_jam < 24 ? "#E24B4A" : "#94a3b8", fontWeight: row.est_jam != null && row.est_jam < 24 ? 600 : 400 }}>
+                    <td style={{ padding: "10px 14px", color: row.est_jam != null && row.est_jam < 24 ? "#E24B4A" : "#ffffff", fontWeight: row.est_jam != null && row.est_jam < 24 ? 600 : 400 }}>
                       {fmt.jam(row.est_jam)}
                     </td>
-                    <td style={{ padding: "10px 14px", color: "#94a3b8", fontSize: 12 }}>
+                    <td style={{ padding: "10px 14px", color: "#ffffff", fontSize: 12 }}>
                       {row.tgl_isi ? row.tgl_isi + " " + (row.jam_isi || "") : "-"}
                     </td>
                     <td style={{ padding: "10px 14px" }}>
@@ -316,27 +316,27 @@ function TabMonitoring({ navigateTo }) {
             padding: "12px 20px", borderTop: "1px solid rgba(99,179,237,0.08)",
             flexWrap: "wrap", gap: 10,
           }}>
-            <span style={{ color: "#64748b", fontSize: 12 }}>
-              Halaman <strong style={{ color: "#94a3b8" }}>{page + 1}</strong> dari <strong style={{ color: "#94a3b8" }}>{maxPage}</strong>
-              {" · "}<strong style={{ color: "#94a3b8" }}>{filtered.length}</strong> ATM
+            <span style={{ color: "#ffffff", fontSize: 12 }}>
+              Halaman <strong style={{ color: "#ffffff" }}>{page + 1}</strong> dari <strong style={{ color: "#ffffff" }}>{maxPage}</strong>
+              {" · "}<strong style={{ color: "#ffffff" }}>{filtered.length}</strong> ATM
             </span>
             <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" }}>
               <NavBtn disabled={page === 0}           onClick={() => setPage(0)}           title="Halaman pertama">«</NavBtn>
               <NavBtn disabled={page === 0}           onClick={() => setPage(p => p - 1)}  title="Sebelumnya">‹</NavBtn>
               {buildPageRange(page, maxPage).map((p_, idx) =>
                 p_ === "…" ? (
-                  <span key={"e" + idx} style={{ color: "#475569", padding: "0 4px", fontSize: 13, userSelect: "none" }}>…</span>
+                  <span key={"e" + idx} style={{ color: "#ffffff", padding: "0 4px", fontSize: 13, userSelect: "none" }}>…</span>
                 ) : (
                   <button key={p_} onClick={() => setPage(p_)} style={{
                     minWidth: 32, height: 32, borderRadius: 6,
                     border:     p_ === page ? "1px solid rgba(59,130,246,0.5)"  : "1px solid rgba(99,179,237,0.12)",
                     background: p_ === page ? "rgba(59,130,246,0.2)"            : "rgba(255,255,255,0.02)",
-                    color:      p_ === page ? "#60a5fa"                         : "#64748b",
+                    color:      p_ === page ? "#60a5fa"                         : "#ffffff",
                     fontSize: 12, fontWeight: p_ === page ? 700 : 400,
                     cursor: "pointer", padding: "0 6px", transition: "all 0.15s",
                   }}
-                    onMouseEnter={e => { if (p_ !== page) { e.currentTarget.style.background = "rgba(59,130,246,0.08)"; e.currentTarget.style.color = "#94a3b8"; } }}
-                    onMouseLeave={e => { if (p_ !== page) { e.currentTarget.style.background = "rgba(255,255,255,0.02)"; e.currentTarget.style.color = "#64748b"; } }}
+                    onMouseEnter={e => { if (p_ !== page) { e.currentTarget.style.background = "rgba(59,130,246,0.08)"; e.currentTarget.style.color = "#ffffff"; } }}
+                    onMouseLeave={e => { if (p_ !== page) { e.currentTarget.style.background = "rgba(255,255,255,0.02)"; e.currentTarget.style.color = "#ffffff"; } }}
                   >{p_ + 1}</button>
                 )
               )}
@@ -352,7 +352,7 @@ function TabMonitoring({ navigateTo }) {
         background: "rgba(255,255,255,0.02)", border: "1px solid rgba(99,179,237,0.06)",
         borderRadius: 8, display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center",
       }}>
-        <span style={{ color: "#475569", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Threshold:</span>
+        <span style={{ color: "#ffffff", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Threshold:</span>
         {[
           { label: "BONGKAR",      color: "#E24B4A", desc: "≤ " + THR_BONGKAR + "%" },
           { label: "AWAS",         color: "#EF9F27", desc: THR_BONGKAR + "–" + THR_AWAS + "%" },
@@ -362,7 +362,7 @@ function TabMonitoring({ navigateTo }) {
           <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.color, display: "inline-block" }} />
             <span style={{ color: s.color, fontSize: 11, fontWeight: 600 }}>{s.label}</span>
-            <span style={{ color: "#475569", fontSize: 11 }}>{s.desc}</span>
+            <span style={{ color: "#ffffff", fontSize: 11 }}>{s.desc}</span>
           </div>
         ))}
       </div>
@@ -419,7 +419,7 @@ function TabAlerts({ navigateTo }) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <p style={{ color: "#64748b", fontSize: 13, margin: 0 }}>
+        <p style={{ color: "#ffffff", fontSize: 13, margin: 0 }}>
           {alerts.length} ATM perlu perhatian
           {ts && <span> · {new Date(ts).toLocaleString("id-ID")}</span>}
         </p>
@@ -439,7 +439,7 @@ function TabAlerts({ navigateTo }) {
             <span style={{ color: s.color, fontSize: 20, fontWeight: 700 }}>{breakdown[s.key]}</span>
             <div>
               <div style={{ color: s.color, fontSize: 11, fontWeight: 600 }}>{s.key}</div>
-              <div style={{ color: "#475569", fontSize: 10 }}>{s.desc}</div>
+              <div style={{ color: "#ffffff", fontSize: 10 }}>{s.desc}</div>
             </div>
           </div>
         ))}
@@ -450,14 +450,14 @@ function TabAlerts({ navigateTo }) {
           <button key={l} onClick={() => setLevel(l)} style={{
             background: level === l ? "rgba(59,130,246,0.15)" : "transparent",
             border:     level === l ? "1px solid rgba(59,130,246,0.3)" : "1px solid rgba(99,179,237,0.1)",
-            borderRadius: 8, color: level === l ? "#60a5fa" : "#64748b",
+            borderRadius: 8, color: level === l ? "#60a5fa" : "#ffffff",
             padding: "6px 14px", fontSize: 12, cursor: "pointer", fontWeight: level === l ? 600 : 400,
           }}>{l}</button>
         ))}
       </div>
 
       {alerts.length === 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 260, color: "#64748b", gap: 10, background: "rgba(0,229,160,0.04)", border: "1px solid rgba(0,229,160,0.1)", borderRadius: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 260, color: "#ffffff", gap: 10, background: "rgba(0,229,160,0.04)", border: "1px solid rgba(0,229,160,0.1)", borderRadius: 12 }}>
           <span style={{ fontSize: 36 }}>✓</span>
           <span style={{ color: "#00e5a0", fontWeight: 600, fontSize: 15 }}>Tidak ada alert saat ini</span>
           <span style={{ fontSize: 12 }}>Semua ATM dalam kondisi aman</span>
@@ -513,9 +513,9 @@ function TabWilayah({ navigateTo }) {
               border: isActive ? "1px solid rgba(59,130,246,0.4)" : bongkar > 0 ? "1px solid rgba(226,75,74,0.3)" : "1px solid rgba(99,179,237,0.08)",
               borderRadius: 10, padding: "9px 18px", cursor: "pointer", transition: "all 0.15s", textAlign: "left",
             }}>
-              <div style={{ color: isActive ? "#60a5fa" : "#94a3b8", fontWeight: 700, fontSize: 13 }}>{w}</div>
+              <div style={{ color: isActive ? "#60a5fa" : "#ffffff", fontWeight: 700, fontSize: 13 }}>{w}</div>
               <div style={{ fontSize: 11, marginTop: 3, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ color: "#64748b" }}>{atms.length} ATM</span>
+                <span style={{ color: "#ffffff" }}>{atms.length} ATM</span>
                 {bongkar > 0 && <span style={{ color: "#E24B4A", fontWeight: 600 }}>⚠ {bongkar}</span>}
                 {awas    > 0 && <span style={{ color: "#EF9F27", fontWeight: 600 }}>⊕ {awas}</span>}
                 {pantau  > 0 && <span style={{ color: "#d4b800", fontWeight: 600 }}>◎ {pantau}</span>}
@@ -529,10 +529,10 @@ function TabWilayah({ navigateTo }) {
       {active && (
         <>
           <div style={{ display: "flex", gap: 12, marginBottom: 14, padding: "10px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(99,179,237,0.06)", borderRadius: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <span style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>{active}</span>
-            <span style={{ color: "#475569" }}>—</span>
+            <span style={{ color: "#ffffff", fontSize: 13, fontWeight: 600 }}>{active}</span>
+            <span style={{ color: "#ffffff" }}>—</span>
             {[
-              { label: "Total",        value: allAtms.length,                                          color: "#94a3b8" },
+              { label: "Total",        value: allAtms.length,                                          color: "#ffffff" },
               { label: "BONGKAR",      value: allAtms.filter(a => a.status === "BONGKAR").length,      color: "#E24B4A" },
               { label: "AWAS",         value: allAtms.filter(a => a.status === "AWAS").length,         color: "#EF9F27" },
               { label: "PERLU PANTAU", value: allAtms.filter(a => a.status === "PERLU PANTAU").length, color: "#d4b800" },
@@ -541,7 +541,7 @@ function TabWilayah({ navigateTo }) {
             ].map(s => (
               <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <span style={{ color: s.color, fontSize: 14, fontWeight: 700 }}>{s.value}</span>
-                <span style={{ color: "#475569", fontSize: 10 }}>{s.label}</span>
+                <span style={{ color: "#ffffff", fontSize: 10 }}>{s.label}</span>
               </div>
             ))}
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari ID / lokasi..."
@@ -550,7 +550,7 @@ function TabWilayah({ navigateTo }) {
           </div>
 
           <div style={{ display: "flex", gap: 14, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
-            <span style={{ color: "#475569", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Threshold:</span>
+            <span style={{ color: "#ffffff", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Threshold:</span>
             {[
               { label: "BONGKAR",      color: "#E24B4A", desc: "≤" + THR_BONGKAR + "%" },
               { label: "AWAS",         color: "#EF9F27", desc: THR_BONGKAR + "–" + THR_AWAS + "%" },
@@ -560,13 +560,13 @@ function TabWilayah({ navigateTo }) {
               <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: s.color, display: "inline-block" }} />
                 <span style={{ color: s.color, fontSize: 10, fontWeight: 600 }}>{s.label}</span>
-                <span style={{ color: "#475569", fontSize: 10 }}>{s.desc}</span>
+                <span style={{ color: "#ffffff", fontSize: 10 }}>{s.desc}</span>
               </div>
             ))}
           </div>
 
           {sortedAtms.length === 0 ? (
-            <div style={{ color: "#64748b", padding: "40px 20px", textAlign: "center", fontSize: 13 }}>Tidak ada ATM yang sesuai pencarian.</div>
+            <div style={{ color: "#ffffff", padding: "40px 20px", textAlign: "center", fontSize: 13 }}>Tidak ada ATM yang sesuai pencarian.</div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
               {sortedAtms.map(atm => <AtmCard key={atm.id_atm} atm={atm} navigateTo={navigateTo} />)}
@@ -602,7 +602,7 @@ function AtmCard({ atm, navigateTo }) {
         <span style={{ color: "#e2e8f0", fontWeight: 700, fontSize: 13, fontFamily: "monospace" }}>{atm.id_atm}</span>
         <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: sc + "18", color: sc }}>{atm.tipe || "-"}</span>
       </div>
-      <div style={{ color: "#64748b", fontSize: 11, marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{atm.lokasi || "-"}</div>
+      <div style={{ color: "#ffffff", fontSize: 11, marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{atm.lokasi || "-"}</div>
       <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 2, marginBottom: 6 }}>
         <div style={{ height: "100%", width: Math.min(atm.pct_saldo || 0, 100) + "%", background: barColor, borderRadius: 2, transition: "width 0.3s" }} />
       </div>
@@ -632,25 +632,25 @@ function AlertCard({ atm, rank, navigateTo }) {
       animation: isBongkar ? "pulse-border 2s infinite" : "none",
     }}>
       <div style={{ textAlign: "center", minWidth: 40 }}>
-        <div style={{ color: "#64748b", fontSize: 10 }}>#{rank}</div>
+        <div style={{ color: "#ffffff", fontSize: 10 }}>#{rank}</div>
         <div style={{ color: sc, fontSize: 20, marginTop: 4 }}>{isBongkar ? "⚠" : isAwas ? "⊕" : "◎"}</div>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
           <span style={{ color: "#e2e8f0", fontWeight: 700, fontSize: 14, fontFamily: "monospace" }}>{atm.id_atm}</span>
           <span style={{ background: sb, color: sc, fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, border: "1px solid " + sc + "33" }}>{atm.status}</span>
-          {atm.tipe && <span style={{ color: "#64748b", fontSize: 11 }}>{atm.tipe}</span>}
+          {atm.tipe && <span style={{ color: "#ffffff", fontSize: 11 }}>{atm.tipe}</span>}
           {atm.atm_sepi && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: "rgba(127,119,221,0.12)", color: "#7F77DD", border: "1px solid rgba(127,119,221,0.25)", fontWeight: 600 }}>◐ SEPI</span>}
         </div>
-        <div style={{ color: "#64748b", fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ color: "#ffffff", fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           📍 {atm.lokasi || "-"} · {atm.wilayah || "-"}
         </div>
       </div>
       <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
         <Metric label="Saldo"      value={fmt.rupiah(atm.saldo)}         sub={(atm.pct_saldo?.toFixed(1)) + "%"} color={atm.pct_saldo <= THR_BONGKAR ? "#E24B4A" : atm.pct_saldo <= THR_AWAS ? "#EF9F27" : "#d4b800"} />
         <Metric label="Est. Habis" value={fmt.jam(atm.est_jam)}          sub={atm.tgl_habis || "-"}             color={sc} />
-        <Metric label="Jadwal Isi" value={atm.tgl_isi || "-"}            sub={atm.jam_isi || "-"}               color="#94a3b8" />
-        <Metric label="Laju Tarik" value={fmt.rupiah(atm.tarik_per_jam)} sub="/jam"                             color="#64748b" />
+        <Metric label="Jadwal Isi" value={atm.tgl_isi || "-"}            sub={atm.jam_isi || "-"}               color="#ffffff" />
+        <Metric label="Laju Tarik" value={fmt.rupiah(atm.tarik_per_jam)} sub="/jam"                             color="#ffffff" />
         <Metric label="Skor"       value={atm.skor_urgensi?.toFixed(0) ?? "-"} sub="/100"                      color={sc} />
       </div>
       <button onClick={() => navigateTo("history", atm.id_atm)} style={{
@@ -665,9 +665,9 @@ function AlertCard({ atm, rank, navigateTo }) {
 function Metric({ label, value, sub, color }) {
   return (
     <div style={{ textAlign: "center", minWidth: 68 }}>
-      <div style={{ color: "#64748b", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>{label}</div>
+      <div style={{ color: "#ffffff", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>{label}</div>
       <div style={{ color: color || "#e2e8f0", fontWeight: 600, fontSize: 12 }}>{value}</div>
-      <div style={{ color: "#64748b", fontSize: 10 }}>{sub}</div>
+      <div style={{ color: "#ffffff", fontSize: 10 }}>{sub}</div>
     </div>
   );
 }
@@ -690,19 +690,19 @@ function NavBtn({ children, onClick, disabled, title }) {
       minWidth: 32, height: 32, borderRadius: 6,
       border: "1px solid rgba(99,179,237,0.12)",
       background: disabled ? "transparent" : "rgba(255,255,255,0.02)",
-      color: disabled ? "#2d3748" : "#64748b",
+      color: disabled ? "#2d3748" : "#ffffff",
       fontSize: 16, cursor: disabled ? "default" : "pointer",
       padding: "0 6px", transition: "all 0.15s", lineHeight: 1,
     }}
       onMouseEnter={e => { if (!disabled) { e.currentTarget.style.background = "rgba(59,130,246,0.08)"; e.currentTarget.style.color = "#60a5fa"; } }}
-      onMouseLeave={e => { if (!disabled) { e.currentTarget.style.background = "rgba(255,255,255,0.02)"; e.currentTarget.style.color = "#64748b"; } }}
+      onMouseLeave={e => { if (!disabled) { e.currentTarget.style.background = "rgba(255,255,255,0.02)"; e.currentTarget.style.color = "#ffffff"; } }}
     >{children}</button>
   );
 }
 
 function Spinner({ label = "Memuat..." }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "50vh", flexDirection: "column", gap: 12, color: "#64748b" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "50vh", flexDirection: "column", gap: 12, color: "#ffffff" }}>
       <div style={{ width: 28, height: 28, border: "2px solid rgba(59,130,246,0.2)", borderTopColor: "#3b82f6", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
       <span style={{ fontSize: 13 }}>{label}</span>
     </div>

@@ -90,7 +90,7 @@ const S = {
     width: "100%", boxSizing: "border-box", fontFamily: "inherit",
   },
   label: {
-    color: "#94a3b8", fontSize: 11, fontWeight: 600, marginBottom: 4,
+    color: "#ffffff", fontSize: 11, fontWeight: 600, marginBottom: 4,
     display: "block", textTransform: "uppercase", letterSpacing: "0.04em",
   },
   btn: (color = "#3b82f6") => ({
@@ -102,11 +102,11 @@ const S = {
 };
 
 const thSt = {
-  padding: "10px 12px", color: "#64748b", fontWeight: 600,
+  padding: "10px 12px", color: "#ffffff", fontWeight: 600,
   textAlign: "left", whiteSpace: "nowrap",
   fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em",
 };
-const tdSt = (color = "#94a3b8") => ({ padding: "9px 12px", color });
+const tdSt = (color = "#ffffff") => ({ padding: "9px 12px", color });
 
 // ── Helper: get unique values dari rows untuk dropdown filter ──
 function getUniques(rows, key) {
@@ -273,7 +273,7 @@ export default function Wilayah() {
         <h1 style={{ color: "#e2e8f0", fontSize: 24, fontWeight: 700, margin: "0 0 4px", letterSpacing: "-0.02em" }}>
           Master ATM
         </h1>
-        <p style={{ color: "#64748b", fontSize: 13, margin: 0 }}>
+        <p style={{ color: "#ffffff", fontSize: 13, margin: 0 }}>
           Data master seluruh ATM BRK Syariah
         </p>
       </div>
@@ -300,7 +300,7 @@ export default function Wilayah() {
         <select
           value={filterUnit}
           onChange={e => { setFilterUnit(e.target.value); setPage(1); }}
-          style={{ ...S.input, width: 180, flex: "0 0 180px", background: "#0d1228", border: "1px solid rgba(99,179,237,0.15)" }}
+          style={{ ...S.input, width: 180, flex: "0 0 180px", background: "#0d1228", border: "1px solid rgba(255, 255, 255, 0.15)" }}
         >
           <option value="">Semua Unit Pengisian</option>
           {unitOpts.map(u => <option key={u} value={u}>{u}</option>)}
@@ -330,9 +330,9 @@ export default function Wilayah() {
             const col = TABLE_COLS.find(c => c.key === key);
             return (
               <div key={key} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.25)", borderRadius: 6, padding: "3px 8px 3px 10px", fontSize: 11 }}>
-                <span style={{ color: "#94a3b8" }}>{col?.label}:</span>
+                <span style={{ color: "#ffffff" }}>{col?.label}:</span>
                 <span style={{ color: "#60a5fa", fontWeight: 600 }}>{val}</span>
-                <button onClick={() => clearColFilter(key)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", padding: "0 2px", fontSize: 12, lineHeight: 1 }}>✕</button>
+                <button onClick={() => clearColFilter(key)} style={{ background: "none", border: "none", color: "#ffffff", cursor: "pointer", padding: "0 2px", fontSize: 12, lineHeight: 1 }}>✕</button>
               </div>
             );
           })}
@@ -340,11 +340,11 @@ export default function Wilayah() {
       )}
 
       {/* Count bar */}
-      <div style={{ color: "#475569", fontSize: 12, marginBottom: 12 }}>
+      <div style={{ color: "#ffffff", fontSize: 12, marginBottom: 12 }}>
         Menampilkan{" "}
-        <strong style={{ color: "#94a3b8" }}>{pagedRows.length}</strong> dari{" "}
-        <strong style={{ color: "#94a3b8" }}>{totalFiltered}</strong>
-        {totalFiltered !== total && <span style={{ color: "#64748b" }}> (total: {total})</span>}
+        <strong style={{ color: "#ffffff" }}>{pagedRows.length}</strong> dari{" "}
+        <strong style={{ color: "#ffffff" }}>{totalFiltered}</strong>
+        {totalFiltered !== total && <span style={{ color: "#ffffff" }}> (total: {total})</span>}
         {" "}ATM
       </div>
 
@@ -368,7 +368,7 @@ export default function Wilayah() {
                           style={{
                             background: hasFilter ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)",
                             border: `1px solid ${hasFilter ? "rgba(96,165,250,0.5)" : "rgba(99,179,237,0.15)"}`,
-                            borderRadius: 4, color: hasFilter ? "#60a5fa" : "#475569",
+                            borderRadius: 4, color: hasFilter ? "#60a5fa" : "#ffffff",
                             width: 18, height: 18, fontSize: 9, cursor: "pointer",
                             display: "flex", alignItems: "center", justifyContent: "center",
                             flexShrink: 0,
@@ -379,7 +379,7 @@ export default function Wilayah() {
                       )}
                       {hasFilter && (
                         <button onClick={() => clearColFilter(col.key)} title="Hapus filter"
-                          style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", padding: 0, fontSize: 10, lineHeight: 1 }}>
+                          style={{ background: "none", border: "none", color: "#ffffff", cursor: "pointer", padding: 0, fontSize: 10, lineHeight: 1 }}>
                           ✕
                         </button>
                       )}
@@ -396,7 +396,7 @@ export default function Wilayah() {
                       }}
                         onClick={e => e.stopPropagation()}
                       >
-                        <div style={{ color: "#64748b", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                        <div style={{ color: "#ffffff", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
                           Filter — {col.label}
                         </div>
 
@@ -414,7 +414,7 @@ export default function Wilayah() {
                           <div style={{ display: "flex", flexDirection: "column", gap: 3, maxHeight: 220, overflowY: "auto" }}>
                             <div
                               onClick={() => { clearColFilter(col.key); setActiveColMenu(null); }}
-                              style={{ padding: "5px 8px", borderRadius: 5, cursor: "pointer", color: !colFilters[col.key] ? "#60a5fa" : "#94a3b8", background: !colFilters[col.key] ? "rgba(59,130,246,0.1)" : "transparent", fontSize: 12 }}
+                              style={{ padding: "5px 8px", borderRadius: 5, cursor: "pointer", color: !colFilters[col.key] ? "#60a5fa" : "#ffffff", background: !colFilters[col.key] ? "rgba(59,130,246,0.1)" : "transparent", fontSize: 12 }}
                             >
                               — Semua —
                             </div>
@@ -424,7 +424,7 @@ export default function Wilayah() {
                                 onClick={() => { setColFilter(col.key, String(opt)); setActiveColMenu(null); }}
                                 style={{
                                   padding: "5px 8px", borderRadius: 5, cursor: "pointer",
-                                  color: colFilters[col.key] === String(opt) ? "#60a5fa" : "#94a3b8",
+                                  color: colFilters[col.key] === String(opt) ? "#60a5fa" : "#ffffff",
                                   background: colFilters[col.key] === String(opt) ? "rgba(59,130,246,0.12)" : "transparent",
                                   fontSize: 12, whiteSpace: "nowrap",
                                 }}
@@ -465,8 +465,8 @@ export default function Wilayah() {
                       onChange={e => setColFilter(col.key, e.target.value)}
                       style={{
                         background: "rgba(255,255,255,0.03)",
-                        border: `1px solid ${colFilters[col.key] ? "rgba(96,165,250,0.4)" : "rgba(99,179,237,0.1)"}`,
-                        borderRadius: 5, color: "#94a3b8",
+                        border: `1px solid ${colFilters[col.key] ? "rgba(255, 255, 255, 0.4)" : "rgba(99,179,237,0.1)"}`,
+                        borderRadius: 5, color: "#ffffff",
                         padding: "4px 8px", fontSize: 11, outline: "none",
                         width: "100%", boxSizing: "border-box", fontFamily: "inherit",
                       }}
@@ -476,7 +476,7 @@ export default function Wilayah() {
                       value={colFilters[col.key] || ""}
                       onChange={e => setColFilter(col.key, e.target.value)}
                       style={{
-                        background: colFilters[col.key] ? "rgba(59,130,246,0.08)" : "rgba(255,255,255,0.02)",
+                        background: colFilters[col.key] ? "rgba(59,130,246,0.08)" : "rgba(255, 255, 255, 0.02)",
                         border: `1px solid ${colFilters[col.key] ? "rgba(96,165,250,0.35)" : "rgba(99,179,237,0.1)"}`,
                         borderRadius: 5, color: colFilters[col.key] ? "#60a5fa" : "#475569",
                         padding: "4px 6px", fontSize: 11, outline: "none",
@@ -500,7 +500,7 @@ export default function Wilayah() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={TABLE_COLS.length + 2} style={{ padding: "44px 0", textAlign: "center", color: "#64748b" }}>
+                <td colSpan={TABLE_COLS.length + 2} style={{ padding: "44px 0", textAlign: "center", color: "#ffffff" }}>
                   <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
                     <div style={{ width: 16, height: 16, border: "2px solid rgba(59,130,246,0.25)", borderTopColor: "#3b82f6", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
                     Memuat data...
@@ -509,7 +509,7 @@ export default function Wilayah() {
               </tr>
             ) : pagedRows.length === 0 ? (
               <tr>
-                <td colSpan={TABLE_COLS.length + 2} style={{ padding: "44px 0", textAlign: "center", color: "#475569", fontSize: 13 }}>
+                <td colSpan={TABLE_COLS.length + 2} style={{ padding: "44px 0", textAlign: "center", color: "#ffffff", fontSize: 13 }}>
                   {hasAnyColFilter || search || filterWil || filterUnit
                     ? <>Tidak ada data yang cocok. <button onClick={() => { setColFilters({}); setSearch(""); setFilterWil(""); setFilterUnit(""); }} style={{ ...S.btn("#EF9F27"), padding: "4px 10px", fontSize: 12 }}>Reset Filter</button></>
                     : <>Tidak ada data. Klik <strong style={{ color: "#1D9E75" }}>+ Tambah ATM</strong> atau import file.</>
@@ -523,10 +523,10 @@ export default function Wilayah() {
                 onMouseEnter={e => e.currentTarget.style.background = "rgba(59,130,246,0.04)"}
                 onMouseLeave={e => e.currentTarget.style.background = "transparent"}
               >
-                <td style={tdSt("#475569")}>{(page - 1) * PAGE_SIZE + i + 1}</td>
+                <td style={tdSt("#ffffff")}>{(page - 1) * PAGE_SIZE + i + 1}</td>
                 {TABLE_COLS.map(c => (
                   <td key={c.key} style={{
-                    ...tdSt(c.key === "id_atm" ? "#60a5fa" : "#94a3b8"),
+                    ...tdSt(c.key === "id_atm" ? "#60a5fa" : "#ffffff"),
                     fontFamily: c.key === "id_atm" ? "monospace" : "inherit",
                     fontWeight: c.key === "id_atm" ? 700 : 400,
                     maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
@@ -571,7 +571,7 @@ export default function Wilayah() {
         })}
         <PBtn onClick={() => setPage(p => p + 1)}    disabled={page >= totalPages}>›</PBtn>
         <PBtn onClick={() => setPage(totalPages)}     disabled={page >= totalPages}>»</PBtn>
-        <span style={{ color: "#475569", fontSize: 11, marginLeft: 6 }}>Hal {page} / {totalPages}</span>
+        <span style={{ color: "#ffffff", fontSize: 11, marginLeft: 6 }}>Hal {page} / {totalPages}</span>
       </div>
 
       {/* Modals */}
@@ -606,7 +606,7 @@ function PBtn({ children, onClick, disabled, active }) {
     <button onClick={onClick} disabled={disabled} style={{
       background: active ? "rgba(59,130,246,0.22)" : "rgba(255,255,255,0.03)",
       border: "1px solid rgba(99,179,237,0.12)",
-      color: active ? "#60a5fa" : disabled ? "#2d3f55" : "#94a3b8",
+      color: active ? "#60a5fa" : disabled ? "#2d3f55" : "#ffffff",
       fontWeight: active ? 700 : 400, borderRadius: 6,
       padding: "5px 10px", fontSize: 13,
       cursor: disabled ? "not-allowed" : "pointer", fontFamily: "inherit",
@@ -637,7 +637,7 @@ function PctBadge({ val }) {
 function SisaHariBadge({ val }) {
   if (val == null || val === "") return <span style={{ color: "#2d3f55" }}>—</span>;
   const v = parseInt(val);
-  if (isNaN(v)) return <span style={{ color: "#94a3b8" }}>{val}</span>;
+  if (isNaN(v)) return <span style={{ color: "#ffffff" }}>{val}</span>;
   const color = v <= 7 ? "#E24B4A" : v <= 30 ? "#EF9F27" : "#1D9E75";
   return <span style={{ color, fontWeight: 600 }}>{v} hr</span>;
 }
@@ -670,7 +670,7 @@ function ModalWrap({ children, onClose, title, width = 640 }) {
       <div style={{ background: "#0f172a", border: "1px solid rgba(99,179,237,0.14)", borderRadius: 14, width: "100%", maxWidth: width, maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 80px rgba(0,0,0,0.6)", animation: "slideIn 0.2s ease" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 20px", borderBottom: "1px solid rgba(99,179,237,0.08)", flexShrink: 0 }}>
           <span style={{ color: "#e2e8f0", fontSize: 15, fontWeight: 700 }}>{title}</span>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.05)", border: "none", color: "#64748b", borderRadius: 6, width: 28, height: 28, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit" }}>✕</button>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.05)", border: "none", color: "#ffffff", borderRadius: 6, width: 28, height: 28, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit" }}>✕</button>
         </div>
         <div style={{ padding: "16px 20px 20px", overflowY: "auto", flex: 1 }}>
           {children}
@@ -684,7 +684,7 @@ function GroupDivider({ label }) {
   return (
     <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: 10, margin: "18px 0 6px" }}>
       <div style={{ flex: 1, height: 1, background: "rgba(99,179,237,0.1)" }} />
-      <span style={{ color: "#475569", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>{label}</span>
+      <span style={{ color: "#ffffff", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>{label}</span>
       <div style={{ flex: 1, height: 1, background: "rgba(99,179,237,0.1)" }} />
     </div>
   );
@@ -749,7 +749,7 @@ function FormModal({ mode, data, onClose, onSave }) {
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20, paddingTop: 14, borderTop: "1px solid rgba(99,179,237,0.08)" }}>
-        <button onClick={onClose} style={S.btn("#64748b")}>Batal</button>
+        <button onClick={onClose} style={S.btn("#ffffff")}>Batal</button>
         <button onClick={submit} disabled={saving} style={{ ...S.btn("#1D9E75"), opacity: saving ? 0.55 : 1, minWidth: 110 }}>
           {saving ? "Menyimpan..." : mode === "add" ? "➕ Simpan" : "💾 Update"}
         </button>
@@ -785,7 +785,7 @@ function DetailModal({ data, onClose, onEdit }) {
         </div>
       ))}
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20, paddingTop: 14, borderTop: "1px solid rgba(99,179,237,0.08)" }}>
-        <button onClick={onClose} style={S.btn("#64748b")}>Tutup</button>
+        <button onClick={onClose} style={S.btn("#ffffff")}>Tutup</button>
         <button onClick={onEdit}  style={S.btn("#1D9E75")}>✎ Edit ATM Ini</button>
       </div>
     </ModalWrap>
@@ -800,9 +800,9 @@ function DeleteModal({ data, onClose, onConfirm }) {
   const ready = confirm === data.id_atm;
   return (
     <ModalWrap onClose={onClose} title="🗑  Hapus ATM" width={440}>
-      <div style={{ color: "#94a3b8", fontSize: 13, lineHeight: 1.75, marginBottom: 16 }}>
+      <div style={{ color: "#ffffff", fontSize: 13, lineHeight: 1.75, marginBottom: 16 }}>
         Anda akan menghapus ATM <strong style={{ color: "#e2e8f0" }}>{data.id_atm}</strong>
-        {data.lokasi_atm && <> — <span style={{ color: "#64748b" }}>{data.lokasi_atm}</span></>}.
+        {data.lokasi_atm && <> — <span style={{ color: "#ffffff" }}>{data.lokasi_atm}</span></>}.
         <br />Tindakan ini <strong style={{ color: "#E24B4A" }}>tidak dapat dibatalkan</strong>.
       </div>
       <div style={{ background: "rgba(226,75,74,0.05)", border: "1px solid rgba(226,75,74,0.2)", borderRadius: 8, padding: "12px 14px", marginBottom: 16 }}>
@@ -811,7 +811,7 @@ function DeleteModal({ data, onClose, onConfirm }) {
           style={{ ...S.input, borderColor: ready ? "#1D9E75" : "rgba(226,75,74,0.3)" }} />
       </div>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-        <button onClick={onClose}   style={S.btn("#64748b")}>Batal</button>
+        <button onClick={onClose}   style={S.btn("#ffffff")}>Batal</button>
         <button onClick={onConfirm} disabled={!ready} style={{ ...S.btn("#E24B4A"), opacity: ready ? 1 : 0.35 }}>🗑 Ya, Hapus</button>
       </div>
     </ModalWrap>
@@ -849,8 +849,8 @@ function ImportModal({ onClose, onSuccess }) {
 
   return (
     <ModalWrap onClose={onClose} title="↑ Import Data ATM Master" width={520}>
-      <div style={{ color: "#64748b", fontSize: 12, lineHeight: 1.75, marginBottom: 14 }}>
-        Upload file <strong style={{ color: "#94a3b8" }}>Excel (.xlsx)</strong> atau <strong style={{ color: "#94a3b8" }}>CSV</strong>.
+      <div style={{ color: "#ffffff", fontSize: 12, lineHeight: 1.75, marginBottom: 14 }}>
+        Upload file <strong style={{ color: "#ffffff" }}>Excel (.xlsx)</strong> atau <strong style={{ color: "#ffffff" }}>CSV</strong>.
         Header kolom akan di-mapping otomatis. Data di-upsert berdasarkan <strong style={{ color: "#60a5fa" }}>ID ATM</strong>.
       </div>
 
@@ -861,10 +861,10 @@ function ImportModal({ onClose, onSuccess }) {
         style={{ border: `2px dashed ${file ? "rgba(29,158,117,0.4)" : "rgba(99,179,237,0.2)"}`, borderRadius: 10, padding: "28px 20px", textAlign: "center", cursor: "pointer", background: file ? "rgba(29,158,117,0.05)" : "rgba(255,255,255,0.01)", marginBottom: 14, transition: "all 0.2s" }}
       >
         <div style={{ fontSize: 28, marginBottom: 6 }}>📂</div>
-        <div style={{ color: file ? "#1D9E75" : "#64748b", fontSize: 13 }}>
+        <div style={{ color: file ? "#1D9E75" : "#ffffff", fontSize: 13 }}>
           {file ? file.name : "Klik atau drag & drop file di sini"}
         </div>
-        {file && <div style={{ color: "#475569", fontSize: 11, marginTop: 3 }}>{(file.size / 1024).toFixed(1)} KB</div>}
+        {file && <div style={{ color: "#ffffff", fontSize: 11, marginTop: 3 }}>{(file.size / 1024).toFixed(1)} KB</div>}
         <input ref={ref} type="file" accept=".xlsx,.xls,.csv" hidden onChange={e => setFile(e.target.files[0])} />
       </div>
 
@@ -880,7 +880,7 @@ function ImportModal({ onClose, onSuccess }) {
             <div style={{ color: "#EF9F27", marginTop: 6 }}>
               ⚠ {result.errors.length} baris gagal:
               {result.errors.slice(0, 5).map((e, i) => (
-                <div key={i} style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
+                <div key={i} style={{ fontSize: 11, color: "#ffffff", marginTop: 2 }}>
                   • {e.id_atm} (row {e.row}): {e.error}
                 </div>
               ))}
@@ -890,7 +890,7 @@ function ImportModal({ onClose, onSuccess }) {
       )}
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-        <button onClick={onClose} style={S.btn("#64748b")}>Tutup</button>
+        <button onClick={onClose} style={S.btn("#ffffff")}>Tutup</button>
         {result
           ? <button onClick={onSuccess} style={S.btn("#1D9E75")}>✓ Selesai & Refresh</button>
           : <button onClick={upload} disabled={!file || loading} style={{ ...S.btn("#7F77DD"), opacity: !file || loading ? 0.45 : 1 }}>

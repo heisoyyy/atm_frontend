@@ -66,7 +66,7 @@ export default function Upload() {
         <h1 style={{ color: "#e2e8f0", fontSize: 26, fontWeight: 700, margin: "0 0 4px", letterSpacing: "-0.02em" }}>
           Upload Data Monitoring
         </h1>
-        <p style={{ color: "#64748b", fontSize: 13, margin: 0 }}>
+        <p style={{ color: "#ffffff", fontSize: 13, margin: 0 }}>
           Upload file monitoring saldo ATM · Data ATM diambil otomatis dari ATM Master SSI
         </p>
       </div>
@@ -81,16 +81,16 @@ export default function Upload() {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, fontSize: 13 }}>
           <div>
-            <div style={{ color: "#94a3b8", marginBottom: 6, fontWeight: 600 }}>Yang dibaca dari file upload:</div>
-            <ul style={{ color: "#64748b", margin: 0, paddingLeft: 16, lineHeight: 1.8 }}>
+            <div style={{ color: "#ffffff", marginBottom: 6, fontWeight: 600 }}>Yang dibaca dari file upload:</div>
+            <ul style={{ color: "#ffffff", margin: 0, paddingLeft: 16, lineHeight: 1.8 }}>
               <li><strong style={{ color: "#60a5fa" }}>ID ATM</strong> — sebagai kunci pencarian</li>
               <li><strong style={{ color: "#60a5fa" }}>Sisa Saldo</strong> — saldo saat ini</li>
               <li>Tanggal & Jam — dari nama file (ZIP) atau otomatis</li>
             </ul>
           </div>
           <div>
-            <div style={{ color: "#94a3b8", marginBottom: 6, fontWeight: 600 }}>Data diambil dari ATM Master SSI:</div>
-            <ul style={{ color: "#64748b", margin: 0, paddingLeft: 16, lineHeight: 1.8 }}>
+            <div style={{ color: "#ffffff", marginBottom: 6, fontWeight: 600 }}>Data diambil dari ATM Master SSI:</div>
+            <ul style={{ color: "#ffffff", margin: 0, paddingLeft: 16, lineHeight: 1.8 }}>
               <li>Merk ATM, Lokasi, Alamat</li>
               <li>Denom, Lembar, Limit</li>
               <li>Wilayah (Pekanbaru/Batam/dll)</li>
@@ -130,17 +130,17 @@ export default function Upload() {
           <div>
             <div style={{ fontSize: 32, marginBottom: 8 }}>📄</div>
             <div style={{ color: "#1D9E75", fontWeight: 700, fontSize: 15 }}>{file.name}</div>
-            <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>{formatSize(file.size)}</div>
+            <div style={{ color: "#ffffff", fontSize: 12, marginTop: 4 }}>{formatSize(file.size)}</div>
             <button
               onClick={e => { e.stopPropagation(); setFile(null); setResult(null); }}
-              style={{ marginTop: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(99,179,237,0.15)", borderRadius: 6, color: "#64748b", padding: "4px 12px", fontSize: 11, cursor: "pointer" }}
+              style={{ marginTop: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(99,179,237,0.15)", borderRadius: 6, color: "#ffffff", padding: "4px 12px", fontSize: 11, cursor: "pointer" }}
             >✕ Ganti file</button>
           </div>
         ) : (
           <div>
             <div style={{ fontSize: 36, marginBottom: 10, opacity: 0.4 }}>⬆</div>
-            <div style={{ color: "#94a3b8", fontSize: 15, fontWeight: 600 }}>Drag & drop atau klik untuk pilih file</div>
-            <div style={{ color: "#475569", fontSize: 12, marginTop: 6 }}>XLSX, CSV, atau ZIP · Kolom minimal: ID ATM + Sisa Saldo</div>
+            <div style={{ color: "#ffffff", fontSize: 15, fontWeight: 600 }}>Drag & drop atau klik untuk pilih file</div>
+            <div style={{ color: "#ffffff", fontSize: 12, marginTop: 6 }}>XLSX, CSV, atau ZIP · Kolom minimal: ID ATM + Sisa Saldo</div>
           </div>
         )}
       </div>
@@ -162,7 +162,7 @@ export default function Upload() {
               transition: "left 0.2s",
             }} />
           </div>
-          <span style={{ color: "#94a3b8", fontSize: 13 }}>Auto retrain setelah upload</span>
+          <span style={{ color: "#ffffff", fontSize: 13 }}>Auto retrain setelah upload</span>
         </label>
 
         <button
@@ -206,7 +206,7 @@ export default function Upload() {
             <div style={{ color: "#1D9E75", fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
               ✅ {result.message}
             </div>
-            <div style={{ color: "#64748b", fontSize: 12 }}>{result.source}</div>
+            <div style={{ color: "#ffffff", fontSize: 12 }}>{result.source}</div>
           </div>
 
           {/* Stats Grid */}
@@ -215,8 +215,8 @@ export default function Upload() {
               { label: "ID di File",       value: result.total_file,   color: "#60a5fa", icon: "📄" },
               { label: "Cocok di Master",  value: result.matched,      color: "#1D9E75", icon: "✓" },
               { label: "Dilewati",         value: result.skipped,      color: result.skipped > 0 ? "#EF9F27" : "#1D9E75", icon: result.skipped > 0 ? "⊕" : "✓" },
-              { label: "Rows Diproses",    value: result.rows,         color: "#94a3b8", icon: "◈" },
-              { label: "ATM Unik",         value: result.atm_count,    color: "#94a3b8", icon: "◉" },
+              { label: "Rows Diproses",    value: result.rows,         color: "#ffffff", icon: "◈" },
+              { label: "ATM Unik",         value: result.atm_count,    color: "#ffffff", icon: "◉" },
               { label: "Prediksi",         value: result.predictions,  color: "#a78bfa", icon: "⟳" },
             ].map(s => (
               <div key={s.label} style={{
@@ -225,7 +225,7 @@ export default function Upload() {
               }}>
                 <div style={{ fontSize: 18, marginBottom: 6 }}>{s.icon}</div>
                 <div style={{ color: s.color, fontSize: 22, fontWeight: 700 }}>{s.value ?? "-"}</div>
-                <div style={{ color: "#64748b", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 4 }}>{s.label}</div>
+                <div style={{ color: "#ffffff", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 4 }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -248,7 +248,7 @@ export default function Upload() {
                   }}>{id}</span>
                 ))}
               </div>
-              <div style={{ color: "#64748b", fontSize: 11, marginTop: 8 }}>
+              <div style={{ color: "#ffffff", fontSize: 11, marginTop: 8 }}>
                 Tambahkan ID ATM ini ke ATM Master (menu Data → ATM Master) agar bisa termonitor.
               </div>
             </div>
@@ -265,7 +265,7 @@ export default function Upload() {
               </div>
               <ul style={{ margin: 0, paddingLeft: 16 }}>
                 {result.warnings.map((w, i) => (
-                  <li key={i} style={{ color: "#64748b", fontSize: 12, marginBottom: 4 }}>{w}</li>
+                  <li key={i} style={{ color: "#ffffff", fontSize: 12, marginBottom: 4 }}>{w}</li>
                 ))}
               </ul>
             </div>

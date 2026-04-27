@@ -58,7 +58,7 @@ const Card = ({ children, title, style = {} }) => (
 );
 
 const Label = ({ children }) => (
-  <div style={{ color: "#64748b", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>
+  <div style={{ color: "#ffffff", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>
     {children}
   </div>
 );
@@ -70,7 +70,7 @@ const TabBar = ({ tabs, active, onChange }) => (
         background: active === tab.key ? "rgba(99,179,237,0.12)" : "transparent",
         border: active === tab.key ? "1px solid rgba(99,179,237,0.35)" : "1px solid rgba(99,179,237,0.08)",
         borderRadius: 8,
-        color: active === tab.key ? "#93c5fd" : "#64748b",
+        color: active === tab.key ? "#93c5fd" : "#ffffff",
         padding: "7px 16px", fontSize: 12,
         fontWeight: active === tab.key ? 600 : 400,
         cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
@@ -192,7 +192,7 @@ export default function History({ atmId: initialAtmId, navigateTo }) {
         <h1 style={{ color: "#e2e8f0", fontSize: 26, fontWeight: 700, margin: "0 0 4px", letterSpacing: "-0.02em" }}>
           Historis & Prediksi ATM
         </h1>
-        <p style={{ color: "#64748b", fontSize: 13, margin: 0 }}>
+        <p style={{ color: "#ffffff", fontSize: 13, margin: 0 }}>
           Analisis tren saldo historis dan prediksi sisa saldo 24 jam ke depan
         </p>
       </div>
@@ -215,7 +215,7 @@ export default function History({ atmId: initialAtmId, navigateTo }) {
             <button key={d} onClick={() => setDays(d)} style={{
               background: days === d ? "rgba(59,130,246,0.2)" : "rgba(255,255,255,0.03)",
               border: days === d ? "1px solid rgba(59,130,246,0.5)" : "1px solid rgba(99,179,237,0.1)",
-              borderRadius: 8, color: days === d ? "#60a5fa" : "#94a3b8",
+              borderRadius: 8, color: days === d ? "#60a5fa" : "#ffffff",
               padding: "8px 16px", fontSize: 13,
               fontWeight: days === d ? 600 : 400, cursor: "pointer",
             }}>
@@ -251,7 +251,7 @@ export default function History({ atmId: initialAtmId, navigateTo }) {
               <span style={{ fontSize: 20 }}>⚡</span>
               <div>
                 <div style={{ color: "#d4b800", fontWeight: 700, fontSize: 14 }}>Perlu Pantau — Laju Penarikan Tinggi</div>
-                <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>
+                <div style={{ color: "#ffffff", fontSize: 12, marginTop: 2 }}>
                   Penarikan per jam mencapai <strong style={{ color: "#d4b800" }}>{fmt.rupiah(predData.tarik_per_jam)}</strong>
                   {" "}({((predData.tarik_per_jam / (data.limit || 1)) * 100).toFixed(1)}% dari limit) — melebihi ambang {THR_LAJU_NOTIF}%.
                 </div>
@@ -265,7 +265,7 @@ export default function History({ atmId: initialAtmId, navigateTo }) {
               <span style={{ fontSize: 20 }}>◐</span>
               <div>
                 <div style={{ color: "#7F77DD", fontWeight: 700, fontSize: 14 }}>ATM Sepi</div>
-                <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>Tidak ada transaksi selama 14 hari terakhir.</div>
+                <div style={{ color: "#ffffff", fontSize: 12, marginTop: 2 }}>Tidak ada transaksi selama 14 hari terakhir.</div>
               </div>
             </div>
           )}
@@ -282,7 +282,7 @@ export default function History({ atmId: initialAtmId, navigateTo }) {
                 <div style={{ color: "#00e5a0", fontWeight: 700, fontSize: 14 }}>
                   ATM ini sudah masuk Cash Plan
                 </div>
-                <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>
+                <div style={{ color: "#ffffff", fontSize: 12, marginTop: 2 }}>
                   Data akan otomatis diperbarui saat ada upload data baru dari Colab.
                   Pantau status di halaman <button onClick={() => navigateTo?.("cashplan")} style={{ background: "none", border: "none", color: "#00e5a0", cursor: "pointer", textDecoration: "underline", padding: 0, fontSize: 12 }}>Cash Plan →</button>
                 </div>
@@ -327,7 +327,7 @@ export default function History({ atmId: initialAtmId, navigateTo }) {
               { label: "Total Refill",   value: data.refill_count ?? 0,        color: "#f5c518" },
             ].map((s, i) => (
               <Card key={i} style={{ padding: "16px 20px" }}>
-                <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase" }}>{s.label}</div>
+                <div style={{ color: "#ffffff", fontSize: 11, textTransform: "uppercase" }}>{s.label}</div>
                 <div style={{ color: s.color, fontSize: 22, fontWeight: 700, marginTop: 4 }}>{s.value}</div>
               </Card>
             ))}
@@ -361,7 +361,7 @@ export default function History({ atmId: initialAtmId, navigateTo }) {
               </>
             )}
             {chartTab === "prediksi" && !predData && (
-              <div style={{ textAlign: "center", color: "#64748b", padding: "60px 20px", fontSize: 13 }}>
+              <div style={{ textAlign: "center", color: "#ffffff", padding: "60px 20px", fontSize: 13 }}>
                 Data prediksi tidak tersedia untuk ATM ini.
               </div>
             )}
@@ -448,7 +448,7 @@ function PredCard({ pred, saldoLatest, limit, atmSepi, isLajuTinggi, alreadyAdde
     }}>
       {/* Status */}
       <div>
-        <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+        <div style={{ color: "#ffffff", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
           Status Prediksi
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -467,7 +467,7 @@ function PredCard({ pred, saldoLatest, limit, atmSepi, isLajuTinggi, alreadyAdde
         { label: "% Saldo",        value: pct != null ? `${pct.toFixed(1)}%` : "—" },
       ].map((s, i) => (
         <div key={i}>
-          <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{s.label}</div>
+          <div style={{ color: "#ffffff", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{s.label}</div>
           <div style={{ color: "#e2e8f0", fontSize: 15, fontWeight: 600 }}>{s.value}</div>
         </div>
       ))}
@@ -482,7 +482,7 @@ function PredCard({ pred, saldoLatest, limit, atmSepi, isLajuTinggi, alreadyAdde
             border: "1px solid rgba(0,229,160,0.3)", textAlign: "center",
           }}>
             ✅ Sudah di Cash Plan
-            <div style={{ fontSize: 10, fontWeight: 400, marginTop: 2, color: "#94a3b8" }}>
+            <div style={{ fontSize: 10, fontWeight: 400, marginTop: 2, color: "#ffffff" }}>
               Tunggu upload data baru
             </div>
           </div>
@@ -539,28 +539,28 @@ function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsP
               <thead>
                 <tr style={{ borderBottom: "2px solid rgba(99,179,237,0.15)" }}>
                   {["Waktu", "Saldo", "Persentase", "Penarikan", "Refill", "Status"].map((h) => (
-                    <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: "#64748b", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
+                    <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: "#ffffff", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {currentRows.map((row, i) => (
                   <tr key={i} style={{ borderBottom: "1px solid rgba(99,179,237,0.06)", background: i % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent" }}>
-                    <td style={{ padding: "10px 16px", color: "#94a3b8", fontFamily: "monospace" }}>{String(row.datetime).slice(0, 16)}</td>
+                    <td style={{ padding: "10px 16px", color: "#ffffff", fontFamily: "monospace" }}>{String(row.datetime).slice(0, 16)}</td>
                     <td style={{ padding: "10px 16px", color: "#e2e8f0", fontWeight: 600 }}>{fmt.rupiah(row.saldo)}</td>
                     <td style={{ padding: "10px 16px" }}>
                       <span style={{ color: row.pct <= THR_BONGKAR ? "#E24B4A" : row.pct <= THR_AWAS ? "#EF9F27" : "#1D9E75" }}>
                         {row.pct?.toFixed(1)}%
                       </span>
                     </td>
-                    <td style={{ padding: "10px 16px", color: "#94a3b8" }}>{row.penarikan > 0 ? fmt.rupiah(row.penarikan) : "—"}</td>
+                    <td style={{ padding: "10px 16px", color: "#ffffff" }}>{row.penarikan > 0 ? fmt.rupiah(row.penarikan) : "—"}</td>
                     <td style={{ padding: "10px 16px" }}>
                       {row.is_refill ? (
                         <span style={{ background: "rgba(0,229,160,0.1)", color: "#00e5a0", borderRadius: 4, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>✓ Refill</span>
                       ) : "—"}
                     </td>
                     <td style={{ padding: "10px 16px" }}>
-                      <span style={{ background: STATUS_BG?.[row.status] || "rgba(100,116,139,0.1)", color: STATUS_COLOR?.[row.status] || "#64748b", borderRadius: 5, padding: "3px 10px", fontSize: 11, fontWeight: 600 }}>
+                      <span style={{ background: STATUS_BG?.[row.status] || "rgba(100,116,139,0.1)", color: STATUS_COLOR?.[row.status] || "#ffffff", borderRadius: 5, padding: "3px 10px", fontSize: 11, fontWeight: 600 }}>
                         {row.status || "—"}
                       </span>
                     </td>
@@ -571,7 +571,7 @@ function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsP
           </div>
           {totalPages > 1 && (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, flexWrap: "wrap", gap: 8 }}>
-              <span style={{ color: "#64748b", fontSize: 12 }}>
+              <span style={{ color: "#ffffff", fontSize: 12 }}>
                 {(currentPage - 1) * rowsPerPage + 1}–{Math.min(currentPage * rowsPerPage, allRows.length)} dari {allRows.length} baris
               </span>
               <div style={{ display: "flex", gap: 4 }}>
@@ -590,7 +590,7 @@ function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsP
       {dataTab === "prediksi" && (
         <>
           {!hasPred ? (
-            <div style={{ textAlign: "center", color: "#64748b", padding: "60px 20px", fontSize: 13 }}>Data prediksi tidak tersedia untuk ATM ini.</div>
+            <div style={{ textAlign: "center", color: "#ffffff", padding: "60px 20px", fontSize: 13 }}>Data prediksi tidak tersedia untuk ATM ini.</div>
           ) : (
             <>
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 16, padding: "10px 14px", background: "rgba(99,179,237,0.04)", border: "1px solid rgba(99,179,237,0.1)", borderRadius: 8 }}>
@@ -603,7 +603,7 @@ function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsP
                   <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
                     <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: s.color }} />
                     <span style={{ color: s.color, fontWeight: 600 }}>{s.label}</span>
-                    <span style={{ color: "#475569" }}>{s.desc}</span>
+                    <span style={{ color: "#ffffff" }}>{s.desc}</span>
                   </div>
                 ))}
               </div>
@@ -612,7 +612,7 @@ function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsP
                   <thead>
                     <tr style={{ borderBottom: "2px solid rgba(99,179,237,0.15)" }}>
                       {["Jam ke Depan", "Waktu Estimasi", "Prediksi Saldo", "% Saldo", "Status", "Cash Plan"].map(h => (
-                        <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: "#64748b", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
+                        <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: "#ffffff", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -627,11 +627,11 @@ function DataTableSection({ currentRows, allRows, currentPage, totalPages, rowsP
                       return (
                         <tr key={i} style={{ borderBottom: "1px solid rgba(99,179,237,0.06)", background: row.jam === 0 ? "rgba(99,179,237,0.06)" : row.pct <= THR_AUTO_CP ? "rgba(226,75,74,0.025)" : i % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent" }}>
                           <td style={{ padding: "10px 16px" }}>
-                            <span style={{ display: "inline-block", padding: "2px 10px", borderRadius: 5, background: row.jam === 0 ? "rgba(99,179,237,0.15)" : "rgba(255,255,255,0.04)", color: row.jam === 0 ? "#93c5fd" : "#94a3b8", fontFamily: "monospace", fontSize: 12, fontWeight: row.jam === 0 ? 700 : 400 }}>
+                            <span style={{ display: "inline-block", padding: "2px 10px", borderRadius: 5, background: row.jam === 0 ? "rgba(99,179,237,0.15)" : "rgba(255,255,255,0.04)", color: row.jam === 0 ? "#93c5fd" : "#ffffff", fontFamily: "monospace", fontSize: 12, fontWeight: row.jam === 0 ? 700 : 400 }}>
                               {row.jam === 0 ? "Sekarang" : `+${row.jam} Jam`}
                             </span>
                           </td>
-                          <td style={{ padding: "10px 16px", color: "#64748b", fontFamily: "monospace", fontSize: 12 }}>{timeStr}</td>
+                          <td style={{ padding: "10px 16px", color: "#ffffff", fontFamily: "monospace", fontSize: 12 }}>{timeStr}</td>
                           <td style={{ padding: "10px 16px", color: "#e2e8f0", fontWeight: 600 }}>{fmt.rupiah(row.saldo)}</td>
                           <td style={{ padding: "10px 16px" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -722,7 +722,7 @@ function CashPlanCell({ showAutoLabel, showTriggerBtn, row, atmInfo, alreadyAdde
     );
   }
 
-  return <span style={{ color: "#374151", fontSize: 11 }}>—</span>;
+  return <span style={{ color: "#ffffff", fontSize: 11 }}>—</span>;
 }
 
 // ── PaginBtn ───────────────────────────────────────────────
@@ -731,7 +731,7 @@ function PaginBtn({ children, onClick, disabled, active }) {
     <button onClick={onClick} disabled={disabled} style={{
       background: active ? "rgba(59,130,246,0.2)" : "rgba(255,255,255,0.03)",
       border: active ? "1px solid rgba(59,130,246,0.5)" : "1px solid rgba(99,179,237,0.1)",
-      borderRadius: 6, color: disabled ? "#334155" : active ? "#60a5fa" : "#94a3b8",
+      borderRadius: 6, color: disabled ? "#334155" : active ? "#60a5fa" : "#ffffff",
       padding: "5px 10px", fontSize: 12, cursor: disabled ? "not-allowed" : "pointer",
       minWidth: 32, opacity: disabled ? 0.4 : 1,
     }}>{children}</button>
@@ -766,7 +766,7 @@ function SaldoChart({ data, limit }) {
       {yTicks.map((t, i) => (
         <g key={i}>
           <line x1={PAD.l} x2={PAD.l + w} y1={t.y} y2={t.y} stroke="rgba(99,179,237,0.08)" strokeWidth="1" strokeDasharray="4,4" />
-          <text x={PAD.l - 8} y={t.y + 4} fontSize="10" fill="#374151" textAnchor="end">{t.label}</text>
+          <text x={PAD.l - 8} y={t.y + 4} fontSize="10" fill="#ffffff" textAnchor="end">{t.label}</text>
         </g>
       ))}
       <rect x={PAD.l} y={bongkarY} width={w} height={PAD.t + h - bongkarY} fill="rgba(226,75,74,0.06)" />
@@ -785,7 +785,7 @@ function SaldoChart({ data, limit }) {
       ))}
       <circle cx={xs(data.length - 1)} cy={ys(data[data.length - 1]?.saldo || 0)} r="5" fill="#3b82f6" />
       {xLabels.map((l, i) => (
-        <text key={i} x={l.x} y={H - 4} fontSize="9" fill="#374151" textAnchor="middle">{l.label}</text>
+        <text key={i} x={l.x} y={H - 4} fontSize="9" fill="#ffffff" textAnchor="middle">{l.label}</text>
       ))}
     </svg>
   );
@@ -803,7 +803,7 @@ function PredictionFutureChart({ currentSaldo, tarikPerJam, estJamHabis, limit }
     return (
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "center",
-        height: 200, color: "#64748b", fontSize: 13,
+        height: 200, color: "#ffffff", fontSize: 13,
         border: "1px dashed rgba(99,179,237,0.1)", borderRadius: 8,
       }}>
         Data saldo tidak tersedia untuk chart prediksi
@@ -847,7 +847,7 @@ function PredictionFutureChart({ currentSaldo, tarikPerJam, estJamHabis, limit }
           <g key={idx}>
             <line x1={PAD.l} x2={PAD.l + w} y1={y} y2={y}
               stroke="rgba(99,179,237,0.08)" strokeDasharray="4,4" />
-            <text x={PAD.l - 12} y={y + 4} fontSize="10" fill="#64748b" textAnchor="end">
+            <text x={PAD.l - 12} y={y + 4} fontSize="10" fill="#ffffff" textAnchor="end">
               {fmt.rupiah(Math.round(p * maxSaldo))}
             </text>
           </g>
@@ -871,7 +871,7 @@ function PredictionFutureChart({ currentSaldo, tarikPerJam, estJamHabis, limit }
       <circle cx={xs(0)} cy={startY} r="7" fill="#60a5fa" stroke="#0f172a" strokeWidth="2" />
 
       {[0, 4, 8, 12, 16, 20, 24].map(i => (
-        <text key={i} x={xs(i)} y={H - 12} fontSize="11" fill="#64748b" textAnchor="middle">
+        <text key={i} x={xs(i)} y={H - 12} fontSize="11" fill="#ffffff" textAnchor="middle">
           +{i}j
         </text>
       ))}
@@ -890,7 +890,7 @@ function PredictionFutureChart({ currentSaldo, tarikPerJam, estJamHabis, limit }
 
 function Spinner() {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300, flexDirection: "column", gap: 12, color: "#64748b" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300, flexDirection: "column", gap: 12, color: "#ffffff" }}>
       <div style={{ width: 36, height: 36, border: "3px solid rgba(59,130,246,0.2)", borderTopColor: "#3b82f6", borderRadius: "50%", animation: "spin 0.9s linear infinite" }} />
       <span>Memuat data historis dan prediksi...</span>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

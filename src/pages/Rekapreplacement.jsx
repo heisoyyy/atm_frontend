@@ -245,7 +245,7 @@ export default function RekapReplacement({ navigateTo }) {
           <h1 style={{ color:"#e2e8f0", fontSize:24, fontWeight:700, margin:"0 0 4px", letterSpacing:"-0.02em" }}>
             Rekap Replacement ATM
           </h1>
-          <p style={{ color:"#64748b", fontSize:13, margin:0 }}>
+          <p style={{ color:"#ffffff", fontSize:13, margin:0 }}>
             ATM setelah Selesai / Batal dari Cash Plan ·{" "}
             <span style={{ color:"#00e5a0" }}>{items.length} rekap</span> bulan {filterBulan} ·{" "}
             <span style={{ color:"#60a5fa" }}>{totalSaved} sudah disimpan</span>
@@ -264,7 +264,7 @@ export default function RekapReplacement({ navigateTo }) {
             ↺ Refresh
           </button>
           <button onClick={()=>navigateTo?.("cashplan")}
-            style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(99,179,237,0.15)", borderRadius:8, color:"#64748b", padding:"8px 16px", fontSize:13, cursor:"pointer" }}>
+            style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(99,179,237,0.15)", borderRadius:8, color:"#ffffff", padding:"8px 16px", fontSize:13, cursor:"pointer" }}>
             ← Cash Plan
           </button>
         </div>
@@ -273,7 +273,7 @@ export default function RekapReplacement({ navigateTo }) {
       {/* Info Banner */}
       <div style={{ background:"rgba(59,130,246,0.06)", border:"1px solid rgba(59,130,246,0.15)", borderRadius:10, padding:"12px 18px", marginBottom:20, display:"flex", alignItems:"center", gap:12 }}>
         <span style={{ fontSize:18 }}>ℹ</span>
-        <div style={{ color:"#94a3b8", fontSize:12 }}>
+        <div style={{ color:"#ffffff", fontSize:12 }}>
           Data di sini bersifat <strong style={{ color:"#00e5a0" }}>permanen</strong> — tidak berubah meskipun user upload ulang setiap hari.
           Isi <strong style={{ color:"#60a5fa" }}>Tanggal Isi</strong>, <strong style={{ color:"#a78bfa" }}>Jam Cash In</strong>, <strong style={{ color:"#f59e0b" }}>Jam Cash Out</strong> lalu klik <strong style={{ color:"#00e5a0" }}>Simpan</strong>.
           Kolom <strong style={{ color:"#a78bfa" }}>Denom</strong> otomatis dari data ATM (EMV: 50rb/100rb, CRM: keduanya).
@@ -285,7 +285,7 @@ export default function RekapReplacement({ navigateTo }) {
         {[
           { label:"Total Rekap",    value:filtered.length,                              color:"#00e5a0", icon:"✓"  },
           { label:"Selesai",        value:totalSelesai,                                 color:"#00e5a0", icon:"✔"  },
-          { label:"Batal",          value:totalBatal,                                   color:"#94a3b8", icon:"✕"  },
+          { label:"Batal",          value:totalBatal,                                   color:"#ffffff", icon:"✕"  },
           { label:"Sudah Disimpan", value:totalSaved,                                   color:"#60a5fa", icon:"💾" },
           { label:"Total Nominal",  value:fmtRp(totalNominal),                          color:"#a78bfa", icon:"◎",  small:true },
           { label:"Total Lembar",   value:`${totalLembar.toLocaleString("id-ID")} lbr`, color:"#f59e0b", icon:"◈",  small:true },
@@ -293,7 +293,7 @@ export default function RekapReplacement({ navigateTo }) {
           <div key={c.label} style={{ background:"rgba(255,255,255,0.02)", border:`1px solid ${c.color}28`, borderRadius:10, padding:"14px 16px", textAlign:"center" }}>
             <div style={{ fontSize:18, color:c.color, marginBottom:6 }}>{c.icon}</div>
             <div style={{ color:c.color, fontSize:c.small?12:22, fontWeight:700, lineHeight:1 }}>{c.value}</div>
-            <div style={{ color:"#64748b", fontSize:10, marginTop:6, textTransform:"uppercase", letterSpacing:"0.07em" }}>{c.label}</div>
+            <div style={{ color:"#ffffff", fontSize:10, marginTop:6, textTransform:"uppercase", letterSpacing:"0.07em" }}>{c.label}</div>
           </div>
         ))}
       </div>
@@ -303,9 +303,9 @@ export default function RekapReplacement({ navigateTo }) {
         <div style={{ display:"flex", gap:10, marginBottom:20, flexWrap:"wrap" }}>
           {byWilayah.map(w=>(
             <div key={w.wilayah} style={{ background:"rgba(0,229,160,0.04)", border:"1px solid rgba(0,229,160,0.15)", borderRadius:8, padding:"10px 16px", minWidth:150 }}>
-              <div style={{ color:"#94a3b8", fontSize:11, fontWeight:600 }}>{w.wilayah}</div>
+              <div style={{ color:"#ffffff", fontSize:11, fontWeight:600 }}>{w.wilayah}</div>
               <div style={{ color:"#00e5a0", fontSize:18, fontWeight:700, marginTop:4 }}>{w.count} ATM</div>
-              <div style={{ color:"#64748b", fontSize:11, marginTop:2 }}>{fmtRp(w.nominal)}</div>
+              <div style={{ color:"#ffffff", fontSize:11, marginTop:2 }}>{fmtRp(w.nominal)}</div>
             </div>
           ))}
         </div>
@@ -344,7 +344,7 @@ export default function RekapReplacement({ navigateTo }) {
                     {label:"Status",key:"status_done"},{label:"Keterangan",key:null},{label:"Aksi",key:null},
                   ].map((col,ci)=>(
                     <th key={ci} onClick={col.key?()=>toggleSort(col.key):undefined}
-                      style={{ padding:"11px 12px", textAlign:"left", color:col.key&&sort.key===col.key?"#60a5fa":"#64748b", fontWeight:600, fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", cursor:col.key?"pointer":"default", whiteSpace:"nowrap" }}>
+                      style={{ padding:"11px 12px", textAlign:"left", color:col.key&&sort.key===col.key?"#60a5fa":"#ffffff", fontWeight:600, fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", cursor:col.key?"pointer":"default", whiteSpace:"nowrap" }}>
                       {col.label}{col.key&&sort.key===col.key&&<span style={{marginLeft:3}}>{sort.dir>0?"↑":"↓"}</span>}
                     </th>
                   ))}
@@ -372,7 +372,7 @@ export default function RekapReplacement({ navigateTo }) {
                   const cashOut = saved ? (item.jam_cash_out||"") : (ov.jam_cash_out ?? item.jam_cash_out ?? "");
 
                   const statusCP = (item.status_done||"").toUpperCase();
-                  const ssColor  = statusCP==="SELESAI"?"#00e5a0":statusCP==="BATAL"?"#94a3b8":"#f59e0b";
+                  const ssColor  = statusCP==="SELESAI"?"#00e5a0":statusCP==="BATAL"?"#ffffff":"#f59e0b";
                   const ssBg     = statusCP==="SELESAI"?"rgba(0,229,160,0.1)":statusCP==="BATAL"?"rgba(148,163,184,0.08)":"rgba(245,158,11,0.1)";
                   const rowBg    = saved?"rgba(0,229,160,0.02)":i%2===0?"transparent":"rgba(255,255,255,0.01)";
 
@@ -391,13 +391,13 @@ export default function RekapReplacement({ navigateTo }) {
                       onMouseEnter={e=>!saved&&(e.currentTarget.style.background="rgba(0,229,160,0.04)")}
                       onMouseLeave={e=>e.currentTarget.style.background=rowBg}>
 
-                      <td style={tdS("#64748b")}>{page*PAGE_SIZE+i+1}</td>
+                      <td style={tdS("#ffffff")}>{page*PAGE_SIZE+i+1}</td>
                       <td style={{padding:"8px 12px"}}>
                         <div style={{color:"#00e5a0",fontSize:11,fontWeight:600}}>
                           {item.done_at ? new Date(item.done_at).toLocaleString("id-ID",{dateStyle:"medium",timeStyle:"short"}) : "—"}
                         </div>
                       </td>
-                      <td style={tdS("#94a3b8")}>{item.bulan||filterBulan}</td>
+                      <td style={tdS("#ffffff")}>{item.bulan||filterBulan}</td>
 
                       {/* ID ATM + SAVED badge */}
                       <td style={{padding:"8px 12px"}}>
@@ -408,8 +408,8 @@ export default function RekapReplacement({ navigateTo }) {
                         </div>
                       </td>
 
-                      <td style={{...tdS("#94a3b8"),maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={item.lokasi}>{item.lokasi||"—"}</td>
-                      <td style={tdS("#94a3b8")}>{item.wilayah||"—"}</td>
+                      <td style={{...tdS("#ffffff"),maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={item.lokasi}>{item.lokasi||"—"}</td>
+                      <td style={tdS("#ffffff")}>{item.wilayah||"—"}</td>
 
                       {/* Tipe */}
                       <td style={{padding:"8px 12px"}}>
@@ -458,7 +458,7 @@ export default function RekapReplacement({ navigateTo }) {
                         </span>
                       </td>
 
-                      <td style={{...tdS("#64748b"),maxWidth:160,overflow:"hidden",textOverflow:"ellipsis"}}>
+                      <td style={{...tdS("#ffffff"),maxWidth:160,overflow:"hidden",textOverflow:"ellipsis"}}>
                         {item.keterangan || <span style={{color:"#374151"}}>—</span>}
                       </td>
 
@@ -484,7 +484,7 @@ export default function RekapReplacement({ navigateTo }) {
 
           {maxPage > 1 && (
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 20px",borderTop:"1px solid rgba(99,179,237,0.08)"}}>
-              <span style={{color:"#64748b",fontSize:12}}>Halaman {page+1} dari {maxPage} · {filtered.length} rekap</span>
+              <span style={{color:"#ffffff",fontSize:12}}>Halaman {page+1} dari {maxPage} · {filtered.length} rekap</span>
               <div style={{display:"flex",gap:6}}>
                 <PageBtn disabled={page===0}        onClick={()=>setPage(p=>p-1)}>← Prev</PageBtn>
                 <PageBtn disabled={page>=maxPage-1} onClick={()=>setPage(p=>p+1)}>Next →</PageBtn>
@@ -504,7 +504,7 @@ export default function RekapReplacement({ navigateTo }) {
         ].map(l=>(
           <div key={l.label} style={{display:"flex",alignItems:"center",gap:6}}>
             <div style={{width:8,height:8,borderRadius:2,background:l.color}} />
-            <span style={{color:"#64748b",fontSize:11}}>{l.label}</span>
+            <span style={{color:"#ffffff",fontSize:11}}>{l.label}</span>
           </div>
         ))}
       </div>
@@ -516,11 +516,11 @@ export default function RekapReplacement({ navigateTo }) {
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
               <div>
                 <h2 style={{color:"#e2e8f0",fontSize:18,fontWeight:700,margin:"0 0 4px"}}>📊 Download Excel Rekap</h2>
-                <p style={{color:"#64748b",fontSize:12,margin:0}}>Bulan: {filterBulan} {nowTahun()} · {filtered.length} rekap</p>
+                <p style={{color:"#ffffff",fontSize:12,margin:0}}>Bulan: {filterBulan} {nowTahun()} · {filtered.length} rekap</p>
               </div>
-              <button onClick={()=>setShowDlModal(false)} style={{background:"none",border:"none",color:"#64748b",fontSize:20,cursor:"pointer"}}>×</button>
+              <button onClick={()=>setShowDlModal(false)} style={{background:"none",border:"none",color:"#ffffff",fontSize:20,cursor:"pointer"}}>×</button>
             </div>
-            <div style={{color:"#94a3b8",fontSize:12,marginBottom:16}}>
+            <div style={{color:"#ffffff",fontSize:12,marginBottom:16}}>
               Kolom <strong style={{color:"#a78bfa"}}>Denom Tersedia</strong> dan <strong style={{color:"#a78bfa"}}>Pilih Denom</strong> ikut tercatat di file Excel.
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -532,12 +532,12 @@ export default function RekapReplacement({ navigateTo }) {
                     disabled={cnt===0}
                     style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",borderRadius:8,background:cnt===0?"rgba(255,255,255,0.02)":"rgba(167,139,250,0.08)",border:`1px solid ${cnt===0?"rgba(99,179,237,0.1)":"rgba(167,139,250,0.25)"}`,color:cnt===0?"#374151":"#a78bfa",cursor:cnt===0?"not-allowed":"pointer",fontSize:13,fontWeight:600}}>
                     <span>📥 {w==="Semua"?"Semua Wilayah":w}</span>
-                    <span style={{fontSize:12,fontWeight:400,color:cnt===0?"#374151":"#64748b"}}>{cnt} rekap · .xlsx</span>
+                    <span style={{fontSize:12,fontWeight:400,color:cnt===0?"#374151":"#ffffff"}}>{cnt} rekap · .xlsx</span>
                   </button>
                 );
               })}
             </div>
-            <button onClick={()=>setShowDlModal(false)} style={{marginTop:16,width:"100%",padding:"10px",borderRadius:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(99,179,237,0.12)",color:"#64748b",cursor:"pointer",fontSize:13}}>Tutup</button>
+            <button onClick={()=>setShowDlModal(false)} style={{marginTop:16,width:"100%",padding:"10px",borderRadius:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(99,179,237,0.12)",color:"#ffffff",cursor:"pointer",fontSize:13}}>Tutup</button>
           </div>
         </div>
       )}
@@ -550,16 +550,16 @@ function EmptyState({ filterBulan }) {
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:280,gap:12,background:"rgba(59,130,246,0.03)",border:"1px solid rgba(59,130,246,0.1)",borderRadius:12}}>
       <span style={{fontSize:36}}>📋</span>
-      <span style={{color:"#94a3b8",fontWeight:600,fontSize:16}}>Belum Ada Rekap — {filterBulan}</span>
-      <span style={{color:"#64748b",fontSize:13,textAlign:"center",maxWidth:400}}>
-        ATM yang sudah ditandai <strong style={{color:"#00e5a0"}}>Selesai</strong> atau <strong style={{color:"#94a3b8"}}>Batal</strong> di Cash Plan akan muncul di sini.
+      <span style={{color:"#ffffff",fontWeight:600,fontSize:16}}>Belum Ada Rekap — {filterBulan}</span>
+      <span style={{color:"#ffffff",fontSize:13,textAlign:"center",maxWidth:400}}>
+        ATM yang sudah ditandai <strong style={{color:"#00e5a0"}}>Selesai</strong> atau <strong style={{color:"#ffffff"}}>Batal</strong> di Cash Plan akan muncul di sini.
       </span>
     </div>
   );
 }
 function Spinner() {
   return (
-    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:200,flexDirection:"column",gap:12,color:"#64748b"}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:200,flexDirection:"column",gap:12,color:"#ffffff"}}>
       <div style={{width:28,height:28,border:"2px solid rgba(59,130,246,0.2)",borderTopColor:"#3b82f6",borderRadius:"50%",animation:"spin 0.8s linear infinite"}} />
       <span>Memuat rekap...</span>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
@@ -571,5 +571,5 @@ function PageBtn({ children, onClick, disabled }) {
     <button onClick={onClick} disabled={disabled} style={{background:disabled?"transparent":"rgba(59,130,246,0.1)",border:"1px solid rgba(59,130,246,0.2)",borderRadius:6,color:disabled?"#374151":"#60a5fa",padding:"5px 12px",fontSize:12,cursor:disabled?"default":"pointer"}}>{children}</button>
   );
 }
-const selectStyle = {background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:8,color:"#94a3b8",padding:"8px 12px",fontSize:13,cursor:"pointer",outline:"none"};
+const selectStyle = {background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:8,color:"#ffffff",padding:"8px 12px",fontSize:13,cursor:"pointer",outline:"none"};
 const tdS = color => ({padding:"8px 12px",color,whiteSpace:"nowrap"});

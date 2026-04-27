@@ -31,8 +31,8 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
           top:             0,
           bottom:          0,
           width:           collapsed ? 64 : 240,
-          background:      "linear-gradient(180deg, #0d1228 0%, #0a0f1e 100%)",
-          borderRight:     "1px solid rgba(99,179,237,0.08)",
+          background:      "linear-gradient(180deg, #000000 0%, #171717 100%)",
+          borderRight:     "1px solid rgba(253, 254, 255, 0.08)",
           display:         "flex",
           flexDirection:   "column",
           zIndex:          100,
@@ -65,7 +65,7 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
                 justifyContent: "center",
                 fontSize:       18,
                 fontWeight:     700,
-                color:          "#fff",
+                color:          "#ffffff",
                 boxShadow:      "0 0 20px rgba(59,130,246,0.4)",
                 flexShrink:     0,
               }}
@@ -74,8 +74,8 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
             </div>
             {!collapsed && (
               <div style={{ overflow:"hidden", whiteSpace:"nowrap" }}>
-                <div style={{ color:"#e2e8f0", fontWeight:700, fontSize:14 }}>Smart ATM</div>
-                <div style={{ color:"#4a9eff", fontSize:10, textTransform:"uppercase" }}>BRK Syariah</div>
+                <div style={{ color:"#ffffff", fontWeight:700, fontSize:14 }}>Smart ATM</div>
+                <div style={{ color:"#95c6ff", fontSize:10, textTransform:"uppercase" }}>BRK Syariah</div>
               </div>
             )}
           </div>
@@ -86,10 +86,10 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
               onClick={handleCollapse}
               title="Tutup sidebar"
               style={{
-                background:   "rgba(255,255,255,0.04)",
-                border:       "1px solid rgba(99,179,237,0.15)",
+                background:   "rgba(240, 12, 12, 0.04)",
+                border:       "1px solid rgba(0, 0, 0, 0.15)",
                 borderRadius: 6,
-                color:        "#64748b",
+                color:        "#ffffff",
                 width:        28,
                 height:       28,
                 cursor:       "pointer",
@@ -100,8 +100,8 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
                 flexShrink:   0,
                 transition:   "all 0.2s",
               }}
-              onMouseEnter={e => { e.currentTarget.style.color="#60a5fa"; e.currentTarget.style.borderColor="rgba(96,165,250,0.35)"; }}
-              onMouseLeave={e => { e.currentTarget.style.color="#64748b"; e.currentTarget.style.borderColor="rgba(99,179,237,0.15)"; }}
+              onMouseEnter={e => { e.currentTarget.style.color="#ffffff"; e.currentTarget.style.borderColor="rgba(96,165,250,0.35)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color="#ffffff"; e.currentTarget.style.borderColor="rgba(99,179,237,0.15)"; }}
             >
               ◂
             </button>
@@ -135,10 +135,10 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
                         padding:        collapsed ? "10px 0" : "10px 14px",
                         marginBottom:   4,
                         justifyContent: collapsed ? "center" : "flex-start",
-                        background:     isOpen || groupActive ? "rgba(59,130,246,0.08)" : "transparent",
+                        background:     isOpen || groupActive ? "rgba(255, 255, 255, 0.08)" : "transparent",
                         border:         "1px solid transparent",
                         borderRadius:   8,
-                        color:          groupActive ? "#60a5fa" : "#94a3b8",
+                        color:          groupActive ? "#ffffff" : "#ffffff",
                         fontSize:       collapsed ? 18 : 13,
                         cursor:         "pointer",
                         transition:     "all 0.2s",
@@ -179,10 +179,10 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
                               width:        "100%",
                               padding:      "8px 28px",
                               marginBottom: 2,
-                              background:   active ? "rgba(59,130,246,0.15)" : "transparent",
+                              background:   active ? "rgba(252, 252, 252, 0.15)" : "transparent",
                               border:       "1px solid transparent",
                               borderRadius: 8,
-                              color:        active ? "#60a5fa" : "#94a3b8",
+                              color:        active ? "#ffffff" : "#002252",
                               fontSize:     12,
                               cursor:       "pointer",
                               transform:    isOpen ? "translateY(0)" : "translateY(-5px)",
@@ -217,10 +217,10 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
                     padding:        collapsed ? "10px 0" : "10px 14px",
                     marginBottom:   4,
                     justifyContent: collapsed ? "center" : "flex-start",
-                    background:     active ? "rgba(59,130,246,0.15)" : "transparent",
-                    border:         active ? "1px solid rgba(59,130,246,0.3)" : "1px solid transparent",
+                    background:     active ? "rgba(250, 250, 250, 0.15)" : "transparent",
+                    border:         active ? "1px solid rgba(255, 255, 255, 0.3)" : "1px solid transparent",
                     borderRadius:   8,
-                    color:          active ? "#60a5fa" : "#94a3b8",
+                    color:          active ? "#f4f1f1" : "#f6f6f6",
                     fontSize:       collapsed ? 18 : 13,
                     cursor:         "pointer",
                     transition:     "all 0.2s",
@@ -240,7 +240,7 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
         <div
           style={{
             padding:     collapsed ? "16px 0" : "16px 24px",
-            borderTop:   "1px solid rgba(99,179,237,0.08)",
+            borderTop:   "1px solid rgba(255, 255, 255, 0.08)",
             flexShrink:  0,
             textAlign:   collapsed ? "center" : "left",
             transition:  "padding 0.3s",
@@ -255,7 +255,7 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
                   background:   "rgba(59,130,246,0.1)",
                   border:       "1px solid rgba(59,130,246,0.25)",
                   borderRadius: 8,
-                  color:        "#60a5fa",
+                  color:        "#fffefe",
                   width:        36,
                   height:       36,
                   cursor:       "pointer",
@@ -272,7 +272,7 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
               </button>
             </Tooltip>
           ) : (
-            <div style={{ color:"#374151", fontSize:11 }}>v6.0.0 · 2026</div>
+            <div style={{ color:"#ffffff", fontSize:11 }}>v6.0.0 · 2026</div>
           )}
         </div>
       </nav>

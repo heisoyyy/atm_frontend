@@ -55,7 +55,7 @@ export default function Training() {
         <h1 style={{ color: "#e2e8f0", fontSize: 24, fontWeight: 700, margin: "0 0 4px", letterSpacing: "-0.02em" }}>
           Training Model
         </h1>
-        <p style={{ color: "#64748b", fontSize: 13, margin: 0 }}>
+        <p style={{ color: "#ffffff", fontSize: 13, margin: 0 }}>
           XGBoost — ATM Cash Prediction v5
         </p>
       </div>
@@ -64,11 +64,11 @@ export default function Training() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>
         {[
           { label: "Total ATM",  value: sysStatus?.total_atm ?? "-",   color: "#60a5fa" },
-          { label: "Total Rows", value: sysStatus?.total_rows ? sysStatus.total_rows.toLocaleString() : "-", color: "#94a3b8" },
+          { label: "Total Rows", value: sysStatus?.total_rows ? sysStatus.total_rows.toLocaleString() : "-", color: "#ffffff" },
           { label: "Model",      value: sysStatus?.has_model ? "✓ Ada" : "✕ Belum", color: sysStatus?.has_model ? "#00e5a0" : "#ff3b5c" },
         ].map(c => (
           <div key={c.label} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(99,179,237,0.08)", borderRadius: 10, padding: "14px 18px" }}>
-            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{c.label}</div>
+            <div style={{ color: "#ffffff", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{c.label}</div>
             <div style={{ color: c.color, fontWeight: 700, fontSize: 20 }}>{c.value}</div>
           </div>
         ))}
@@ -78,15 +78,15 @@ export default function Training() {
       <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(99,179,237,0.1)", borderRadius: 12, padding: "20px 24px", marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div>
-            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em" }}>Status Training</div>
+            <div style={{ color: "#ffffff", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em" }}>Status Training</div>
             <div style={{ marginTop: 4 }}>
               <StatusBadge status={ts?.status} />
             </div>
           </div>
           {ts?.last_trained && (
-            <div style={{ color: "#64748b", fontSize: 12, textAlign: "right" }}>
+            <div style={{ color: "#ffffff", fontSize: 12, textAlign: "right" }}>
               <div>Terakhir dilatih:</div>
-              <div style={{ color: "#94a3b8", marginTop: 2 }}>{new Date(ts.last_trained).toLocaleString("id-ID")}</div>
+              <div style={{ color: "#ffffff", marginTop: 2 }}>{new Date(ts.last_trained).toLocaleString("id-ID")}</div>
             </div>
           )}
         </div>
@@ -94,7 +94,7 @@ export default function Training() {
         {/* Progress bar */}
         <div style={{ marginBottom: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-            <span style={{ color: "#94a3b8", fontSize: 12 }}>{ts?.message || "Idle"}</span>
+            <span style={{ color: "#ffffff", fontSize: 12 }}>{ts?.message || "Idle"}</span>
             <span style={{ color: "#60a5fa", fontSize: 12, fontWeight: 600 }}>{ts?.progress ?? 0}%</span>
           </div>
           <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3 }}>
@@ -111,7 +111,7 @@ export default function Training() {
 
         {/* Log-like display */}
         {isRunning && (
-          <div style={{ fontFamily: "monospace", fontSize: 12, color: "#64748b", background: "rgba(0,0,0,0.2)", borderRadius: 6, padding: "8px 12px" }}>
+          <div style={{ fontFamily: "monospace", fontSize: 12, color: "#ffffff", background: "rgba(0,0,0,0.2)", borderRadius: 6, padding: "8px 12px" }}>
             <span style={{ color: "#3b82f6" }}>▶</span> {ts.message}
             <span style={{ animation: "blink 1s step-end infinite" }}>_</span>
           </div>
@@ -139,16 +139,16 @@ export default function Training() {
       {/* Last Result */}
       {ts?.last_result && (
         <div style={{ background: "rgba(0,229,160,0.04)", border: "1px solid rgba(0,229,160,0.15)", borderRadius: 12, padding: "20px 24px" }}>
-          <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 14 }}>Hasil Training Terakhir</div>
+          <div style={{ color: "#ffffff", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 14 }}>Hasil Training Terakhir</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
             {[
               { label: "MAE",       value: `${ts.last_result.mae_avg} jam`, color: "#60a5fa" },
               { label: "R²",        value: ts.last_result.r2_avg,           color: "#00e5a0" },
-              { label: "Data Train",value: ts.last_result.n_train?.toLocaleString(), color: "#94a3b8" },
-              { label: "Hari Data", value: `${ts.last_result.n_hari} hari`,  color: "#94a3b8" },
+              { label: "Data Train",value: ts.last_result.n_train?.toLocaleString(), color: "#ffffff" },
+              { label: "Hari Data", value: `${ts.last_result.n_hari} hari`,  color: "#ffffff" },
             ].map(m => (
               <div key={m.label} style={{ textAlign: "center", background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "12px" }}>
-                <div style={{ color: "#64748b", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>{m.label}</div>
+                <div style={{ color: "#ffffff", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>{m.label}</div>
                 <div style={{ color: m.color, fontWeight: 700, fontSize: 18, marginTop: 4 }}>{m.value}</div>
               </div>
             ))}
@@ -156,12 +156,12 @@ export default function Training() {
 
           {ts.last_result.top_features?.length > 0 && (
             <>
-              <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Top Features</div>
+              <div style={{ color: "#ffffff", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Top Features</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {ts.last_result.top_features.slice(0, 8).map((f, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ color: "#64748b", fontSize: 11, minWidth: 18, textAlign: "right" }}>{i + 1}.</span>
-                    <span style={{ color: "#94a3b8", fontSize: 12, flex: 1 }}>{f.fitur}</span>
+                    <span style={{ color: "#ffffff", fontSize: 11, minWidth: 18, textAlign: "right" }}>{i + 1}.</span>
+                    <span style={{ color: "#ffffff", fontSize: 12, flex: 1 }}>{f.fitur}</span>
                     <div style={{ width: 120, height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
                       <div style={{
                         height: "100%",
@@ -189,7 +189,7 @@ export default function Training() {
 
 function StatusBadge({ status }) {
   const map = {
-    idle:    { label: "Idle",      color: "#6b7280", bg: "rgba(107,114,128,0.12)" },
+    idle:    { label: "Idle",      color: "#ffffff", bg: "rgba(107,114,128,0.12)" },
     running: { label: "Running",   color: "#3b82f6", bg: "rgba(59,130,246,0.12)" },
     done:    { label: "Selesai ✓", color: "#00e5a0", bg: "rgba(0,229,160,0.1)" },
     error:   { label: "Error ✕",   color: "#ff3b5c", bg: "rgba(255,59,92,0.12)" },

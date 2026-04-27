@@ -42,7 +42,7 @@ const jumlahIsiCalc = (saldo, limit) => Math.max(0, (limit || 0) - (saldo || 0))
 
 const PROSES_STYLE  = { color: "#f59e0b", bg: "rgba(245,158,11,0.12)",  border: "rgba(245,158,11,0.3)"  };
 const SELESAI_STYLE = { color: "#00e5a0", bg: "rgba(0,229,160,0.12)",   border: "rgba(0,229,160,0.3)"   };
-const BATAL_STYLE   = { color: "#94a3b8", bg: "rgba(148,163,184,0.1)",  border: "rgba(148,163,184,0.25)"};
+const BATAL_STYLE   = { color: "#ffffff", bg: "rgba(148,163,184,0.1)",  border: "rgba(148,163,184,0.25)"};
 const PENDING_STYLE = { color: "#60a5fa", bg: "rgba(96,165,250,0.08)",  border: "rgba(96,165,250,0.25)" };
 
 // ─── DENOM HELPERS ─────────────────────────────────────────────────────────────
@@ -421,7 +421,7 @@ export default function CashPlan({ navigateTo }) {
           <h1 style={{ color:"#e2e8f0", fontSize:24, fontWeight:700, margin:"0 0 4px", letterSpacing:"-0.02em" }}>
             Cash Plan — Penambahan Saldo ATM
           </h1>
-          <p style={{ color:"#64748b", fontSize:13, margin:0 }}>
+          <p style={{ color:"#ffffff", fontSize:13, margin:0 }}>
             {filterBulan} {nowTahun()} · {tableData.length} ATM dalam antrian ·{" "}
             {genAt ? `Prediksi: ${new Date(genAt).toLocaleString("id-ID")}` : "—"}
           </p>
@@ -435,7 +435,7 @@ export default function CashPlan({ navigateTo }) {
           {/* 🔔 Bell Notif */}
           <div ref={notifRef} style={{ position:"relative" }}>
             <button onClick={handleOpenNotif}
-              style={{ position:"relative", background:unreadCount>0?"rgba(245,158,11,0.15)":"rgba(255,255,255,0.04)", border:unreadCount>0?"1px solid rgba(245,158,11,0.4)":"1px solid rgba(99,179,237,0.15)", borderRadius:8, color:unreadCount>0?"#f59e0b":"#94a3b8", padding:"8px 14px", fontSize:18, cursor:"pointer" }}>
+              style={{ position:"relative", background:unreadCount>0?"rgba(245,158,11,0.15)":"rgba(255,255,255,0.04)", border:unreadCount>0?"1px solid rgba(245,158,11,0.4)":"1px solid rgba(99,179,237,0.15)", borderRadius:8, color:unreadCount>0?"#f59e0b":"#ffffff", padding:"8px 14px", fontSize:18, cursor:"pointer" }}>
               🔔
               {unreadCount > 0 && (
                 <span style={{ position:"absolute", top:-6, right:-6, background:"#ff3b5c", color:"#fff", borderRadius:"50%", width:18, height:18, fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", border:"2px solid #0d1228", animation:"pulse 1.5s infinite" }}>
@@ -449,7 +449,7 @@ export default function CashPlan({ navigateTo }) {
                 <div style={{ padding:"14px 18px", borderBottom:"1px solid rgba(99,179,237,0.1)", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, gap:8, flexWrap:"wrap" }}>
                   <div>
                     <span style={{ color:"#e2e8f0", fontWeight:700, fontSize:14 }}>🔔 Rekomendasi Sistem</span>
-                    <span style={{ marginLeft:8, fontSize:11, color:"#64748b" }}>{notifItems.length} ATM perlu diputuskan</span>
+                    <span style={{ marginLeft:8, fontSize:11, color:"#ffffff" }}>{notifItems.length} ATM perlu diputuskan</span>
                   </div>
                   <div style={{ display:"flex", gap:6 }}>
                     {notifItems.length > 0 && (
@@ -461,7 +461,7 @@ export default function CashPlan({ navigateTo }) {
                     )}
                     {notifItems.length > 0 && (
                       <button onClick={handleDismissAllNotif}
-                        style={{ fontSize:11, color:"#64748b", background:"none", border:"none", cursor:"pointer" }}>
+                        style={{ fontSize:11, color:"#ffffff", background:"none", border:"none", cursor:"pointer" }}>
                         Abaikan Semua
                       </button>
                     )}
@@ -470,7 +470,7 @@ export default function CashPlan({ navigateTo }) {
 
                 <div style={{ overflowY:"auto", flex:1 }}>
                   {notifItems.length === 0 ? (
-                    <div style={{ padding:"40px 20px", textAlign:"center", color:"#475569" }}>
+                    <div style={{ padding:"40px 20px", textAlign:"center", color:"#ffffff" }}>
                       <div style={{ fontSize:32, marginBottom:8 }}>✓</div>
                       <div style={{ fontSize:13 }}>Tidak ada rekomendasi baru</div>
                       <div style={{ fontSize:11, marginTop:6, color:"#374151" }}>Semua ATM dalam kondisi aman atau sudah di Cash Plan</div>
@@ -488,17 +488,17 @@ export default function CashPlan({ navigateTo }) {
                               <span style={{ fontSize:9, padding:"1px 6px", borderRadius:3, fontWeight:700, background:isUrgent?"rgba(255,59,92,0.15)":"rgba(245,158,11,0.15)", color:isUrgent?"#ff3b5c":"#f59e0b" }}>{n.status_awal}</span>
                               <span style={{ fontSize:9, padding:"1px 6px", borderRadius:3, background:"rgba(167,139,250,0.12)", color:"#a78bfa", border:"1px solid rgba(167,139,250,0.25)" }}>{getDenomLabel(n)}</span>
                             </div>
-                            <div style={{ color:"#94a3b8", fontSize:11, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>📍 {n.lokasi||"—"} · {n.wilayah||"—"}</div>
+                            <div style={{ color:"#ffffff", fontSize:11, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>📍 {n.lokasi||"—"} · {n.wilayah||"—"}</div>
                             <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:3 }}>
                               <SaldoBar pct={n.pct_saldo} compact />
-                              <span style={{ color:"#64748b", fontSize:10 }}>{fmtRp(n.saldo)} / {fmtRp(n.limit)}</span>
+                              <span style={{ color:"#ffffff", fontSize:10 }}>{fmtRp(n.saldo)} / {fmtRp(n.limit)}</span>
                             </div>
                           </div>
                           <div style={{ display:"flex", flexDirection:"column", gap:4, flexShrink:0 }}>
                             <button onClick={e=>{e.stopPropagation();openValidasiModal([{...n,status:n.status_awal,_notif_id:n.id}]);}}
                               style={{ fontSize:10, padding:"4px 10px", borderRadius:6, background:"rgba(0,229,160,0.12)", color:"#00e5a0", border:"1px solid rgba(0,229,160,0.3)", cursor:"pointer", fontWeight:700 }}>+ Konfirmasi</button>
                             <button onClick={e => handleDismissNotif(n.id, e)}
-                              style={{ fontSize:10, padding:"3px 8px", borderRadius:6, background:"transparent", color:"#475569", border:"1px solid rgba(99,179,237,0.1)", cursor:"pointer" }}>Abaikan</button>
+                              style={{ fontSize:10, padding:"3px 8px", borderRadius:6, background:"transparent", color:"#ffffff", border:"1px solid rgba(99,179,237,0.1)", cursor:"pointer" }}>Abaikan</button>
                           </div>
                         </div>
                       </div>
@@ -508,7 +508,7 @@ export default function CashPlan({ navigateTo }) {
 
                 {notifItems.length > 0 && (
                   <div style={{ padding:"10px 16px", borderTop:"1px solid rgba(99,179,237,0.08)", background:"rgba(0,0,0,0.2)", flexShrink:0 }}>
-                    <div style={{ color:"#64748b", fontSize:11, textAlign:"center" }}>Klik ATM atau <strong style={{ color:"#00e5a0" }}>+ Konfirmasi Semua</strong> · Abaikan tidak masuk Cash Plan</div>
+                    <div style={{ color:"#ffffff", fontSize:11, textAlign:"center" }}>Klik ATM atau <strong style={{ color:"#00e5a0" }}>+ Konfirmasi Semua</strong> · Abaikan tidak masuk Cash Plan</div>
                   </div>
                 )}
               </div>
@@ -535,7 +535,7 @@ export default function CashPlan({ navigateTo }) {
             onClick={() => c.clickable && openValidasiModal(notifItems.map(n=>({...n,status:n.status_awal,_notif_id:n.id})))}>
             <div style={{ fontSize:16, color:c.color, marginBottom:5 }}>{c.icon}</div>
             <div style={{ color:c.color, fontSize:c.small?13:24, fontWeight:700, lineHeight:1 }}>{c.value}</div>
-            <div style={{ color:"#64748b", fontSize:9, marginTop:5, textTransform:"uppercase", letterSpacing:"0.07em" }}>{c.label}</div>
+            <div style={{ color:"#ffffff", fontSize:9, marginTop:5, textTransform:"uppercase", letterSpacing:"0.07em" }}>{c.label}</div>
             {c.clickable && <div style={{ color:"#f59e0b", fontSize:9, marginTop:3 }}>▶ klik konfirmasi</div>}
           </div>
         ))}
@@ -549,7 +549,7 @@ export default function CashPlan({ navigateTo }) {
             <div style={{ color:"#f59e0b", fontWeight:700, fontSize:13, marginBottom:3 }}>
               {notifItems.length} ATM direkomendasikan sistem — belum diputuskan
             </div>
-            <div style={{ color:"#94a3b8", fontSize:12 }}>
+            <div style={{ color:"#ffffff", fontSize:12 }}>
               Klik bell atau tombol berikut untuk review dan konfirmasi masuk Cash Plan.
             </div>
           </div>
@@ -574,7 +574,7 @@ export default function CashPlan({ navigateTo }) {
             {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
         ))}
-        <span style={{ color:"#475569", fontSize:12, marginLeft:"auto" }}>{filtered.length} ATM</span>
+        <span style={{ color:"#ffffff", fontSize:12, marginLeft:"auto" }}>{filtered.length} ATM</span>
       </div>
 
       {/* ── BULK ACTION BAR ─────────────────────────────────────────────────── */}
@@ -583,7 +583,7 @@ export default function CashPlan({ navigateTo }) {
           <span style={{ color:"#60a5fa", fontSize:13, fontWeight:600 }}>{selectedRows.length} ATM dipilih</span>
           <div style={{ marginLeft:"auto", display:"flex", gap:8 }}>
             <button onClick={handleBulkRemove} style={bulkBtn("#ff3b5c")}>✕ Remove ({selectedRows.length})</button>
-            <button onClick={() => setSelectedRows([])} style={bulkBtn("#64748b")}>Batal Pilih</button>
+            <button onClick={() => setSelectedRows([])} style={bulkBtn("#ffffff")}>Batal Pilih</button>
           </div>
         </div>
       )}
@@ -606,7 +606,7 @@ export default function CashPlan({ navigateTo }) {
                     {label:"Status",key:"status_awal"},{label:"Keterangan",key:null},{label:"Aksi",key:null},
                   ].map((col,ci) => (
                     <th key={ci} onClick={col.key?()=>toggleSort(col.key):undefined}
-                      style={{ padding:"11px 12px", textAlign:"left", color:col.key&&sort.key===col.key?"#60a5fa":"#64748b", fontWeight:600, fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", cursor:col.key?"pointer":"default", whiteSpace:"nowrap" }}>
+                      style={{ padding:"11px 12px", textAlign:"left", color:col.key&&sort.key===col.key?"#60a5fa":"#ffffff", fontWeight:600, fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", cursor:col.key?"pointer":"default", whiteSpace:"nowrap" }}>
                       {col.label}{col.key&&sort.key===col.key&&<span style={{marginLeft:3}}>{sort.dir>0?"↑":"↓"}</span>}
                     </th>
                   ))}
@@ -631,13 +631,13 @@ export default function CashPlan({ navigateTo }) {
                       onMouseLeave={e=>e.currentTarget.style.background=rowBg}>
 
                       <td style={{padding:"8px 14px"}}><Checkbox checked={isSelected} onChange={()=>toggleSelect(atm.id_atm)} /></td>
-                      <td style={td("#64748b")}>{rowNo}</td>
+                      <td style={td("#ffffff")}>{rowNo}</td>
 
                       <td style={{padding:"8px 12px"}}>
                         {atm.added_at ? (
                           <div>
                             <div style={{color:"#60a5fa",fontSize:11,fontWeight:600}}>{new Date(atm.added_at).toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"})}</div>
-                            <div style={{color:"#475569",fontSize:10,marginTop:1}}>{new Date(atm.added_at).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})}</div>
+                            <div style={{color:"#ffffff",fontSize:10,marginTop:1}}>{new Date(atm.added_at).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})}</div>
                           </div>
                         ) : <span style={{color:"#374151",fontSize:11}}>—</span>}
                       </td>
@@ -646,8 +646,8 @@ export default function CashPlan({ navigateTo }) {
                         <span style={{color:"#e2e8f0",fontFamily:"monospace",fontWeight:700,cursor:"pointer",textDecoration:"underline dotted"}} onClick={()=>navigateTo?.("history",atm.id_atm)}>{atm.id_atm}</span>
                       </td>
 
-                      <td style={{...td("#94a3b8"),maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={atm.lokasi}>{atm.lokasi||"—"}</td>
-                      <td style={td("#94a3b8")}>{atm.wilayah||"—"}</td>
+                      <td style={{...td("#ffffff"),maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={atm.lokasi}>{atm.lokasi||"—"}</td>
+                      <td style={td("#ffffff")}>{atm.wilayah||"—"}</td>
 
                       <td style={{padding:"8px 12px"}}>
                         <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:4,background:atm.tipe==="CRM"?"rgba(167,139,250,0.15)":"rgba(96,165,250,0.12)",color:atm.tipe==="CRM"?"#a78bfa":"#60a5fa",border:atm.tipe==="CRM"?"1px solid rgba(167,139,250,0.3)":"1px solid rgba(96,165,250,0.25)"}}>
@@ -661,14 +661,14 @@ export default function CashPlan({ navigateTo }) {
                           style={{background:"#0d1228",border:"1px solid rgba(167,139,250,0.25)",borderRadius:6,color:"#a78bfa",padding:"4px 6px",fontSize:11,cursor:"pointer",outline:"none",width:"100%"}}>
                           {denomOpts.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
                         </select>
-                        {denomOpts.length > 1 && <div style={{fontSize:9,color:"#64748b",marginTop:2,textAlign:"center"}}>support {denomOpts.length} denom</div>}
+                        {denomOpts.length > 1 && <div style={{fontSize:9,color:"#ffffff",marginTop:2,textAlign:"center"}}>support {denomOpts.length} denom</div>}
                       </td>
 
                       <td style={{padding:"8px 12px"}}>
                         <span style={{color:"#f59e0b",fontWeight:600}}>{fmtRp(totalIsiV)}</span>
-                        <div style={{color:"#64748b",fontSize:10,marginTop:1}}>target: {fmtRp(atm.limit)}</div>
+                        <div style={{color:"#ffffff",fontSize:10,marginTop:1}}>target: {fmtRp(atm.limit)}</div>
                       </td>
-                      <td style={td("#94a3b8")}>{totalIsiV>0?fmtLembar(totalIsiV,denom):"—"}</td>
+                      <td style={td("#ffffff")}>{totalIsiV>0?fmtLembar(totalIsiV,denom):"—"}</td>
 
                       <td style={{padding:"8px 12px"}}>
                         <div style={{color:"#e2e8f0",fontWeight:600}}>{fmtRp(atm.saldo)}</div>
@@ -690,7 +690,7 @@ export default function CashPlan({ navigateTo }) {
                               style={{flex:1,fontSize:10,fontWeight:700,padding:"4px 6px",borderRadius:5,background:"rgba(0,229,160,0.1)",color:"#00e5a0",border:"1px solid rgba(0,229,160,0.3)",cursor:"pointer"}}>✔ Selesai</button>
                             <button onClick={()=>handleUpdateStatus(atm,"BATAL")}
                               title={!ket?"Pilih keterangan dulu":"Tandai Batal → masuk Rekap"}
-                              style={{flex:1,fontSize:10,fontWeight:700,padding:"4px 6px",borderRadius:5,background:ket?"rgba(148,163,184,0.15)":"rgba(148,163,184,0.04)",color:ket?"#94a3b8":"#374151",border:ket?"1px solid rgba(148,163,184,0.35)":"1px solid rgba(148,163,184,0.12)",cursor:ket?"pointer":"not-allowed",opacity:ket?1:0.5}}>✕ Batal</button>
+                              style={{flex:1,fontSize:10,fontWeight:700,padding:"4px 6px",borderRadius:5,background:ket?"rgba(148,163,184,0.15)":"rgba(148,163,184,0.04)",color:ket?"#ffffff":"#374151",border:ket?"1px solid rgba(148,163,184,0.35)":"1px solid rgba(148,163,184,0.12)",cursor:ket?"pointer":"not-allowed",opacity:ket?1:0.5}}>✕ Batal</button>
                           </div>
                           {!ket && <div style={{color:"#f59e0b",fontSize:9,textAlign:"center"}}>isi ket. dulu ↓</div>}
                         </div>
@@ -698,7 +698,7 @@ export default function CashPlan({ navigateTo }) {
 
                       <td style={{padding:"8px 10px"}}>
                         <select value={ket} onChange={e=>setOverride(atm.id_atm,"keterangan",e.target.value)}
-                          style={{background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:6,color:ket?"#e2e8f0":"#475569",padding:"5px 8px",fontSize:11,width:150,outline:"none",cursor:"pointer"}}>
+                          style={{background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:6,color:ket?"#e2e8f0":"#ffffff",padding:"5px 8px",fontSize:11,width:150,outline:"none",cursor:"pointer"}}>
                           <option value="">— pilih keterangan —</option>
                           {KET_OPTIONS.map(k=><option key={k} value={k}>{k}</option>)}
                         </select>
@@ -719,7 +719,7 @@ export default function CashPlan({ navigateTo }) {
 
           {maxPage > 1 && (
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 20px",borderTop:"1px solid rgba(99,179,237,0.08)"}}>
-              <span style={{color:"#64748b",fontSize:12}}>Halaman {page+1} dari {maxPage} · {filtered.length} ATM</span>
+              <span style={{color:"#ffffff",fontSize:12}}>Halaman {page+1} dari {maxPage} · {filtered.length} ATM</span>
               <div style={{display:"flex",gap:6}}>
                 <PageBtn disabled={page===0}        onClick={()=>setPage(p=>p-1)}>← Prev</PageBtn>
                 <PageBtn disabled={page>=maxPage-1} onClick={()=>setPage(p=>p+1)}>Next →</PageBtn>
@@ -739,7 +739,7 @@ export default function CashPlan({ navigateTo }) {
         ].map(l=>(
           <div key={l.label} style={{display:"flex",alignItems:"center",gap:6}}>
             <div style={{width:8,height:8,borderRadius:2,background:l.color}} />
-            <span style={{color:"#64748b",fontSize:11}}>{l.label}</span>
+            <span style={{color:"#ffffff",fontSize:11}}>{l.label}</span>
           </div>
         ))}
       </div>
@@ -751,13 +751,13 @@ export default function CashPlan({ navigateTo }) {
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16}}>
               <div>
                 <h2 style={{color:"#00e5a0",fontSize:17,fontWeight:700,margin:"0 0 4px"}}>✅ Konfirmasi Masuk Cash Plan</h2>
-                <p style={{color:"#64748b",fontSize:12,margin:0}}>
+                <p style={{color:"#ffffff",fontSize:12,margin:0}}>
                   {validasiList.length===1
                     ? `Review ATM ${validasiList[0].id_atm} ${validasiList[0]._notif_id?"(dari rekomendasi sistem)":"(manual)"}`
                     : `${validasiList.length} ATM — atur denom & keterangan per ATM`}
                 </p>
               </div>
-              <button onClick={()=>{setShowValidasiModal(false);setValidasiList([]);}} style={{background:"none",border:"none",color:"#64748b",fontSize:22,cursor:"pointer"}}>×</button>
+              <button onClick={()=>{setShowValidasiModal(false);setValidasiList([]);}} style={{background:"none",border:"none",color:"#ffffff",fontSize:22,cursor:"pointer"}}>×</button>
             </div>
 
             {/* Bulk denom shortcut */}
@@ -806,19 +806,19 @@ export default function CashPlan({ navigateTo }) {
                         {label:"Lokasi",value:atm.lokasi||"—",span:true},
                         {label:"Wilayah",value:atm.wilayah||"—"},
                         {label:"Saldo",value:fmtRp(atm.saldo),color:"#ff3b5c"},
-                        {label:"Limit",value:fmtRp(atm.limit),color:"#94a3b8"},
+                        {label:"Limit",value:fmtRp(atm.limit),color:"#ffffff"},
                         {label:"Total Isi",value:fmtRp(jumlahIsiCalc(atm.saldo,atm.limit)),color:"#f59e0b"},
                         {label:"Est. Jam Kosong",value:atm.est_jam?`${atm.est_jam} jam`:"—"},
                       ].map((f,fi)=>(
                         <div key={fi} style={{gridColumn:f.span?"1 / -1":"auto",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(99,179,237,0.1)",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{color:"#475569",fontSize:10,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:4}}>{f.label}</div>
-                          <div style={{color:f.color||"#94a3b8",fontSize:13,fontWeight:600,fontFamily:f.mono?"monospace":"inherit"}}>{f.value}</div>
+                          <div style={{color:"#ffffff",fontSize:10,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:4}}>{f.label}</div>
+                          <div style={{color:f.color||"#ffffff",fontSize:13,fontWeight:600,fontFamily:f.mono?"monospace":"inherit"}}>{f.value}</div>
                         </div>
                       ))}
                     </div>
                     <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(99,179,237,0.1)",borderRadius:8,padding:"12px 14px",marginBottom:14}}>
                       <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                        <span style={{color:"#64748b",fontSize:11}}>Persentase Saldo</span>
+                        <span style={{color:"#ffffff",fontSize:11}}>Persentase Saldo</span>
                         <span style={{color:(atm.pct_saldo||0)<=20?"#ff3b5c":"#f59e0b",fontWeight:700,fontSize:13}}>{(atm.pct_saldo||0).toFixed(1)}%</span>
                       </div>
                       <div style={{width:"100%",height:8,background:"rgba(255,255,255,0.06)",borderRadius:4}}>
@@ -827,7 +827,7 @@ export default function CashPlan({ navigateTo }) {
                     </div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
                       <div>
-                        <label style={{color:"#64748b",fontSize:11,display:"block",marginBottom:5}}>Denominasi {dOpts.length>1&&<span style={{color:"#f59e0b"}}>*pilih salah satu</span>}</label>
+                        <label style={{color:"#ffffff",fontSize:11,display:"block",marginBottom:5}}>Denominasi {dOpts.length>1&&<span style={{color:"#f59e0b"}}>*pilih salah satu</span>}</label>
                         {/* FIXED: onChange tanpa Number() */}
                         <select value={vd} onChange={e=>setVOv(atm.id_atm,"denom",e.target.value)}
                           style={{width:"100%",background:"#0d1228",border:"1px solid rgba(167,139,250,0.3)",borderRadius:8,color:"#a78bfa",padding:"8px 10px",fontSize:12,outline:"none",cursor:"pointer"}}>
@@ -835,16 +835,16 @@ export default function CashPlan({ navigateTo }) {
                         </select>
                       </div>
                       <div>
-                        <label style={{color:"#64748b",fontSize:11,display:"block",marginBottom:5}}>Jumlah Lembar</label>
+                        <label style={{color:"#ffffff",fontSize:11,display:"block",marginBottom:5}}>Jumlah Lembar</label>
                         <div style={{background:"rgba(245,158,11,0.08)",border:"1px solid rgba(245,158,11,0.2)",borderRadius:8,padding:"8px 10px",color:"#f59e0b",fontSize:12,fontWeight:700}}>
                           {fmtLembar(jumlahIsiCalc(atm.saldo,atm.limit),vd)}
                         </div>
                       </div>
                     </div>
                     <div>
-                      <label style={{color:"#64748b",fontSize:11,display:"block",marginBottom:5}}>Keterangan (opsional)</label>
+                      <label style={{color:"#ffffff",fontSize:11,display:"block",marginBottom:5}}>Keterangan (opsional)</label>
                       <select value={getVKet(atm.id_atm)} onChange={e=>setVOv(atm.id_atm,"ket",e.target.value)}
-                        style={{width:"100%",background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:8,color:getVKet(atm.id_atm)?"#e2e8f0":"#475569",padding:"8px 10px",fontSize:12,outline:"none",cursor:"pointer"}}>
+                        style={{width:"100%",background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:8,color:getVKet(atm.id_atm)?"#e2e8f0":"#ffffff",padding:"8px 10px",fontSize:12,outline:"none",cursor:"pointer"}}>
                         <option value="">— pilih keterangan (opsional) —</option>
                         {KET_OPTIONS.map(k=><option key={k} value={k}>{k}</option>)}
                       </select>
@@ -856,7 +856,7 @@ export default function CashPlan({ navigateTo }) {
                   <thead>
                     <tr style={{background:"rgba(255,255,255,0.03)",borderBottom:"1px solid rgba(99,179,237,0.1)"}}>
                       {["No","ID ATM","Lokasi","Wilayah","Status","Saldo %","Total Isi","Denom Tersedia","Pilih Denom","Keterangan"].map(h=>(
-                        <th key={h} style={{padding:"8px 10px",textAlign:"left",color:"#64748b",fontWeight:600,fontSize:10,textTransform:"uppercase",letterSpacing:"0.07em",whiteSpace:"nowrap"}}>{h}</th>
+                        <th key={h} style={{padding:"8px 10px",textAlign:"left",color:"#ffffff",fontWeight:600,fontSize:10,textTransform:"uppercase",letterSpacing:"0.07em",whiteSpace:"nowrap"}}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -866,13 +866,13 @@ export default function CashPlan({ navigateTo }) {
                       const dOpts = getDenomOptionsForAtm(atm);
                       return (
                         <tr key={atm.id_atm} style={{borderBottom:"1px solid rgba(99,179,237,0.06)"}}>
-                          <td style={td("#64748b")}>{idx+1}</td>
+                          <td style={td("#ffffff")}>{idx+1}</td>
                           <td style={{padding:"7px 10px",color:"#e2e8f0",fontFamily:"monospace",fontWeight:700,whiteSpace:"nowrap"}}>
                             {atm.id_atm}
                             {atm._notif_id && <span style={{marginLeft:4,fontSize:8,color:"#f59e0b"}}>🔔</span>}
                           </td>
-                          <td style={{...td("#94a3b8"),maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={atm.lokasi}>{atm.lokasi||"—"}</td>
-                          <td style={td("#94a3b8")}>{atm.wilayah||"—"}</td>
+                          <td style={{...td("#ffffff"),maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={atm.lokasi}>{atm.lokasi||"—"}</td>
+                          <td style={td("#ffffff")}>{atm.wilayah||"—"}</td>
                           <td style={{padding:"7px 10px"}}>
                             <span style={{fontSize:9,padding:"2px 7px",borderRadius:3,fontWeight:700,background:atm.status==="BONGKAR"?"rgba(255,59,92,0.15)":"rgba(245,158,11,0.15)",color:atm.status==="BONGKAR"?"#ff3b5c":"#f59e0b"}}>{atm.status}</span>
                           </td>
@@ -892,7 +892,7 @@ export default function CashPlan({ navigateTo }) {
                           </td>
                           <td style={{padding:"7px 8px"}}>
                             <select value={getVKet(atm.id_atm)} onChange={e=>setVOv(atm.id_atm,"ket",e.target.value)}
-                              style={{background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:6,color:getVKet(atm.id_atm)?"#e2e8f0":"#475569",padding:"3px 6px",fontSize:10,cursor:"pointer",outline:"none",width:115}}>
+                              style={{background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:6,color:getVKet(atm.id_atm)?"#e2e8f0":"#ffffff",padding:"3px 6px",fontSize:10,cursor:"pointer",outline:"none",width:115}}>
                               <option value="">— opsional —</option>
                               {KET_OPTIONS.map(k=><option key={k} value={k}>{k}</option>)}
                             </select>
@@ -909,10 +909,10 @@ export default function CashPlan({ navigateTo }) {
             <div style={{background:"rgba(0,229,160,0.05)",border:"1px solid rgba(0,229,160,0.2)",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
               <div style={{color:"#00e5a0",fontWeight:700,fontSize:12,marginBottom:6}}>📋 Ringkasan</div>
               <div style={{display:"flex",gap:20,flexWrap:"wrap"}}>
-                <span style={{color:"#94a3b8",fontSize:12}}>ATM: <strong style={{color:"#e2e8f0"}}>{validasiList.length}</strong></span>
-                <span style={{color:"#94a3b8",fontSize:12}}>Total Isi: <strong style={{color:"#f59e0b"}}>{fmtRp(validasiList.reduce((s,a)=>s+jumlahIsiCalc(a.saldo,a.limit),0))}</strong></span>
-                <span style={{color:"#94a3b8",fontSize:12}}>BONGKAR: <strong style={{color:"#ff3b5c"}}>{validasiList.filter(a=>a.status==="BONGKAR").length}</strong></span>
-                <span style={{color:"#94a3b8",fontSize:12}}>Dari sistem: <strong style={{color:"#f59e0b"}}>{validasiList.filter(a=>a._notif_id).length} ATM</strong></span>
+                <span style={{color:"#ffffff",fontSize:12}}>ATM: <strong style={{color:"#e2e8f0"}}>{validasiList.length}</strong></span>
+                <span style={{color:"#ffffff",fontSize:12}}>Total Isi: <strong style={{color:"#f59e0b"}}>{fmtRp(validasiList.reduce((s,a)=>s+jumlahIsiCalc(a.saldo,a.limit),0))}</strong></span>
+                <span style={{color:"#ffffff",fontSize:12}}>BONGKAR: <strong style={{color:"#ff3b5c"}}>{validasiList.filter(a=>a.status==="BONGKAR").length}</strong></span>
+                <span style={{color:"#ffffff",fontSize:12}}>Dari sistem: <strong style={{color:"#f59e0b"}}>{validasiList.filter(a=>a._notif_id).length} ATM</strong></span>
               </div>
             </div>
 
@@ -922,7 +922,7 @@ export default function CashPlan({ navigateTo }) {
                 {validasiLoading?"Menyimpan...":`✅ Konfirmasi ${validasiList.length} ATM ke Cash Plan`}
               </button>
               <button onClick={()=>{setShowValidasiModal(false);setValidasiList([]);}}
-                style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(99,179,237,0.15)",borderRadius:10,color:"#64748b",padding:"12px 18px",fontSize:13,cursor:"pointer"}}>
+                style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(99,179,237,0.15)",borderRadius:10,color:"#ffffff",padding:"12px 18px",fontSize:13,cursor:"pointer"}}>
                 Batal
               </button>
             </div>
@@ -936,7 +936,7 @@ export default function CashPlan({ navigateTo }) {
           <div style={{background:"#0d1228",border:"1px solid rgba(99,179,237,0.2)",borderRadius:16,padding:"28px 32px",width:440,boxShadow:"0 24px 80px rgba(0,0,0,0.6)"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
               <h2 style={{color:"#e2e8f0",fontSize:18,fontWeight:700,margin:0}}>📊 Download Excel Cash Plan</h2>
-              <button onClick={()=>setShowDlModal(false)} style={{background:"none",border:"none",color:"#64748b",fontSize:20,cursor:"pointer"}}>×</button>
+              <button onClick={()=>setShowDlModal(false)} style={{background:"none",border:"none",color:"#ffffff",fontSize:20,cursor:"pointer"}}>×</button>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {["Semua","PEKANBARU","BATAM","DUMAI","Tanjung Pinang"].map(w=>{
@@ -947,12 +947,12 @@ export default function CashPlan({ navigateTo }) {
                     disabled={cnt===0}
                     style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",borderRadius:8,background:cnt===0?"rgba(255,255,255,0.02)":"rgba(167,139,250,0.08)",border:`1px solid ${cnt===0?"rgba(99,179,237,0.1)":"rgba(167,139,250,0.25)"}`,color:cnt===0?"#374151":"#a78bfa",cursor:cnt===0?"not-allowed":"pointer",fontSize:13,fontWeight:600}}>
                     <span>📥 {w==="Semua"?"Semua Wilayah":w}</span>
-                    <span style={{fontSize:12,fontWeight:400,color:cnt===0?"#374151":"#64748b"}}>{cnt} ATM · .xlsx</span>
+                    <span style={{fontSize:12,fontWeight:400,color:cnt===0?"#374151":"#ffffff"}}>{cnt} ATM · .xlsx</span>
                   </button>
                 );
               })}
             </div>
-            <button onClick={()=>setShowDlModal(false)} style={{marginTop:16,width:"100%",padding:"10px",borderRadius:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(99,179,237,0.12)",color:"#64748b",cursor:"pointer",fontSize:13}}>Tutup</button>
+            <button onClick={()=>setShowDlModal(false)} style={{marginTop:16,width:"100%",padding:"10px",borderRadius:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(99,179,237,0.12)",color:"#ffffff",cursor:"pointer",fontSize:13}}>Tutup</button>
           </div>
         </div>
       )}
@@ -963,12 +963,12 @@ export default function CashPlan({ navigateTo }) {
           <div style={{background:"#0d1228",border:"1px solid rgba(99,179,237,0.2)",borderRadius:16,padding:"28px 32px",width:420,boxShadow:"0 24px 80px rgba(0,0,0,0.6)"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
               <h2 style={{color:"#e2e8f0",fontSize:18,fontWeight:700,margin:0}}>Tambah ATM Manual</h2>
-              <button onClick={()=>{setShowAddModal(false);setAddError("");setAddIdInput("");}} style={{background:"none",border:"none",color:"#64748b",fontSize:20,cursor:"pointer"}}>×</button>
+              <button onClick={()=>{setShowAddModal(false);setAddError("");setAddIdInput("");}} style={{background:"none",border:"none",color:"#ffffff",fontSize:20,cursor:"pointer"}}>×</button>
             </div>
             <div style={{background:"rgba(59,130,246,0.06)",border:"1px solid rgba(59,130,246,0.2)",borderRadius:8,padding:"10px 14px",marginBottom:16,color:"#93c5fd",fontSize:12}}>
               ℹ️ ATM akan melewati <strong>validasi detail</strong> sebelum masuk ke antrian Cash Plan.
             </div>
-            <label style={{color:"#94a3b8",fontSize:12,display:"block",marginBottom:6}}>ID ATM</label>
+            <label style={{color:"#ffffff",fontSize:12,display:"block",marginBottom:6}}>ID ATM</label>
             <input value={addIdInput} onChange={e=>{setAddIdInput(e.target.value.toUpperCase());setAddError("");}}
               onKeyDown={e=>e.key==="Enter"&&handleAddManual()}
               placeholder="Contoh: CRM10101 atau EMV82901" autoFocus
@@ -981,7 +981,7 @@ export default function CashPlan({ navigateTo }) {
                 {addLoading?"Mencari ATM...":"Cari & Review →"}
               </button>
               <button onClick={()=>{setShowAddModal(false);setAddError("");setAddIdInput("");}}
-                style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(99,179,237,0.12)",borderRadius:8,color:"#64748b",padding:"10px 18px",fontSize:13,cursor:"pointer"}}>
+                style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(99,179,237,0.12)",borderRadius:8,color:"#ffffff",padding:"10px 18px",fontSize:13,cursor:"pointer"}}>
                 Batal
               </button>
             </div>
@@ -1022,13 +1022,13 @@ function EmptyState() {
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:280,gap:12,background:"rgba(0,229,160,0.03)",border:"1px solid rgba(0,229,160,0.1)",borderRadius:12}}>
       <span style={{fontSize:36}}>✓</span>
       <span style={{color:"#00e5a0",fontWeight:600,fontSize:16}}>Antrian Cash Plan Kosong</span>
-      <span style={{color:"#64748b",fontSize:13}}>Tidak ada ATM yang menunggu pengisian. Cek bell notif untuk rekomendasi sistem.</span>
+      <span style={{color:"#ffffff",fontSize:13}}>Tidak ada ATM yang menunggu pengisian. Cek bell notif untuk rekomendasi sistem.</span>
     </div>
   );
 }
 function Spinner() {
   return (
-    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",flexDirection:"column",gap:12,color:"#64748b"}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",flexDirection:"column",gap:12,color:"#ffffff"}}>
       <div style={{width:32,height:32,border:"2px solid rgba(59,130,246,0.2)",borderTopColor:"#3b82f6",borderRadius:"50%",animation:"spin 0.8s linear infinite"}} />
       <span>Memuat data Cash Plan...</span>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
@@ -1040,7 +1040,7 @@ function PageBtn({ children, onClick, disabled }) {
     <button onClick={onClick} disabled={disabled} style={{background:disabled?"transparent":"rgba(59,130,246,0.1)",border:"1px solid rgba(59,130,246,0.2)",borderRadius:6,color:disabled?"#374151":"#60a5fa",padding:"5px 12px",fontSize:12,cursor:disabled?"default":"pointer"}}>{children}</button>
   );
 }
-const selectStyle = {background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:8,color:"#94a3b8",padding:"8px 12px",fontSize:13,cursor:"pointer",outline:"none"};
+const selectStyle = {background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:8,color:"#ffffff",padding:"8px 12px",fontSize:13,cursor:"pointer",outline:"none"};
 const td          = color => ({padding:"8px 12px",color,whiteSpace:"nowrap"});
 const btnStyle    = accent => ({background:`${accent}18`,border:`1px solid ${accent}44`,borderRadius:8,color:accent,padding:"8px 16px",fontSize:13,cursor:"pointer",fontWeight:600});
 const bulkBtn     = accent => ({background:`${accent}15`,border:`1px solid ${accent}40`,borderRadius:7,color:accent,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"});

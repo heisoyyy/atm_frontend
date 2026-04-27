@@ -39,7 +39,7 @@ export default function App() {
     <div style={{
       display:    "flex",
       minHeight:  "100vh",
-      background: "#0a0f1e",
+      background: "#000000",
       fontFamily: "'IBM Plex Sans', sans-serif",
     }}>
       <Sidebar

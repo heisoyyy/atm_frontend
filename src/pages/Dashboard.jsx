@@ -13,7 +13,7 @@ const Card = ({ children, style = {} }) => (
 );
 
 const Label = ({ children }) => (
-  <div style={{ color: "#64748b", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
+  <div style={{ color: "#ffffff", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
     {children}
   </div>
 );
@@ -53,10 +53,10 @@ export default function Dashboard({ navigateTo }) {
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
           <div>
-            <h1 style={{ color: "#e2e8f0", fontSize: 26, fontWeight: 700, margin: "0 0 4px", letterSpacing: "-0.02em" }}>
+            <h1 style={{ color: "#ffffff", fontSize: 26, fontWeight: 700, margin: "0 0 4px", letterSpacing: "-0.02em" }}>
               Dashboard Monitoring
             </h1>
-            <p style={{ color: "#64748b", fontSize: 13, margin: 0 }}>
+            <p style={{ color: "#ffffff", fontSize: 13, margin: 0 }}>
               BRK Syariah · Diperbarui {summary.generated_at ? new Date(summary.generated_at).toLocaleString("id-ID") : "-"}
             </p>
           </div>
@@ -84,9 +84,9 @@ export default function Dashboard({ navigateTo }) {
           const hasBadge = tab.id === "coverage" && coverage?.summary?.not_in_master > 0;
           return (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-              background:   isActive ? "rgba(59,130,246,0.18)" : "transparent",
+              background:   isActive ? "rgba(255, 255, 255, 0.18)" : "transparent",
               border:       isActive ? "1px solid rgba(59,130,246,0.35)" : "1px solid transparent",
-              borderRadius: 9, color: isActive ? "#60a5fa" : "#64748b",
+              borderRadius: 9, color: isActive ? "#ffffff" : "#b5b5b5",
               padding: "8px 20px", fontSize: 13, fontWeight: isActive ? 600 : 400,
               cursor: "pointer", transition: "all 0.15s",
               display: "flex", alignItems: "center", gap: 7,
@@ -141,8 +141,8 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
           <Card key={c.label} style={{ textAlign: "center", padding: "16px 12px" }}>
             <div style={{ fontSize: 20, color: c.color, marginBottom: 6 }}>{c.icon}</div>
             <div style={{ color: c.color, fontSize: 26, fontWeight: 700, lineHeight: 1 }}>{c.value ?? "-"}</div>
-            <div style={{ color: "#64748b", fontSize: 10, marginTop: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>{c.label}</div>
-            <div style={{ color: "#475569", fontSize: 10, marginTop: 2 }}>{c.sub}</div>
+            <div style={{ color: "#ffffff", fontSize: 10, marginTop: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>{c.label}</div>
+            <div style={{ color: "#ffffff", fontSize: 10, marginTop: 2 }}>{c.sub}</div>
           </Card>
         ))}
       </div>
@@ -159,7 +159,7 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
             <div style={{ color: "#EF9F27", fontWeight: 700, fontSize: 14 }}>
               {notMon} ATM SSI belum punya data upload
             </div>
-            <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>
+            <div style={{ color: "#ffffff", fontSize: 12, marginTop: 2 }}>
               ATM ini ada di Master SSI tapi belum pernah muncul di file monitoring. Coverage saat ini: <strong style={{ color: "#EF9F27" }}>{covPct}%</strong>
             </div>
           </div>
@@ -185,7 +185,7 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
             <div style={{ color: "#E24B4A", fontWeight: 700, fontSize: 14 }}>
               {notMast} ATM dari file upload tidak ditemukan di Master SSI
             </div>
-            <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>
+            <div style={{ color: "#ffffff", fontSize: 12, marginTop: 2 }}>
               ID ATM ini ada di file monitoring tapi tidak ada di ATM Master. Perlu dicek/ditambahkan ke Master.
             </div>
           </div>
@@ -205,7 +205,7 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
                 <div key={st} style={{ marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                     <span style={{ color: col, fontSize: 12, fontWeight: 600 }}>{st}</span>
-                    <span style={{ color: "#94a3b8", fontSize: 12 }}>{count} ({pct}%)</span>
+                    <span style={{ color: "#ffffff", fontSize: 12 }}>{count} ({pct}%)</span>
                   </div>
                   <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
                     <div style={{ height: "100%", width: `${pct}%`, background: col, borderRadius: 2, transition: "width 0.6s ease" }} />
@@ -228,8 +228,8 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
                 border: "1px solid rgba(99,179,237,0.06)",
               }}>
                 <div>
-                  <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>{w.wilayah}</div>
-                  <div style={{ color: "#64748b", fontSize: 11, marginTop: 1 }}>
+                  <div style={{ color: "#ffffff", fontSize: 13, fontWeight: 600 }}>{w.wilayah}</div>
+                  <div style={{ color: "#ffffff", fontSize: 11, marginTop: 1 }}>
                     {w.total} ATM · avg {w.avg_pct_saldo?.toFixed(1)}%
                   </div>
                 </div>
@@ -259,22 +259,22 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
               ].map(s => (
                 <div key={s.label} style={{ textAlign: "center" }}>
                   <div style={{ color: s.color, fontSize: 22, fontWeight: 700 }}>{s.value}</div>
-                  <div style={{ color: "#64748b", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 3 }}>{s.label}</div>
+                  <div style={{ color: "#ffffff", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 3 }}>{s.label}</div>
                 </div>
               ))}
             </div>
             <div style={{ marginLeft: "auto" }}>
-              <div style={{ color: "#64748b", fontSize: 11, marginBottom: 8 }}>Per Wilayah:</div>
+              <div style={{ color: "#ffffff", fontSize: 11, marginBottom: 8 }}>Per Wilayah:</div>
               {(coverage.wilayah_breakdown || []).map(w => (
                 <div key={w.wilayah} style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 5 }}>
-                  <span style={{ color: "#94a3b8", fontSize: 12, minWidth: 110 }}>{w.wilayah}</span>
+                  <span style={{ color: "#ffffff", fontSize: 12, minWidth: 110 }}>{w.wilayah}</span>
                   <div style={{ width: 120, height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
                     <div style={{
                       height: "100%", borderRadius: 2, background: "#1D9E75",
                       width: `${(w.monitored / Math.max(w.master, 1)) * 100}%`,
                     }} />
                   </div>
-                  <span style={{ color: "#64748b", fontSize: 11 }}>{w.monitored}/{w.master}</span>
+                  <span style={{ color: "#ffffff", fontSize: 11 }}>{w.monitored}/{w.master}</span>
                   {w.not_monitored > 0 && (
                     <span style={{ color: "#EF9F27", fontSize: 10, fontWeight: 600 }}>+{w.not_monitored} belum</span>
                   )}
@@ -301,14 +301,14 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
                 background: s.ok ? "#00e5a0" : "#ff3b5c",
                 boxShadow: `0 0 6px ${s.ok ? "#00e5a0" : "#ff3b5c"}`,
               }} />
-              <span style={{ color: s.ok ? "#94a3b8" : "#ff3b5c", fontSize: 13 }}>
+              <span style={{ color: s.ok ? "#ffffff" : "#ff3b5c", fontSize: 13 }}>
                 {s.label}
                 {!s.ok && s.note && <span style={{ fontSize: 10, marginLeft: 5, opacity: 0.65 }}>({s.note})</span>}
               </span>
             </div>
           ))}
           {status?.date_range && (
-            <span style={{ color: "#475569", fontSize: 12, marginLeft: "auto" }}>
+            <span style={{ color: "#ffffff", fontSize: 12, marginLeft: "auto" }}>
               Data: {status.date_range.from} → {status.date_range.to}
               {status.total_atm && <span style={{ marginLeft: 10 }}>{status.total_atm} ATM</span>}
             </span>
@@ -326,7 +326,7 @@ function TabCoverage({ coverage, navigateTo }) {
 
   if (!coverage) {
     return (
-      <div style={{ color: "#64748b", padding: "40px 20px", textAlign: "center", fontSize: 13 }}>
+      <div style={{ color: "#ffffff", padding: "40px 20px", textAlign: "center", fontSize: 13 }}>
         Data perbandingan tidak tersedia. Pastikan ATM Master sudah diimport dan ada data upload.
       </div>
     );
@@ -361,7 +361,7 @@ function TabCoverage({ coverage, navigateTo }) {
               <div style={{ color: c.color, fontSize: 26, fontWeight: 700 }}>{c.value}</div>
             </div>
             <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 600 }}>{c.label}</div>
-            <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>{c.desc}</div>
+            <div style={{ color: "#ffffff", fontSize: 11, marginTop: 2 }}>{c.desc}</div>
           </Card>
         ))}
       </div>
@@ -386,8 +386,8 @@ function TabCoverage({ coverage, navigateTo }) {
                   <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3 }} />
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
-                  <span style={{ color: "#64748b" }}>Master: <strong style={{ color: "#94a3b8" }}>{w.master}</strong></span>
-                  <span style={{ color: "#64748b" }}>Monitoring: <strong style={{ color: "#1D9E75" }}>{w.monitored}</strong></span>
+                  <span style={{ color: "#ffffff" }}>Master: <strong style={{ color: "#ffffff" }}>{w.master}</strong></span>
+                  <span style={{ color: "#ffffff" }}>Monitoring: <strong style={{ color: "#1D9E75" }}>{w.monitored}</strong></span>
                   {w.not_monitored > 0 && <span style={{ color: "#EF9F27" }}>Belum: {w.not_monitored}</span>}
                 </div>
               </div>
@@ -405,7 +405,7 @@ function TabCoverage({ coverage, navigateTo }) {
           <button key={t.key} onClick={() => { setSubTab(t.key); setSearch(""); }} style={{
             background: subTab === t.key ? `rgba(${t.color === "#EF9F27" ? "239,159,39" : "226,75,74"},0.12)` : "transparent",
             border:     subTab === t.key ? `1px solid ${t.color}44` : "1px solid rgba(99,179,237,0.1)",
-            borderRadius: 8, color: subTab === t.key ? t.color : "#64748b",
+            borderRadius: 8, color: subTab === t.key ? t.color : "#ffffff",
             padding: "7px 16px", fontSize: 12, fontWeight: subTab === t.key ? 700 : 400, cursor: "pointer",
           }}>{t.label}</button>
         ))}
@@ -435,7 +435,7 @@ function TabCoverage({ coverage, navigateTo }) {
                 <thead>
                   <tr style={{ borderBottom: "1px solid rgba(99,179,237,0.1)" }}>
                     {["ID ATM", "Merk", "Lokasi", "Wilayah", "Denom", "Limit", "Keterangan"].map(h => (
-                      <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
+                      <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: "#ffffff", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -446,11 +446,11 @@ function TabCoverage({ coverage, navigateTo }) {
                       background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)",
                     }}>
                       <td style={{ padding: "10px 16px", fontWeight: 600, color: "#e2e8f0", fontFamily: "monospace" }}>{r.id_atm}</td>
-                      <td style={{ padding: "10px 16px", color: "#94a3b8" }}>{r.merk_atm || "-"}</td>
-                      <td style={{ padding: "10px 16px", color: "#94a3b8", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.lokasi_atm}>{r.lokasi_atm || "-"}</td>
-                      <td style={{ padding: "10px 16px", color: "#94a3b8" }}>{r.wilayah || "-"}</td>
-                      <td style={{ padding: "10px 16px", color: "#94a3b8" }}>{r.denom_options || "-"}</td>
-                      <td style={{ padding: "10px 16px", color: "#94a3b8" }}>{fmt.rupiah(r.limit)}</td>
+                      <td style={{ padding: "10px 16px", color: "#ffffff" }}>{r.merk_atm || "-"}</td>
+                      <td style={{ padding: "10px 16px", color: "#ffffff", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.lokasi_atm}>{r.lokasi_atm || "-"}</td>
+                      <td style={{ padding: "10px 16px", color: "#ffffff" }}>{r.wilayah || "-"}</td>
+                      <td style={{ padding: "10px 16px", color: "#ffffff" }}>{r.denom_options || "-"}</td>
+                      <td style={{ padding: "10px 16px", color: "#ffffff" }}>{fmt.rupiah(r.limit)}</td>
                       <td style={{ padding: "10px 16px" }}>
                         <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "rgba(239,159,39,0.08)", color: "#EF9F27", border: "1px solid rgba(239,159,39,0.2)" }}>
                           Belum ada data upload
@@ -474,7 +474,7 @@ function TabCoverage({ coverage, navigateTo }) {
             </div>
           ) : (
             <>
-              <div style={{ padding: "12px 16px", background: "rgba(226,75,74,0.04)", borderBottom: "1px solid rgba(226,75,74,0.1)", fontSize: 12, color: "#94a3b8" }}>
+              <div style={{ padding: "12px 16px", background: "rgba(226,75,74,0.04)", borderBottom: "1px solid rgba(226,75,74,0.1)", fontSize: 12, color: "#ffffff" }}>
                 ⚠ ATM ini sudah pernah ada di file upload tapi <strong style={{ color: "#E24B4A" }}>tidak ditemukan di ATM Master SSI</strong>.
                 Saldo tidak bisa diperbarui saat upload berikutnya sampai ATM ini ditambahkan ke Master.
               </div>
@@ -483,7 +483,7 @@ function TabCoverage({ coverage, navigateTo }) {
                   <thead>
                     <tr style={{ borderBottom: "1px solid rgba(99,179,237,0.1)" }}>
                       {["ID ATM", "Lokasi", "Wilayah", "Saldo Terakhir", "% Saldo", "Status", "Last Update", "Aksi"].map(h => (
-                        <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: "#64748b", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
+                        <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: "#ffffff", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -496,14 +496,14 @@ function TabCoverage({ coverage, navigateTo }) {
                           background: i % 2 === 0 ? "rgba(226,75,74,0.02)" : "transparent",
                         }}>
                           <td style={{ padding: "10px 16px", fontWeight: 600, color: "#e2e8f0", fontFamily: "monospace" }}>{r.id_atm}</td>
-                          <td style={{ padding: "10px 16px", color: "#94a3b8", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.lokasi}>{r.lokasi || "-"}</td>
-                          <td style={{ padding: "10px 16px", color: "#94a3b8" }}>{r.wilayah || "-"}</td>
-                          <td style={{ padding: "10px 16px", color: "#e2e8f0", fontWeight: 600 }}>{fmt.rupiah(r.saldo)}</td>
+                          <td style={{ padding: "10px 16px", color: "#ffffff", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.lokasi}>{r.lokasi || "-"}</td>
+                          <td style={{ padding: "10px 16px", color: "#ffffff" }}>{r.wilayah || "-"}</td>
+                          <td style={{ padding: "10px 16px", color: "#ffffff", fontWeight: 600 }}>{fmt.rupiah(r.saldo)}</td>
                           <td style={{ padding: "10px 16px", color: sc, fontWeight: 600 }}>{r.pct_saldo?.toFixed(1)}%</td>
                           <td style={{ padding: "10px 16px" }}>
                             <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: sc + "18", color: sc, border: `1px solid ${sc}33` }}>{r.status || "-"}</span>
                           </td>
-                          <td style={{ padding: "10px 16px", color: "#64748b", fontSize: 11 }}>{r.last_update ? String(r.last_update).slice(0, 16) : "-"}</td>
+                          <td style={{ padding: "10px 16px", color: "#ffffff", fontSize: 11 }}>{r.last_update ? String(r.last_update).slice(0, 16) : "-"}</td>
                           <td style={{ padding: "10px 16px" }}>
                             <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, background: "rgba(226,75,74,0.08)", color: "#E24B4A", border: "1px solid rgba(226,75,74,0.25)" }}>
                               Tambahkan ke Master
@@ -544,7 +544,7 @@ function CoverageRing({ pct }) {
       </svg>
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
         <div style={{ color, fontWeight: 700, fontSize: 16 }}>{pct}%</div>
-        <div style={{ color: "#64748b", fontSize: 9, textTransform: "uppercase" }}>coverage</div>
+        <div style={{ color: "#ffffff", fontSize: 9, textTransform: "uppercase" }}>coverage</div>
       </div>
     </div>
   );
@@ -561,7 +561,7 @@ function Pill({ children, color }) {
 
 function LoadingState() {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", color: "#64748b", flexDirection: "column", gap: 12 }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", color: "#ffffff", flexDirection: "column", gap: 12 }}>
       <div style={{ width: 36, height: 36, border: "2px solid rgba(59,130,246,0.3)", borderTopColor: "#3b82f6", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
       <span>Memuat data...</span>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -573,8 +573,8 @@ function EmptyState({ navigateTo }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", flexDirection: "column", gap: 16 }}>
       <div style={{ fontSize: 48, opacity: 0.3 }}>◈</div>
-      <h2 style={{ color: "#94a3b8", fontWeight: 600, margin: 0 }}>Belum Ada Data</h2>
-      <p style={{ color: "#64748b", margin: 0, fontSize: 14 }}>Import ATM Master terlebih dahulu, lalu upload file monitoring</p>
+      <h2 style={{ color: "#ffffff", fontWeight: 600, margin: 0 }}>Belum Ada Data</h2>
+      <p style={{ color: "#ffffff", margin: 0, fontSize: 14 }}>Import ATM Master terlebih dahulu, lalu upload file monitoring</p>
       <div style={{ display: "flex", gap: 10 }}>
         <button onClick={() => navigateTo("data")} style={{
           background: "rgba(59,130,246,0.15)", border: "1px solid rgba(59,130,246,0.4)",
@@ -582,7 +582,7 @@ function EmptyState({ navigateTo }) {
         }}>Import ATM Master →</button>
         <button onClick={() => navigateTo("upload")} style={{
           background: "rgba(255,255,255,0.04)", border: "1px solid rgba(99,179,237,0.15)",
-          borderRadius: 8, color: "#94a3b8", padding: "10px 20px", fontSize: 13, cursor: "pointer",
+          borderRadius: 8, color: "#ffffff", padding: "10px 20px", fontSize: 13, cursor: "pointer",
         }}>Upload Monitoring</button>
       </div>
     </div>

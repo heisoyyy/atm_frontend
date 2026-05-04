@@ -9,7 +9,7 @@ import {
 } from "../utils/api";
 
 // ── Config ─────────────────────────────────────────────────────────────────────
-const ADMIN_PASSWORD  = "brks2026";   // ganti sesuai kebutuhan
+const ADMIN_PASSWORD  = "brks2026";
 const API_BASE        = import.meta.env?.VITE_API_URL || "http://localhost:8000";
 const BULAN_ID        = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 const WILAYAH_LIST    = ["Semua","Pekanbaru","Batam","Dumai","Tanjung Pinang"];
@@ -26,7 +26,7 @@ function getDenomOpts(item) {
   return opts.length > 0 ? opts : [{ label:"Rp 100.000", value:100_000 }];
 }
 
-// ── Tiny API helpers not in api.js ──────────────────────────────────────────────
+// ── Tiny API helpers ──────────────────────────────────────────────────────────
 async function deleteCashplanDirect(id) {
   const r = await fetch(`${API_BASE}/api/cashplan/${id}`, { method:"DELETE" });
   if (!r.ok) throw new Error(await r.text());
@@ -46,19 +46,13 @@ async function postCashplan(body) {
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
-async function deleteRekapDirect(id) {
-  // endpoint hapus rekap tidak ada di backend — kita pakai workaround update is_saved=0
-  // atau tandai via keterangan; gunakan API yg tersedia
-  // Jika perlu tambahkan endpoint DELETE /api/rekap-replacement/{id} di backend
-  throw new Error("Endpoint DELETE rekap belum tersedia. Tambahkan di backend terlebih dahulu.");
-}
 
 // ══════════════════════════════════════════════════════════════════════════════
 export default function AdminPanel() {
   const [authed,   setAuthed]   = useState(() => sessionStorage.getItem("admin_authed") === "1");
   const [pwInput,  setPwInput]  = useState("");
   const [pwErr,    setPwErr]    = useState(false);
-  const [tab,      setTab]      = useState("cashplan"); // "cashplan" | "rekap"
+  const [tab,      setTab]      = useState("cashplan");
   const [toast,    setToast]    = useState(null);
 
   const showToast = (msg, type="ok") => {
@@ -86,10 +80,7 @@ export default function AdminPanel() {
 
   return (
     <div style={styles.root}>
-      {/* ── Scanline overlay ── */}
       <div style={styles.scanlines} />
-
-      {/* ── Header ── */}
       <header style={styles.header}>
         <div style={styles.headerLeft}>
           <div style={styles.logo}>⬡</div>
@@ -105,7 +96,6 @@ export default function AdminPanel() {
         </div>
       </header>
 
-      {/* ── Tab Bar ── */}
       <div style={styles.tabBar}>
         {[
           { key:"cashplan", label:"◈ Cash Plan (PENDING)", accent:"#38bdf8" },
@@ -120,18 +110,27 @@ export default function AdminPanel() {
         ))}
       </div>
 
-      {/* ── Content ── */}
       <div style={styles.content}>
         {tab === "cashplan" && <CashplanCRUD showToast={showToast} />}
         {tab === "rekap"    && <RekapCRUD    showToast={showToast} />}
       </div>
 
-      {/* ── Toast ── */}
       {toast && (
         <div style={{ ...styles.toast, background: toast.type === "ok" ? "rgba(74,222,128,0.12)" : "rgba(248,113,113,0.12)", borderColor: toast.type === "ok" ? "#4ade80" : "#f87171", color: toast.type === "ok" ? "#4ade80" : "#f87171" }}>
           {toast.type === "ok" ? "✓" : "✕"} {toast.msg}
         </div>
       )}
+
+      <style>{`
+        @keyframes glow { from { opacity:0.7; box-shadow:0 0 4px #4ade80; } to { opacity:1; box-shadow:0 0 10px #4ade80; } }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes pulse { from { opacity:0.4; } to { opacity:0.8; } }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+        @keyframes bulkSlideIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+        .cb-row:hover { background: rgba(56,189,248,0.05) !important; }
+        input[type="checkbox"].atm-cb { accent-color: #38bdf8; width:15px; height:15px; cursor:pointer; }
+        input[type="checkbox"].rekap-cb { accent-color: #a78bfa; width:15px; height:15px; cursor:pointer; }
+      `}</style>
     </div>
   );
 }
@@ -143,14 +142,19 @@ function CashplanCRUD({ showToast }) {
   const [items,    setItems]    = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [search,   setSearch]   = useState("");
-  const [editRow,  setEditRow]  = useState(null);   // {id, field, value}
+  const [editRow,  setEditRow]  = useState(null);
   const [showAdd,  setShowAdd]  = useState(false);
   const [addForm,  setAddForm]  = useState({ id_atm:"", lokasi:"-", wilayah:"Pekanbaru", tipe:"EMV", saldo:0, limit:0, status:"AWAS", added_by:"manual", denom_options:"100000" });
-  const [confirm,  setConfirm]  = useState(null);   // {type, item}
+  const [confirm,  setConfirm]  = useState(null);
   const [busy,     setBusy]     = useState(false);
+
+  // ── Multi-select state ────────────────────────────────────────────────────
+  const [selected, setSelected] = useState(new Set()); // Set of item.id
+  const [bulkConfirm, setBulkConfirm] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setSelected(new Set()); // reset selection on reload
     try {
       const r = await getCashplanAPI("PENDING");
       setItems(r.data || []);
@@ -166,7 +170,44 @@ function CashplanCRUD({ showToast }) {
     return items.filter(r => r.id_atm?.toLowerCase().includes(q) || r.lokasi?.toLowerCase().includes(q) || r.wilayah?.toLowerCase().includes(q));
   }, [items, search]);
 
-  // ── Inline edit save ────────────────────────────────────────────────────────
+  // ── Checkbox helpers ──────────────────────────────────────────────────────
+  const allFilteredIds   = filtered.map(r => r.id);
+  const allChecked       = allFilteredIds.length > 0 && allFilteredIds.every(id => selected.has(id));
+  const someChecked      = allFilteredIds.some(id => selected.has(id)) && !allChecked;
+  const selectedCount    = [...selected].filter(id => allFilteredIds.includes(id)).length;
+
+  const toggleAll = () => {
+    if (allChecked) {
+      setSelected(prev => { const n = new Set(prev); allFilteredIds.forEach(id => n.delete(id)); return n; });
+    } else {
+      setSelected(prev => { const n = new Set(prev); allFilteredIds.forEach(id => n.add(id)); return n; });
+    }
+  };
+
+  const toggleOne = (id) => {
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
+
+  // ── Bulk delete ───────────────────────────────────────────────────────────
+  const doBulkDelete = async () => {
+    setBusy(true);
+    const ids = [...selected].filter(id => allFilteredIds.includes(id));
+    let ok = 0, fail = 0;
+    for (const id of ids) {
+      try {
+        await removeCashplanAPI(id);
+        ok++;
+      } catch { fail++; }
+    }
+    setItems(prev => prev.filter(x => !ids.includes(x.id)));
+    setSelected(new Set());
+    setBulkConfirm(false);
+    setBusy(false);
+    if (fail === 0) showToast(`${ok} ATM berhasil dihapus dari antrian`);
+    else showToast(`${ok} berhasil, ${fail} gagal`, fail > 0 ? "err" : "ok");
+  };
+
+  // ── Inline edit save ──────────────────────────────────────────────────────
   const saveInlineKet = async (item, ket) => {
     setBusy(true);
     try {
@@ -177,24 +218,26 @@ function CashplanCRUD({ showToast }) {
     finally { setBusy(false); setEditRow(null); }
   };
 
-  // ── Status update ───────────────────────────────────────────────────────────
+  // ── Status update (single) ────────────────────────────────────────────────
   const doStatusUpdate = async (item, newStatus) => {
     setBusy(true);
     try {
       if (newStatus === "DELETE") {
         await removeCashplanAPI(item.id);
         setItems(p => p.filter(x => x.id !== item.id));
+        setSelected(prev => { const n = new Set(prev); n.delete(item.id); return n; });
         showToast(`ATM ${item.id_atm} dihapus dari antrian`);
       } else {
         await patchCashplan(item.id, { status: newStatus, keterangan: item.keterangan || "" });
         setItems(p => p.filter(x => x.id !== item.id));
+        setSelected(prev => { const n = new Set(prev); n.delete(item.id); return n; });
         showToast(`ATM ${item.id_atm} → ${newStatus}`);
       }
     } catch(e) { showToast(e.message, "err"); }
     finally { setBusy(false); setConfirm(null); }
   };
 
-  // ── Add new ─────────────────────────────────────────────────────────────────
+  // ── Add new ───────────────────────────────────────────────────────────────
   const doAdd = async () => {
     if (!addForm.id_atm.trim()) return showToast("ID ATM wajib diisi", "err");
     setBusy(true);
@@ -219,11 +262,49 @@ function CashplanCRUD({ showToast }) {
         <button onClick={load} style={styles.refreshBtn} disabled={loading}>↺</button>
       </div>
 
+      {/* ── Bulk Action Bar ── */}
+      {selectedCount > 0 && (
+        <div style={styles.bulkBar}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <span style={styles.bulkBadge}>{selectedCount}</span>
+            <span style={{ color:"#e2e8f0", fontSize:13, fontWeight:600 }}>
+              item dipilih
+            </span>
+            <button
+              onClick={() => setSelected(new Set())}
+              style={styles.bulkClearBtn}
+            >
+              ✕ Batal pilih
+            </button>
+          </div>
+          <div style={{ display:"flex", gap:8 }}>
+            <button
+              onClick={() => setBulkConfirm(true)}
+              disabled={busy}
+              style={styles.bulkDeleteBtn}
+            >
+              ⌫ Hapus {selectedCount} yang dipilih
+            </button>
+          </div>
+        </div>
+      )}
+
       {loading ? <TableSkeleton /> : (
         <div style={styles.tableWrap}>
           <table style={styles.table}>
             <thead>
               <tr>
+                {/* Checkbox Select All */}
+                <th style={{ ...styles.thStyle, width:36, padding:"10px 8px 10px 14px" }}>
+                  <input
+                    type="checkbox"
+                    className="atm-cb"
+                    checked={allChecked}
+                    ref={el => { if (el) el.indeterminate = someChecked; }}
+                    onChange={toggleAll}
+                    title="Pilih semua"
+                  />
+                </th>
                 {["ID","Tgl Masuk","ID ATM","Lokasi","Wilayah","Tipe","Saldo","Limit","% Saldo","Denom","Jumlah Isi","Status Awal","Keterangan","Sumber","Aksi"].map(h => (
                   <Th key={h}>{h}</Th>
                 ))}
@@ -231,67 +312,91 @@ function CashplanCRUD({ showToast }) {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={15} style={styles.empty}>Tidak ada data PENDING</td></tr>
-              ) : filtered.map((item, i) => (
-                <tr key={item.id} style={{ background: i%2===0?"transparent":"rgba(255,255,255,0.012)", transition:"background 0.1s" }}
-                  onMouseEnter={e=>e.currentTarget.style.background="rgba(56,189,248,0.05)"}
-                  onMouseLeave={e=>e.currentTarget.style.background=i%2===0?"transparent":"rgba(255,255,255,0.012)"}>
-                  <Td mono dim>{item.id}</Td>
-                  <Td dim small>{item.added_at ? new Date(item.added_at).toLocaleString("id-ID",{dateStyle:"short",timeStyle:"short"}) : "—"}</Td>
-                  <Td mono bold accent="#38bdf8">{item.id_atm}</Td>
-                  <Td dim small truncate>{item.lokasi || "—"}</Td>
-                  <Td dim>{item.wilayah || "—"}</Td>
-                  <Td>
-                    <TypeBadge tipe={item.tipe} />
-                  </Td>
-                  <Td>{fmtRp(item.saldo)}</Td>
-                  <Td dim>{fmtRp(item.limit)}</Td>
-                  <Td>
-                    <PctBadge pct={item.pct_saldo} />
-                  </Td>
-                  <Td dim small>{item.denom_options || "100000"}</Td>
-                  <Td accent="#f59e0b">{fmtRp(item.jumlah_isi)}</Td>
-                  <Td>
-                    <StatusBadge status={item.status_awal || item.status} />
-                  </Td>
-                  {/* Inline edit keterangan */}
-                  <Td>
-                    {editRow?.id === item.id ? (
+                <tr><td colSpan={16} style={styles.empty}>Tidak ada data PENDING</td></tr>
+              ) : filtered.map((item, i) => {
+                const isSelected = selected.has(item.id);
+                return (
+                  <tr
+                    key={item.id}
+                    className="cb-row"
+                    style={{
+                      background: isSelected
+                        ? "rgba(56,189,248,0.08)"
+                        : i%2===0 ? "transparent" : "rgba(255,255,255,0.012)",
+                      transition:"background 0.1s",
+                      outline: isSelected ? "1px solid rgba(56,189,248,0.2)" : "none",
+                    }}
+                  >
+                    {/* Checkbox */}
+                    <td style={{ padding:"8px 8px 8px 14px", borderBottom:"1px solid rgba(255,255,255,0.03)", verticalAlign:"middle" }}>
+                      <input
+                        type="checkbox"
+                        className="atm-cb"
+                        checked={isSelected}
+                        onChange={() => toggleOne(item.id)}
+                      />
+                    </td>
+                    <Td mono dim>{item.id}</Td>
+                    <Td dim small>{item.added_at ? new Date(item.added_at).toLocaleString("id-ID",{dateStyle:"short",timeStyle:"short"}) : "—"}</Td>
+                    <Td mono bold accent="#38bdf8">{item.id_atm}</Td>
+                    <Td dim small truncate>{item.lokasi || "—"}</Td>
+                    <Td dim>{item.wilayah || "—"}</Td>
+                    <Td><TypeBadge tipe={item.tipe} /></Td>
+                    <Td>{fmtRp(item.saldo)}</Td>
+                    <Td dim>{fmtRp(item.limit)}</Td>
+                    <Td><PctBadge pct={item.pct_saldo} /></Td>
+                    <Td dim small>{item.denom_options || "100000"}</Td>
+                    <Td accent="#f59e0b">{fmtRp(item.jumlah_isi)}</Td>
+                    <Td><StatusBadge status={item.status_awal || item.status} /></Td>
+                    {/* Inline edit keterangan */}
+                    <Td>
+                      {editRow?.id === item.id ? (
+                        <div style={{ display:"flex", gap:4 }}>
+                          <select value={editRow.value} onChange={e=>setEditRow(r=>({...r,value:e.target.value}))}
+                            style={{ ...styles.inlineSelect, width:130 }}>
+                            <option value="">— pilih —</option>
+                            {KET_OPTIONS.map(k=><option key={k} value={k}>{k}</option>)}
+                          </select>
+                          <button onClick={() => saveInlineKet(item, editRow.value)} disabled={busy} style={styles.saveSmBtn}>✓</button>
+                          <button onClick={() => setEditRow(null)} style={styles.cancelSmBtn}>✕</button>
+                        </div>
+                      ) : (
+                        <span style={{ color: item.keterangan ? "#e2e8f0" : "#374151", fontSize:11, cursor:"pointer" }}
+                          onClick={() => setEditRow({ id:item.id, value:item.keterangan||"" })}>
+                          {item.keterangan || <span style={{ color:"#374151" }}>— edit</span>}
+                        </span>
+                      )}
+                    </Td>
+                    <Td small><SourceBadge src={item.added_by} /></Td>
+                    {/* Aksi */}
+                    <Td>
                       <div style={{ display:"flex", gap:4 }}>
-                        <select value={editRow.value} onChange={e=>setEditRow(r=>({...r,value:e.target.value}))}
-                          style={{ ...styles.inlineSelect, width:130 }}>
-                          <option value="">— pilih —</option>
-                          {KET_OPTIONS.map(k=><option key={k} value={k}>{k}</option>)}
-                        </select>
-                        <button onClick={() => saveInlineKet(item, editRow.value)} disabled={busy} style={styles.saveSmBtn}>✓</button>
-                        <button onClick={() => setEditRow(null)} style={styles.cancelSmBtn}>✕</button>
+                        <ActionBtn color="#4ade80" onClick={() => setConfirm({ type:"DONE",   item })} title="Selesai">✔</ActionBtn>
+                        <ActionBtn color="#f87171" onClick={() => setConfirm({ type:"REMOVED", item })} title="Batal">✕</ActionBtn>
+                        <ActionBtn color="#ff3b5c" onClick={() => setConfirm({ type:"DELETE",  item })} title="Hapus dari DB">⌫</ActionBtn>
                       </div>
-                    ) : (
-                      <span style={{ color: item.keterangan ? "#e2e8f0" : "#374151", fontSize:11, cursor:"pointer" }}
-                        onClick={() => setEditRow({ id:item.id, value:item.keterangan||"" })}>
-                        {item.keterangan || <span style={{ color:"#374151" }}>— edit</span>}
-                      </span>
-                    )}
-                  </Td>
-                  <Td small>
-                    <SourceBadge src={item.added_by} />
-                  </Td>
-                  {/* Aksi */}
-                  <Td>
-                    <div style={{ display:"flex", gap:4 }}>
-                      <ActionBtn color="#4ade80" onClick={() => setConfirm({ type:"DONE",   item })} title="Selesai">✔</ActionBtn>
-                      <ActionBtn color="#f87171" onClick={() => setConfirm({ type:"REMOVED", item })} title="Batal">✕</ActionBtn>
-                      <ActionBtn color="#ff3b5c" onClick={() => setConfirm({ type:"DELETE",  item })} title="Hapus dari DB">⌫</ActionBtn>
-                    </div>
-                  </Td>
-                </tr>
-              ))}
+                    </Td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* ── Confirm Modal ── */}
+      {/* ── Bulk Delete Confirm ── */}
+      {bulkConfirm && (
+        <BulkConfirmModal
+          count={selectedCount}
+          items={filtered.filter(x => selected.has(x.id))}
+          onOk={doBulkDelete}
+          onCancel={() => setBulkConfirm(false)}
+          loading={busy}
+          accent="#38bdf8"
+        />
+      )}
+
+      {/* ── Single Confirm Modal ── */}
       {confirm && (
         <ConfirmModal
           title={
@@ -371,17 +476,22 @@ function CashplanCRUD({ showToast }) {
 //  REKAP CRUD
 // ══════════════════════════════════════════════════════════════════════════════
 function RekapCRUD({ showToast }) {
-  const [items,      setItems]      = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [filterBulan,setFilterBulan]= useState(nowBulan());
-  const [filterWil,  setFilterWil]  = useState("Semua");
-  const [search,     setSearch]     = useState("");
-  const [editRow,    setEditRow]    = useState(null); // {id, fields}
-  const [confirm,    setConfirm]    = useState(null);
-  const [busy,       setBusy]       = useState(false);
+  const [items,        setItems]       = useState([]);
+  const [loading,      setLoading]     = useState(true);
+  const [filterBulan,  setFilterBulan] = useState(nowBulan());
+  const [filterWil,    setFilterWil]   = useState("Semua");
+  const [search,       setSearch]      = useState("");
+  const [editRow,      setEditRow]     = useState(null);
+  const [confirm,      setConfirm]     = useState(null);
+  const [busy,         setBusy]        = useState(false);
+
+  // ── Multi-select state ────────────────────────────────────────────────────
+  const [selected,     setSelected]    = useState(new Set());
+  const [bulkConfirm,  setBulkConfirm] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setSelected(new Set());
     try {
       const r = await getRekapReplacementAPI({
         bulan:   filterBulan,
@@ -401,7 +511,42 @@ function RekapCRUD({ showToast }) {
     return items.filter(r => r.id_atm?.toLowerCase().includes(q) || r.lokasi?.toLowerCase().includes(q));
   }, [items, search]);
 
-  // ── Buka edit ───────────────────────────────────────────────────────────────
+  // ── Checkbox helpers ──────────────────────────────────────────────────────
+  const allFilteredIds  = filtered.map(r => r.id);
+  const allChecked      = allFilteredIds.length > 0 && allFilteredIds.every(id => selected.has(id));
+  const someChecked     = allFilteredIds.some(id => selected.has(id)) && !allChecked;
+  const selectedCount   = [...selected].filter(id => allFilteredIds.includes(id)).length;
+
+  const toggleAll = () => {
+    if (allChecked) {
+      setSelected(prev => { const n = new Set(prev); allFilteredIds.forEach(id => n.delete(id)); return n; });
+    } else {
+      setSelected(prev => { const n = new Set(prev); allFilteredIds.forEach(id => n.add(id)); return n; });
+    }
+  };
+  const toggleOne = (id) => {
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
+
+  // ── Bulk delete rekap ─────────────────────────────────────────────────────
+  // Workaround: gunakan updateRekapAPI dengan flag, atau tambahkan endpoint DELETE di backend.
+  // Di sini kita hapus dari local state dan tampilkan pesan bahwa endpoint perlu ditambahkan.
+  const doBulkDeleteRekap = async () => {
+    setBusy(true);
+    const ids = [...selected].filter(id => allFilteredIds.includes(id));
+    // TODO: Tambahkan endpoint DELETE /api/rekap-replacement/{id} di backend
+    // Sementara: hanya hapus dari local state sebagai simulasi
+    showToast(`Endpoint DELETE rekap belum tersedia di backend. Tambahkan dulu di FastAPI.`, "err");
+    setBulkConfirm(false);
+    setBusy(false);
+    // Jika endpoint sudah ada:
+    // let ok=0, fail=0;
+    // for (const id of ids) { try { await deleteRekapAPI(id); ok++; } catch { fail++; } }
+    // setItems(prev => prev.filter(x => !ids.includes(x.id)));
+    // setSelected(new Set());
+  };
+
+  // ── Buka edit ─────────────────────────────────────────────────────────────
   const openEdit = (item) => {
     setEditRow({
       id:          item.id,
@@ -413,7 +558,7 @@ function RekapCRUD({ showToast }) {
     });
   };
 
-  // ── Simpan edit ─────────────────────────────────────────────────────────────
+  // ── Simpan edit ───────────────────────────────────────────────────────────
   const saveEdit = async () => {
     if (!editRow) return;
     setBusy(true);
@@ -424,29 +569,23 @@ function RekapCRUD({ showToast }) {
         jam_cash_out: editRow.jam_cash_out || null,
         denom:        editRow.denom,
       });
-      setItems(p => p.map(x => x.id === editRow.id
-        ? { ...x, ...editRow, is_saved:true }
-        : x
-      ));
+      setItems(p => p.map(x => x.id === editRow.id ? { ...x, ...editRow, is_saved:true } : x));
       showToast("Rekap diperbarui");
       setEditRow(null);
     } catch(e) { showToast(e.message,"err"); }
     finally { setBusy(false); }
   };
 
-  // ── Unlock (reset is_saved) ─────────────────────────────────────────────────
+  // ── Unlock ────────────────────────────────────────────────────────────────
   const doUnlock = async (item) => {
     setBusy(true);
     try {
-      // Patch ulang dengan data yang sama — is_saved akan false karena kita re-save
       await updateRekapAPI(item.id, {
         tgl_isi:      item.tgl_isi      || null,
         jam_cash_in:  item.jam_cash_in  || null,
         jam_cash_out: item.jam_cash_out || null,
         denom:        item.denom        || 100_000,
       });
-      // Workaround: set is_saved=false di local state; backend akan set is_saved=1 ulang
-      // Untuk unlock sungguhan tambahkan endpoint PATCH /rekap/{id}/unlock di backend
       setItems(p => p.map(x => x.id === item.id ? { ...x, is_saved: false } : x));
       showToast(`Rekap #${item.id} (${item.id_atm}) dibuka untuk edit`);
       setConfirm(null);
@@ -469,6 +608,22 @@ function RekapCRUD({ showToast }) {
         <button onClick={load} style={styles.refreshBtn} disabled={loading}>↺</button>
       </div>
 
+      {/* ── Bulk Action Bar ── */}
+      {selectedCount > 0 && (
+        <div style={{ ...styles.bulkBar, borderColor:"rgba(167,139,250,0.3)", background:"rgba(167,139,250,0.06)" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ ...styles.bulkBadge, background:"rgba(167,139,250,0.2)", color:"#a78bfa", border:"1px solid rgba(167,139,250,0.4)" }}>{selectedCount}</span>
+            <span style={{ color:"#e2e8f0", fontSize:13, fontWeight:600 }}>rekap dipilih</span>
+            <button onClick={() => setSelected(new Set())} style={{ ...styles.bulkClearBtn, color:"#a78bfa", borderColor:"rgba(167,139,250,0.3)" }}>✕ Batal pilih</button>
+          </div>
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={() => setBulkConfirm(true)} disabled={busy} style={styles.bulkDeleteBtn}>
+              ⌫ Hapus {selectedCount} yang dipilih
+            </button>
+          </div>
+        </div>
+      )}
+
       {loading ? <TableSkeleton /> : (
         <div style={styles.tableWrap}>
           <table style={styles.table}>
@@ -481,15 +636,26 @@ function RekapCRUD({ showToast }) {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={18} style={styles.empty}>Tidak ada data rekap bulan {filterBulan}</td></tr>
+                <tr><td colSpan={19} style={styles.empty}>Tidak ada data rekap bulan {filterBulan}</td></tr>
               ) : filtered.map((item, i) => {
-                const isEditing = editRow?.id === item.id;
+                const isEditing  = editRow?.id === item.id;
+                const isSelected = selected.has(item.id);
                 const ed = editRow || {};
                 const denomOpts = getDenomOpts(item);
                 return (
-                  <tr key={item.id} style={{ background: item.is_saved?"rgba(74,222,128,0.025)":i%2===0?"transparent":"rgba(255,255,255,0.012)", transition:"background 0.1s" }}
-                    onMouseEnter={e=>e.currentTarget.style.background="rgba(167,139,250,0.05)"}
-                    onMouseLeave={e=>e.currentTarget.style.background=item.is_saved?"rgba(74,222,128,0.025)":i%2===0?"transparent":"rgba(255,255,255,0.012)"}>
+                  <tr
+                    key={item.id}
+                    className="cb-row"
+                    style={{
+                      background: isSelected
+                        ? "rgba(167,139,250,0.08)"
+                        : item.is_saved
+                          ? "rgba(74,222,128,0.025)"
+                          : i%2===0 ? "transparent" : "rgba(255,255,255,0.012)",
+                      transition:"background 0.1s",
+                      outline: isSelected ? "1px solid rgba(167,139,250,0.2)" : "none",
+                    }}
+                  >
                     <Td mono dim>{item.id}</Td>
                     <Td dim small>{item.done_at ? new Date(item.done_at).toLocaleString("id-ID",{dateStyle:"short",timeStyle:"short"}) : "—"}</Td>
                     <Td dim small>{item.bulan||filterBulan}</Td>
@@ -499,8 +665,6 @@ function RekapCRUD({ showToast }) {
                     <Td><TypeBadge tipe={item.tipe} /></Td>
                     <Td>{fmtRp(item.saldo_awal)}</Td>
                     <Td accent="#f59e0b">{fmtRp(item.jumlah_isi)}</Td>
-
-                    {/* Denom — editable */}
                     <Td>
                       {isEditing ? (
                         <select value={ed.denom} onChange={e=>setEditRow(r=>({...r,denom:Number(e.target.value)}))} style={styles.inlineSelect}>
@@ -509,31 +673,22 @@ function RekapCRUD({ showToast }) {
                       ) : <span style={{ color:"#ffffff", fontSize:11 }}>{fmtRp(item.denom)}</span>}
                     </Td>
                     <Td>{item.lembar ? `${item.lembar} lbr` : "—"}</Td>
-
-                    {/* Tgl Isi — editable */}
                     <Td>
                       {isEditing ? (
                         <input type="date" value={ed.tgl_isi} onChange={e=>setEditRow(r=>({...r,tgl_isi:e.target.value}))} style={styles.inlineInput} />
                       ) : <span style={{ color: item.tgl_isi?"#e2e8f0":"#374151", fontSize:11 }}>{item.tgl_isi || "—"}</span>}
                     </Td>
-
-                    {/* Cash In — editable */}
                     <Td>
                       {isEditing ? (
                         <input type="time" value={ed.jam_cash_in} onChange={e=>setEditRow(r=>({...r,jam_cash_in:e.target.value}))} style={{...styles.inlineInput, width:80}} />
                       ) : <span style={{ color: item.jam_cash_in?"#60a5fa":"#374151", fontSize:11, fontFamily:"monospace" }}>{item.jam_cash_in || "—"}</span>}
                     </Td>
-
-                    {/* Cash Out — editable */}
                     <Td>
                       {isEditing ? (
                         <input type="time" value={ed.jam_cash_out} onChange={e=>setEditRow(r=>({...r,jam_cash_out:e.target.value}))} style={{...styles.inlineInput, width:80}} />
                       ) : <span style={{ color: item.jam_cash_out?"#60a5fa":"#374151", fontSize:11, fontFamily:"monospace" }}>{item.jam_cash_out || "—"}</span>}
                     </Td>
-
-                    <Td>
-                      <RekapStatusBadge status={item.status_done} />
-                    </Td>
+                    <Td><RekapStatusBadge status={item.status_done} /></Td>
                     <Td dim small truncate>{item.keterangan || "—"}</Td>
                     <Td>
                       {item.is_saved
@@ -541,8 +696,6 @@ function RekapCRUD({ showToast }) {
                         : <span style={{ fontSize:10, color:"#ffffff" }}>—</span>
                       }
                     </Td>
-
-                    {/* Aksi */}
                     <Td>
                       {isEditing ? (
                         <div style={{ display:"flex", gap:4 }}>
@@ -566,6 +719,18 @@ function RekapCRUD({ showToast }) {
         </div>
       )}
 
+      {/* ── Bulk Delete Confirm ── */}
+      {bulkConfirm && (
+        <BulkConfirmModal
+          count={selectedCount}
+          items={filtered.filter(x => selected.has(x.id))}
+          onOk={doBulkDeleteRekap}
+          onCancel={() => setBulkConfirm(false)}
+          loading={busy}
+          accent="#a78bfa"
+        />
+      )}
+
       {/* Confirm unlock */}
       {confirm?.type === "unlock" && (
         <ConfirmModal
@@ -577,6 +742,59 @@ function RekapCRUD({ showToast }) {
           loading={busy}
         />
       )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  BULK CONFIRM MODAL
+// ══════════════════════════════════════════════════════════════════════════════
+function BulkConfirmModal({ count, items, onOk, onCancel, loading, accent="#38bdf8" }) {
+  const preview = items.slice(0, 5);
+  const extra   = items.length - preview.length;
+  return (
+    <div style={styles.modalOverlay}>
+      <div style={{ ...styles.modalBox, maxWidth:480 }}>
+        <div style={{ fontSize:32, marginBottom:12, textAlign:"center" }}>🗑️</div>
+        <h3 style={{ color:"#f87171", fontSize:16, fontWeight:700, margin:"0 0 6px", textAlign:"center", fontFamily:"'IBM Plex Mono',monospace" }}>
+          Hapus {count} Item?
+        </h3>
+        <p style={{ color:"#ffffff", fontSize:12, textAlign:"center", margin:"0 0 16px" }}>
+          Aksi ini tidak bisa dibatalkan. Data berikut akan dihapus permanen:
+        </p>
+
+        {/* Preview list */}
+        <div style={{ background:"rgba(248,113,113,0.04)", border:"1px solid rgba(248,113,113,0.15)", borderRadius:8, padding:"10px 14px", marginBottom:20 }}>
+          {preview.map(item => (
+            <div key={item.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"4px 0", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
+              <span style={{ color:accent, fontSize:11, fontFamily:"monospace", fontWeight:700, minWidth:80 }}>{item.id_atm}</span>
+              <span style={{ color:"#ffffff", fontSize:11 }}>{item.lokasi || "—"}</span>
+              <span style={{ color:"#ffffff", fontSize:10, marginLeft:"auto" }}>{item.wilayah || ""}</span>
+            </div>
+          ))}
+          {extra > 0 && (
+            <div style={{ color:"#ffffff", fontSize:11, paddingTop:6, fontStyle:"italic" }}>
+              + {extra} item lainnya...
+            </div>
+          )}
+        </div>
+
+        <div style={{ display:"flex", gap:10 }}>
+          <button
+            onClick={onOk}
+            disabled={loading}
+            style={{ flex:1, padding:"11px", borderRadius:8, fontWeight:700, fontSize:13, cursor:loading?"not-allowed":"pointer", background:"rgba(248,113,113,0.15)", border:"1px solid rgba(248,113,113,0.4)", color:"#f87171", fontFamily:"'IBM Plex Mono',monospace" }}
+          >
+            {loading ? "Menghapus..." : `⌫ Ya, Hapus ${count} Item`}
+          </button>
+          <button
+            onClick={onCancel}
+            style={{ padding:"11px 20px", borderRadius:8, fontSize:13, cursor:"pointer", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(99,179,237,0.15)", color:"#ffffff" }}
+          >
+            Batal
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -604,7 +822,6 @@ function LoginGate({ pw, setPw, err, onLogin }) {
         {err && <p style={styles.loginErr}>⊗ Password salah</p>}
         <button onClick={onLogin} style={styles.loginBtn}>Masuk →</button>
       </div>
-      <style>{`@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}`}</style>
     </div>
   );
 }
@@ -647,15 +864,13 @@ function ConfirmModal({ title, desc, danger, onOk, onCancel, loading }) {
 
 function Th({ children }) {
   return (
-    <th style={{ padding:"10px 12px", textAlign:"left", color:"#ffffff", fontWeight:700, fontSize:9, letterSpacing:"0.1em", textTransform:"uppercase", whiteSpace:"nowrap", borderBottom:"1px solid rgba(56,189,248,0.1)", fontFamily:"'IBM Plex Mono', monospace", background:"rgba(0,0,0,0.2)" }}>
-      {children}
-    </th>
+    <th style={styles.thStyle}>{children}</th>
   );
 }
 
 function Td({ children, mono, bold, dim, accent, small, truncate }) {
   return (
-    <td style={{ padding:"8px 12px", color: accent || (dim?"#ffffff":"#ffffff"), fontSize: small?10:12, fontWeight: bold?700:400, fontFamily: mono?"'IBM Plex Mono',monospace":"inherit", whiteSpace:"nowrap", maxWidth: truncate?140:"none", overflow: truncate?"hidden":"visible", textOverflow: truncate?"ellipsis":"clip", borderBottom:"1px solid rgba(255,255,255,0.03)" }}>
+    <td style={{ padding:"8px 12px", color: accent || "#ffffff", fontSize: small?10:12, fontWeight: bold?700:400, fontFamily: mono?"'IBM Plex Mono',monospace":"inherit", whiteSpace:"nowrap", maxWidth: truncate?140:"none", overflow: truncate?"hidden":"visible", textOverflow: truncate?"ellipsis":"clip", borderBottom:"1px solid rgba(255,255,255,0.03)" }}>
       {children}
     </td>
   );
@@ -708,7 +923,6 @@ function TableSkeleton() {
       {[...Array(6)].map((_,i)=>(
         <div key={i} style={{ height:36, background:`rgba(56,189,248,${0.02+i*0.005})`, borderRadius:4, marginBottom:4, animation:"pulse 1.5s ease infinite alternate" }} />
       ))}
-      <style>{`@keyframes pulse{from{opacity:0.4}to{opacity:0.8}}`}</style>
     </div>
   );
 }
@@ -737,6 +951,7 @@ const styles = {
   tableWrap:    { overflowX:"auto", borderRadius:10, border:"1px solid rgba(56,189,248,0.08)", background:"rgba(5,11,24,0.6)" },
   table:        { width:"100%", borderCollapse:"collapse", fontSize:12 },
   empty:        { padding:"60px 20px", textAlign:"center", color:"#ffffff", fontSize:13 },
+  thStyle:      { padding:"10px 12px", textAlign:"left", color:"#ffffff", fontWeight:700, fontSize:9, letterSpacing:"0.1em", textTransform:"uppercase", whiteSpace:"nowrap", borderBottom:"1px solid rgba(56,189,248,0.1)", fontFamily:"'IBM Plex Mono', monospace", background:"rgba(0,0,0,0.2)" },
   inlineInput:  { background:"#0a0f1e", border:"1px solid rgba(56,189,248,0.3)", borderRadius:5, color:"#e2e8f0", padding:"3px 7px", fontSize:11, outline:"none" },
   inlineSelect: { background:"#0a0f1e", border:"1px solid rgba(167,139,250,0.3)", borderRadius:5, color:"#a78bfa", padding:"3px 6px", fontSize:11, outline:"none", cursor:"pointer" },
   saveSmBtn:    { background:"rgba(74,222,128,0.12)", border:"1px solid rgba(74,222,128,0.35)", borderRadius:5, color:"#4ade80", padding:"3px 8px", fontSize:11, cursor:"pointer", fontWeight:700 },
@@ -751,6 +966,11 @@ const styles = {
   formSelect:   { background:"#0a0f1e", border:"1px solid rgba(56,189,248,0.2)", borderRadius:8, color:"#e2e8f0", padding:"9px 12px", fontSize:13, outline:"none", cursor:"pointer" },
   confirmOkBtn: { flex:1, padding:"11px", borderRadius:9, fontWeight:700, fontSize:13, cursor:"pointer", background:"rgba(74,222,128,0.15)", border:"1px solid rgba(74,222,128,0.4)", color:"#4ade80", fontFamily:"'IBM Plex Mono',monospace" },
   confirmCancelBtn:{ padding:"11px 20px", borderRadius:9, fontSize:13, cursor:"pointer", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(99,179,237,0.12)", color:"#ffffff" },
+  // Bulk action bar
+  bulkBar:      { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 16px", marginBottom:12, borderRadius:9, background:"rgba(56,189,248,0.06)", border:"1px solid rgba(56,189,248,0.25)", animation:"bulkSlideIn 0.2s ease" },
+  bulkBadge:    { display:"inline-flex", alignItems:"center", justifyContent:"center", minWidth:26, height:22, borderRadius:6, background:"rgba(56,189,248,0.2)", color:"#38bdf8", fontSize:12, fontWeight:800, border:"1px solid rgba(56,189,248,0.4)", fontFamily:"'IBM Plex Mono',monospace", padding:"0 6px" },
+  bulkClearBtn: { background:"transparent", border:"1px solid rgba(56,189,248,0.25)", borderRadius:6, color:"#38bdf8", padding:"4px 10px", fontSize:11, cursor:"pointer", fontFamily:"'IBM Plex Mono',monospace" },
+  bulkDeleteBtn:{ background:"rgba(248,113,113,0.12)", border:"1px solid rgba(248,113,113,0.35)", borderRadius:7, color:"#f87171", padding:"7px 16px", fontSize:12, cursor:"pointer", fontWeight:700, fontFamily:"'IBM Plex Mono',monospace", transition:"all 0.15s" },
   // Login
   loginRoot:    { minHeight:"100vh", background:"#050b18", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'IBM Plex Sans',sans-serif", position:"relative" },
   loginCard:    { background:"rgba(8,14,29,0.95)", border:"1px solid rgba(56,189,248,0.2)", borderRadius:18, padding:"40px 44px", width:360, textAlign:"center", boxShadow:"0 0 60px rgba(56,189,248,0.06)" },

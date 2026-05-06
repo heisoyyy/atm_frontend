@@ -807,9 +807,8 @@ function LoginGate({ pw, setPw, err, onLogin }) {
     <div style={styles.loginRoot}>
       <div style={styles.scanlines} />
       <div style={{ ...styles.loginCard, animation: err ? "shake 0.3s ease" : "none" }}>
-        <div style={styles.loginLogo}>⬡</div>
         <h1 style={styles.loginTitle}>ADMIN ACCESS</h1>
-        <p style={styles.loginSub}>BRK Syariah · ATM Monitoring</p>
+        <p style={styles.loginSub}>BRK Syariah · 2026</p>
         <input
           type="password"
           value={pw}

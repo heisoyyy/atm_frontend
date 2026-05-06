@@ -1,6 +1,17 @@
 // src/pages/Dashboard.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { apiFetch, fmt, STATUS_COLOR, STATUS_BG } from "../utils/api";
+
+// ── Shared tiny helpers ───────────────────────────────────────────────────────
+
+function fmtShort(n) {
+  if (n == null) return "-";
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + "M";
+  if (n >= 1e6) return (n / 1e6).toFixed(0) + "jt";
+  return n.toLocaleString("id-ID");
+}
+
+// ── Shared UI atoms ───────────────────────────────────────────────────────────
 
 const Card = ({ children, style = {} }) => (
   <div style={{
@@ -18,10 +29,95 @@ const Label = ({ children }) => (
   </div>
 );
 
+function Pill({ children, color }) {
+  return (
+    <span style={{
+      background: color + "18", color, fontSize: 11, padding: "2px 8px",
+      borderRadius: 4, fontWeight: 600, border: `1px solid ${color}33`, whiteSpace: "nowrap",
+    }}>{children}</span>
+  );
+}
+
+function WilayahBadge({ wilayah }) {
+  return (
+    <span style={{
+      fontSize: 11, padding: "2px 8px", borderRadius: 4,
+      background: "rgba(56,130,221,0.12)", color: "#60a5fa", fontWeight: 500,
+    }}>{wilayah || "-"}</span>
+  );
+}
+
+function SectionCard({ children, style = {} }) {
+  return (
+    <div style={{
+      background: "rgba(255,255,255,0.03)",
+      border: "1px solid rgba(99,179,237,0.1)",
+      borderRadius: 12,
+      overflow: "hidden",
+      ...style,
+    }}>{children}</div>
+  );
+}
+
+function SectionHeader({ title, icon, right }) {
+  return (
+    <div style={{
+      padding: "12px 16px",
+      borderBottom: "1px solid rgba(99,179,237,0.08)",
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+    }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ fontSize: 15, color: "#8a8a9a" }}>{icon}</span>
+        {title}
+      </span>
+      {right}
+    </div>
+  );
+}
+
+function PctBar({ pct, status }) {
+  const color = STATUS_COLOR[status] || "#8a8a9a";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <span style={{ fontSize: 11, fontWeight: 600, color, minWidth: 38 }}>{(pct ?? 0).toFixed(1)}%</span>
+      <div style={{ flex: 1, height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2, minWidth: 40 }}>
+        <div style={{ height: "100%", width: `${Math.min(100, pct || 0)}%`, background: color, borderRadius: 2 }} />
+      </div>
+    </div>
+  );
+}
+
+// ── Table primitives ──────────────────────────────────────────────────────────
+
+function Th({ children }) {
+  return (
+    <th style={{
+      padding: "9px 14px", textAlign: "left", fontSize: 11, fontWeight: 600,
+      color: "#8a8a9a", borderBottom: "1px solid rgba(99,179,237,0.08)",
+      whiteSpace: "nowrap",
+    }}>{children}</th>
+  );
+}
+
+function Td({ children, style = {} }) {
+  return (
+    <td style={{
+      padding: "9px 14px", borderBottom: "1px solid rgba(99,179,237,0.05)",
+      color: "#e2e8f0", verticalAlign: "middle", ...style,
+    }}>{children}</td>
+  );
+}
+
+// ── TABS config ───────────────────────────────────────────────────────────────
+
 const TABS = [
-  { id: "overview",  label: "Overview",        icon: "◈" },
-  { id: "coverage",  label: "Master vs Upload", icon: "⊞" },
+  { id: "overview", label: "Overview",        icon: "◈" },
+  { id: "coverage", label: "Master vs Upload", icon: "⊞" },
 ];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  DEFAULT EXPORT — Dashboard
+// ═══════════════════════════════════════════════════════════════════════════════
 
 export default function Dashboard({ navigateTo }) {
   const [activeTab, setActiveTab] = useState("overview");
@@ -84,7 +180,7 @@ export default function Dashboard({ navigateTo }) {
           const hasBadge = tab.id === "coverage" && coverage?.summary?.not_in_master > 0;
           return (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-              background:   isActive ? "rgba(255, 255, 255, 0.18)" : "transparent",
+              background:   isActive ? "rgba(255,255,255,0.18)" : "transparent",
               border:       isActive ? "1px solid rgba(59,130,246,0.35)" : "1px solid transparent",
               borderRadius: 9, color: isActive ? "#ffffff" : "#b5b5b5",
               padding: "8px 20px", fontSize: 13, fontWeight: isActive ? 600 : 400,
@@ -103,8 +199,8 @@ export default function Dashboard({ navigateTo }) {
         })}
       </div>
 
-      {activeTab === "overview"  && <TabOverview  summary={summary} status={status} coverage={coverage} navigateTo={navigateTo} />}
-      {activeTab === "coverage"  && <TabCoverage  coverage={coverage} navigateTo={navigateTo} />}
+      {activeTab === "overview" && <TabOverview summary={summary} status={status} coverage={coverage} navigateTo={navigateTo} />}
+      {activeTab === "coverage" && <TabCoverage coverage={coverage} navigateTo={navigateTo} />}
 
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
@@ -114,7 +210,10 @@ export default function Dashboard({ navigateTo }) {
   );
 }
 
-// ═══ TAB 1 — OVERVIEW ══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+//  TAB 1 — OVERVIEW
+// ═══════════════════════════════════════════════════════════════════════════════
+
 function TabOverview({ summary, status, coverage, navigateTo }) {
   const ov    = summary.overall;
   const total = ov.total_atm || 1;
@@ -128,10 +227,9 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
     { label: "Aman",                 value: ov.aman,         color: "#1D9E75", icon: "✓", sub: "> 35% limit" },
   ];
 
-  // Coverage ring data
-  const covPct   = coverage?.summary?.coverage_pct ?? 0;
-  const notMon   = coverage?.summary?.not_monitored ?? 0;
-  const notMast  = coverage?.summary?.not_in_master ?? 0;
+  const covPct  = coverage?.summary?.coverage_pct ?? 0;
+  const notMon  = coverage?.summary?.not_monitored ?? 0;
+  const notMast = coverage?.summary?.not_in_master ?? 0;
 
   return (
     <div>
@@ -147,7 +245,6 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
         ))}
       </div>
 
-      {/* Coverage Alert — jika ada ATM tidak termonitor */}
       {notMon > 0 && (
         <div style={{
           background: "rgba(239,159,39,0.06)", border: "1px solid rgba(239,159,39,0.25)",
@@ -167,13 +264,10 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
             background: "rgba(239,159,39,0.12)", border: "1px solid rgba(239,159,39,0.3)",
             borderRadius: 8, color: "#EF9F27", padding: "6px 14px", fontSize: 12,
             cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap",
-          }}
-            onClick={() => document.querySelector("[data-tab='coverage']")?.click?.()}
-          >Lihat Detail →</button>
+          }}>Lihat Detail →</button>
         </div>
       )}
 
-      {/* ATM tidak ada di master */}
       {notMast > 0 && (
         <div style={{
           background: "rgba(226,75,74,0.06)", border: "1px solid rgba(226,75,74,0.2)",
@@ -192,9 +286,7 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
         </div>
       )}
 
-      {/* Middle row */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-        {/* Status Distribution */}
         <Card>
           <Label>Distribusi Status ATM</Label>
           <div style={{ marginTop: 12 }}>
@@ -216,7 +308,6 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
           </div>
         </Card>
 
-        {/* Per Wilayah */}
         <Card>
           <Label>Status Per Wilayah</Label>
           <div style={{ marginTop: 8 }}>
@@ -244,7 +335,6 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
         </Card>
       </div>
 
-      {/* Coverage Summary mini card */}
       {coverage && (
         <Card style={{ marginBottom: 16 }}>
           <Label>Coverage ATM Master SSI</Label>
@@ -252,10 +342,10 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
             <CoverageRing pct={covPct} />
             <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
               {[
-                { label: "Total Master SSI",  value: coverage.summary.total_master_ssi,  color: "#60a5fa" },
-                { label: "Termonitor",        value: coverage.summary.matched,            color: "#1D9E75" },
-                { label: "Belum Ada Upload",  value: coverage.summary.not_monitored,      color: "#EF9F27" },
-                { label: "Tidak di Master",   value: coverage.summary.not_in_master,      color: "#E24B4A" },
+                { label: "Total Master SSI", value: coverage.summary.total_master_ssi, color: "#60a5fa" },
+                { label: "Termonitor",       value: coverage.summary.matched,           color: "#1D9E75" },
+                { label: "Belum Ada Upload", value: coverage.summary.not_monitored,     color: "#EF9F27" },
+                { label: "Tidak di Master",  value: coverage.summary.not_in_master,     color: "#E24B4A" },
               ].map(s => (
                 <div key={s.label} style={{ textAlign: "center" }}>
                   <div style={{ color: s.color, fontSize: 22, fontWeight: 700 }}>{s.value}</div>
@@ -269,15 +359,10 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
                 <div key={w.wilayah} style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 5 }}>
                   <span style={{ color: "#ffffff", fontSize: 12, minWidth: 110 }}>{w.wilayah}</span>
                   <div style={{ width: 120, height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
-                    <div style={{
-                      height: "100%", borderRadius: 2, background: "#1D9E75",
-                      width: `${(w.monitored / Math.max(w.master, 1)) * 100}%`,
-                    }} />
+                    <div style={{ height: "100%", borderRadius: 2, background: "#1D9E75", width: `${(w.monitored / Math.max(w.master, 1)) * 100}%` }} />
                   </div>
                   <span style={{ color: "#ffffff", fontSize: 11 }}>{w.monitored}/{w.master}</span>
-                  {w.not_monitored > 0 && (
-                    <span style={{ color: "#EF9F27", fontSize: 10, fontWeight: 600 }}>+{w.not_monitored} belum</span>
-                  )}
+                  {w.not_monitored > 0 && <span style={{ color: "#EF9F27", fontSize: 10, fontWeight: 600 }}>+{w.not_monitored} belum</span>}
                 </div>
               ))}
             </div>
@@ -285,15 +370,14 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
         </Card>
       )}
 
-      {/* System Status */}
       <Card>
         <Label>Status Sistem</Label>
         <div style={{ display: "flex", gap: 28, marginTop: 12, flexWrap: "wrap", alignItems: "center" }}>
           {[
             { label: "ATM Master",    ok: (coverage?.summary?.total_master_ssi ?? 0) > 0, note: "Import ATM Master dulu" },
-            { label: "Data Upload",   ok: status?.has_data,   note: "Upload file monitoring dulu" },
-            { label: "Model XGBoost", ok: status?.has_model,  note: "Belum di-train" },
-            { label: "Cache Prediksi",ok: status?.has_cache,  note: null },
+            { label: "Data Upload",   ok: status?.has_data,  note: "Upload file monitoring dulu" },
+            { label: "Model XGBoost", ok: status?.has_model, note: "Belum di-train" },
+            { label: "Cache Prediksi",ok: status?.has_cache, note: null },
           ].map(s => (
             <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{
@@ -319,215 +403,596 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
   );
 }
 
-// ═══ TAB 2 — MASTER VS MONITORING COVERAGE ═════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+//  TAB 2 — MASTER VS MONITORING COVERAGE (ENHANCED)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Chart.js loader (lazy, sekali) ───────────────────────────────────────────
+function useChartJs() {
+  const [ready, setReady] = useState(typeof window !== "undefined" && !!window.Chart);
+  useEffect(() => {
+    if (window.Chart) { setReady(true); return; }
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js";
+    s.onload = () => setReady(true);
+    document.head.appendChild(s);
+  }, []);
+  return ready;
+}
+
+// ── Insight panel ─────────────────────────────────────────────────────────────
+function InsightPanel({ coverage }) {
+  const s  = coverage.summary;
+  const wb = coverage.wilayah_breakdown || [];
+  const worst = wb.reduce(
+    (a, b) => (b.not_monitored / Math.max(b.master, 1)) > (a.not_monitored / Math.max(a.master, 1)) ? b : a,
+    wb[0] || { not_monitored: 0, master: 1, wilayah: "-" }
+  );
+  const worstPct = Math.round((worst.not_monitored / Math.max(worst.master, 1)) * 100);
+
+  const clsMap = {
+    err:  { bg: "rgba(226,75,74,0.06)",   border: "rgba(226,75,74,0.2)",   color: "#E24B4A" },
+    warn: { bg: "rgba(239,159,39,0.06)",  border: "rgba(239,159,39,0.2)",  color: "#EF9F27" },
+    ok:   { bg: "rgba(29,158,117,0.06)",  border: "rgba(29,158,117,0.2)", color: "#1D9E75" },
+    info: { bg: "rgba(56,130,221,0.06)",  border: "rgba(56,130,221,0.2)", color: "#60a5fa" },
+  };
+
+  const insights = [];
+  if (s.coverage_pct < 70)
+    insights.push({ cls: "err",  icon: "⊗", text: `Coverage hanya ${s.coverage_pct}% — kurang dari 70%. Banyak ATM SSI belum pernah masuk data upload.` });
+  else if (s.coverage_pct < 90)
+    insights.push({ cls: "warn", icon: "⊕", text: `Coverage ${s.coverage_pct}% — ada ${s.not_monitored} ATM SSI yang belum pernah muncul di file monitoring.` });
+  else
+    insights.push({ cls: "ok",   icon: "✓", text: `Coverage ${s.coverage_pct}% — sangat baik! Hampir semua ATM SSI sudah terpantau.` });
+
+  if (s.not_in_master > 0)
+    insights.push({ cls: "err", icon: "⚠", text: `${s.not_in_master} ATM ada di file upload tapi tidak ada di ATM Master SSI. Saldo mereka tidak terhitung dalam kalkulasi wilayah.` });
+
+  if (worst.not_monitored > 0)
+    insights.push({ cls: "info", icon: "◎", text: `Wilayah ${worst.wilayah} punya gap terbesar: ${worst.not_monitored} ATM (${worstPct}%) belum ada data upload.` });
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+      {insights.map((ins, i) => {
+        const c = clsMap[ins.cls];
+        return (
+          <div key={i} style={{
+            background: c.bg, border: `1px solid ${c.border}`,
+            borderRadius: 8, padding: "10px 14px",
+            display: "flex", gap: 8, alignItems: "flex-start",
+          }}>
+            <span style={{ color: c.color, fontSize: 15, flexShrink: 0, marginTop: 1 }}>{ins.icon}</span>
+            <span style={{ color: "#e2e8f0", fontSize: 12 }}>{ins.text}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Coverage donut chart ──────────────────────────────────────────────────────
+function CoverageDonutChart({ summary, chartReady }) {
+  const canvasRef = useRef(null);
+  const chartRef  = useRef(null);
+
+  useEffect(() => {
+    if (!chartReady || !canvasRef.current) return;
+    chartRef.current?.destroy();
+    const { matched, not_monitored, not_in_master } = summary;
+    chartRef.current = new window.Chart(canvasRef.current, {
+      type: "doughnut",
+      data: {
+        labels: ["Termonitor", "Belum upload", "Tidak di master"],
+        datasets: [{
+          data: [matched, not_monitored, not_in_master],
+          backgroundColor: ["#1D9E75", "#EF9F27", "#E24B4A"],
+          borderWidth: 2,
+          borderColor: "#0d1117",
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: "68%",
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} ATM` } },
+        },
+      },
+    });
+    return () => chartRef.current?.destroy();
+  }, [chartReady, summary]);
+
+  const covColor = summary.coverage_pct >= 90 ? "#1D9E75" : summary.coverage_pct >= 70 ? "#EF9F27" : "#E24B4A";
+  return (
+    <div style={{ padding: "14px 16px" }}>
+      <div style={{ position: "relative", width: "100%", height: 180 }}>
+        <canvas ref={canvasRef} />
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 10, alignItems: "center" }}>
+        {[
+          { label: `Termonitor (${summary.matched})`,         color: "#1D9E75" },
+          { label: `Belum upload (${summary.not_monitored})`, color: "#EF9F27" },
+          { label: `Tidak di master (${summary.not_in_master})`, color: "#E24B4A" },
+        ].map(l => (
+          <span key={l.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#8a8a9a" }}>
+            <span style={{ width: 10, height: 10, borderRadius: 2, background: l.color, flexShrink: 0 }} />
+            {l.label}
+          </span>
+        ))}
+        <span style={{ marginLeft: "auto", color: covColor, fontWeight: 700, fontSize: 18 }}>
+          {summary.coverage_pct}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ── Wilayah grouped bar chart ─────────────────────────────────────────────────
+function WilayahBarChart({ breakdown, chartReady }) {
+  const canvasRef = useRef(null);
+  const chartRef  = useRef(null);
+
+  useEffect(() => {
+    if (!chartReady || !canvasRef.current || !breakdown?.length) return;
+    chartRef.current?.destroy();
+    chartRef.current = new window.Chart(canvasRef.current, {
+      type: "bar",
+      data: {
+        labels: breakdown.map(w => w.wilayah),
+        datasets: [
+          { label: "Master SSI",   data: breakdown.map(w => w.master),        backgroundColor: "rgba(55,138,221,0.25)", borderRadius: 4 },
+          { label: "Termonitor",   data: breakdown.map(w => w.monitored),      backgroundColor: "#1D9E75", borderRadius: 4 },
+          { label: "Belum upload", data: breakdown.map(w => w.not_monitored),  backgroundColor: "#EF9F27", borderRadius: 4 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#8a8a9a", font: { size: 11 } } },
+          y: { grid: { color: "rgba(255,255,255,0.04)" }, ticks: { color: "#8a8a9a", font: { size: 10 } } },
+        },
+      },
+    });
+    return () => chartRef.current?.destroy();
+  }, [chartReady, breakdown]);
+
+  return (
+    <div style={{ padding: "14px 16px" }}>
+      <div style={{ display: "flex", gap: 14, marginBottom: 8, flexWrap: "wrap" }}>
+        {[
+          { label: "Master SSI",   color: "rgba(55,138,221,0.4)" },
+          { label: "Termonitor",   color: "#1D9E75" },
+          { label: "Belum upload", color: "#EF9F27" },
+        ].map(l => (
+          <span key={l.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#8a8a9a" }}>
+            <span style={{ width: 10, height: 10, borderRadius: 2, background: l.color, flexShrink: 0 }} />
+            {l.label}
+          </span>
+        ))}
+      </div>
+      <div style={{ position: "relative", width: "100%", height: 160 }}>
+        <canvas ref={canvasRef} />
+      </div>
+    </div>
+  );
+}
+
+// ── Heatmap per wilayah ───────────────────────────────────────────────────────
+function WilayahHeatmap({ breakdown }) {
+  return (
+    <div style={{ padding: "14px 16px" }}>
+      <div style={{
+        display: "grid", gridTemplateColumns: "110px 1fr 44px 44px 44px",
+        gap: 10, paddingBottom: 6,
+        borderBottom: "1px solid rgba(99,179,237,0.08)", marginBottom: 4,
+      }}>
+        {["Wilayah", "Progress", "Master", "Monitor", "Belum"].map((h, i) => (
+          <span key={h} style={{ fontSize: 11, color: "#8a8a9a", textAlign: i >= 2 ? "center" : "left" }}>{h}</span>
+        ))}
+      </div>
+      {(breakdown || []).map(w => {
+        const pct      = Math.round((w.monitored / Math.max(w.master, 1)) * 100);
+        const barColor = pct >= 90 ? "#1D9E75" : pct >= 70 ? "#EF9F27" : "#E24B4A";
+        return (
+          <div key={w.wilayah} style={{
+            display: "grid", gridTemplateColumns: "110px 1fr 44px 44px 44px",
+            alignItems: "center", gap: 10,
+            padding: "8px 0", borderBottom: "1px solid rgba(99,179,237,0.05)",
+          }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>{w.wilayah}</div>
+              <div style={{ fontSize: 10, color: "#8a8a9a" }}>{pct}% coverage</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: "#8a8a9a", textAlign: "right", marginBottom: 3 }}>{w.monitored}/{w.master}</div>
+              <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 3, transition: "width 0.5s" }} />
+              </div>
+            </div>
+            {[
+              { val: w.master,        color: "#60a5fa", bg: "rgba(56,130,221,0.1)" },
+              { val: w.monitored,     color: "#1D9E75", bg: "rgba(29,158,117,0.1)" },
+              { val: w.not_monitored, color: w.not_monitored > 0 ? "#EF9F27" : "#1D9E75", bg: w.not_monitored > 0 ? "rgba(239,159,39,0.1)" : "rgba(29,158,117,0.1)" },
+            ].map((b, i) => (
+              <div key={i} style={{
+                textAlign: "center", fontSize: 11, fontWeight: 600,
+                padding: "2px 4px", borderRadius: 4, color: b.color, background: b.bg,
+              }}>{b.val}</div>
+            ))}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Goal tracker ──────────────────────────────────────────────────────────────
+function CoverageGoals({ summary }) {
+  const goals = [
+    { label: "Target coverage 95%",     current: summary.coverage_pct,  target: 95, unit: "%",  invert: false },
+    { label: "ATM tanpa upload = 0",    current: summary.not_monitored, target: 0,  unit: "",   invert: true  },
+    { label: "ATM tidak di master = 0", current: summary.not_in_master, target: 0,  unit: "",   invert: true  },
+  ];
+  return (
+    <div style={{ padding: "14px 16px" }}>
+      {goals.map(g => {
+        let pct, color, labelStr;
+        if (g.invert) {
+          pct      = g.current === 0 ? 100 : Math.max(5, 100 - Math.round((g.current / Math.max(g.current * 1.5, 1)) * 100));
+          color    = g.current === 0 ? "#1D9E75" : "#E24B4A";
+          labelStr = g.current === 0 ? "✓ Tercapai!" : `Masih ${g.current} ATM`;
+        } else {
+          pct      = Math.min(100, Math.round((g.current / g.target) * 100));
+          color    = g.current >= g.target ? "#1D9E75" : g.current >= g.target * 0.8 ? "#EF9F27" : "#E24B4A";
+          labelStr = `${g.current}${g.unit} / ${g.target}${g.unit}`;
+        }
+        return (
+          <div key={g.label} style={{ marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ fontSize: 12, color: "#e2e8f0" }}>{g.label}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color }}>{labelStr}</span>
+            </div>
+            <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3, transition: "width 0.6s" }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Table: belum ada upload ───────────────────────────────────────────────────
+function TableNotMonitored({ data }) {
+  if (!data.length) return (
+    <div style={{ padding: "40px 20px", textAlign: "center", color: "#1D9E75", fontSize: 13 }}>
+      ✓ Semua ATM SSI sudah punya data upload!
+    </div>
+  );
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+        <thead><tr><Th>ID ATM</Th><Th>Merk</Th><Th>Lokasi</Th><Th>Wilayah</Th><Th>Denom</Th><Th>Limit</Th><Th>Status</Th></tr></thead>
+        <tbody>
+          {data.map((r, i) => (
+            <tr key={r.id_atm} style={{ background: i % 2 ? "rgba(255,255,255,0.01)" : "transparent" }}>
+              <Td><span style={{ fontFamily: "monospace", fontSize: 11, fontWeight: 600 }}>{r.id_atm}</span></Td>
+              <Td style={{ color: "#8a8a9a", fontSize: 11 }}>{r.merk_atm || "-"}</Td>
+              <Td style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.lokasi_atm || "-"}</Td>
+              <Td><WilayahBadge wilayah={r.wilayah} /></Td>
+              <Td style={{ fontFamily: "monospace", fontSize: 11 }}>{r.denom_options || "-"}</Td>
+              <Td style={{ fontSize: 11, color: "#8a8a9a" }}>{fmt.rupiah(r.limit)}</Td>
+              <Td><Pill color="#EF9F27">Belum ada upload</Pill></Td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Table: tidak di master ────────────────────────────────────────────────────
+function TableNotInMaster({ data }) {
+  if (!data.length) return (
+    <div style={{ padding: "40px 20px", textAlign: "center", color: "#1D9E75", fontSize: 13 }}>
+      ✓ Semua ATM dari upload sudah terdaftar di Master SSI!
+    </div>
+  );
+  return (
+    <>
+      <div style={{ padding: "10px 14px", background: "rgba(226,75,74,0.04)", borderBottom: "1px solid rgba(226,75,74,0.08)", fontSize: 12, color: "#8a8a9a" }}>
+        ⚠ ATM ini ada di file upload tapi <strong style={{ color: "#E24B4A" }}>tidak ditemukan di ATM Master SSI</strong>. Tambahkan ke Master agar saldo terhitung saat upload berikutnya.
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+          <thead><tr><Th>ID ATM</Th><Th>Lokasi</Th><Th>Wilayah</Th><Th>Saldo</Th><Th>% Saldo</Th><Th>Status</Th><Th>Last Update</Th><Th>Aksi</Th></tr></thead>
+          <tbody>
+            {data.map((r, i) => {
+              const sc  = STATUS_COLOR[r.status] || "#8a8a9a";
+              const sbg = (STATUS_BG && STATUS_BG[r.status]) || sc + "18";
+              return (
+                <tr key={r.id_atm} style={{ background: i % 2 ? "rgba(226,75,74,0.015)" : "transparent" }}>
+                  <Td><span style={{ fontFamily: "monospace", fontSize: 11, fontWeight: 600 }}>{r.id_atm}</span></Td>
+                  <Td style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.lokasi || "-"}</Td>
+                  <Td><WilayahBadge wilayah={r.wilayah} /></Td>
+                  <Td style={{ fontWeight: 600, fontSize: 11 }}>{fmtShort(r.saldo)}</Td>
+                  <Td><PctBar pct={r.pct_saldo} status={r.status} /></Td>
+                  <Td><span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: sbg, color: sc, fontWeight: 600 }}>{r.status || "-"}</span></Td>
+                  <Td style={{ fontSize: 10, color: "#8a8a9a" }}>{(r.last_update || "-").slice(0, 16)}</Td>
+                  <Td>
+                    <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 4, background: "rgba(226,75,74,0.08)", color: "#E24B4A", border: "1px solid rgba(226,75,74,0.25)", cursor: "pointer" }}>
+                      + Tambah ke Master
+                    </span>
+                  </Td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+// ── Table: termonitor (matched) ───────────────────────────────────────────────
+function TableMatched({ data }) {
+  if (!data.length) return (
+    <div style={{ padding: "40px 20px", textAlign: "center", color: "#8a8a9a", fontSize: 13 }}>
+      Data matched_detail belum tersedia — tambahkan ke response backend (lihat patch).
+    </div>
+  );
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+        <thead><tr><Th>ID ATM</Th><Th>Merk</Th><Th>Lokasi</Th><Th>Wilayah</Th><Th>Saldo</Th><Th>% Saldo</Th><Th>Status</Th><Th>Last Update</Th></tr></thead>
+        <tbody>
+          {data.map((r, i) => {
+            const sc  = STATUS_COLOR[r.status] || "#8a8a9a";
+            const sbg = (STATUS_BG && STATUS_BG[r.status]) || sc + "18";
+            return (
+              <tr key={r.id_atm} style={{ background: i % 2 ? "rgba(255,255,255,0.01)" : "transparent" }}>
+                <Td><span style={{ fontFamily: "monospace", fontSize: 11, fontWeight: 600 }}>{r.id_atm}</span></Td>
+                <Td style={{ color: "#8a8a9a", fontSize: 11 }}>{r.merk_atm || "-"}</Td>
+                <Td style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.lokasi_atm || "-"}</Td>
+                <Td><WilayahBadge wilayah={r.wilayah} /></Td>
+                <Td style={{ fontWeight: 600, fontSize: 11 }}>{fmtShort(r.saldo)}</Td>
+                <Td><PctBar pct={r.pct_saldo} status={r.status} /></Td>
+                <Td><span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: sbg, color: sc, fontWeight: 600 }}>{r.status || "-"}</span></Td>
+                <Td style={{ fontSize: 10, color: "#8a8a9a" }}>{(r.last_update || "-").slice(0, 16)}</Td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Main TabCoverage ──────────────────────────────────────────────────────────
 function TabCoverage({ coverage, navigateTo }) {
-  const [subTab,  setSubTab]  = useState("not_monitored");
-  const [search,  setSearch]  = useState("");
+  const [subTab,        setSubTab]        = useState("not_monitored");
+  const [search,        setSearch]        = useState("");
+  const [filterWilayah, setFilterWilayah] = useState("");
+  const [sortKey,       setSortKey]       = useState("id");
+  const [page,          setPage]          = useState(1);
+  const PAGE_SIZE  = 10;
+  const chartReady = useChartJs();
 
   if (!coverage) {
     return (
-      <div style={{ color: "#ffffff", padding: "40px 20px", textAlign: "center", fontSize: 13 }}>
+      <div style={{ color: "#8a8a9a", padding: "40px 20px", textAlign: "center", fontSize: 13 }}>
         Data perbandingan tidak tersedia. Pastikan ATM Master sudah diimport dan ada data upload.
       </div>
     );
   }
 
-  const { summary, not_monitored, not_in_master, wilayah_breakdown } = coverage;
+  const {
+    summary,
+    not_monitored  = [],
+    not_in_master  = [],
+    matched_detail = [],
+    wilayah_breakdown = [],
+  } = coverage;
 
-  const filteredNotMon = (not_monitored || []).filter(r =>
-    !search || r.id_atm?.toLowerCase().includes(search.toLowerCase()) ||
-    r.lokasi_atm?.toLowerCase().includes(search.toLowerCase()) ||
-    r.wilayah?.toLowerCase().includes(search.toLowerCase())
-  );
+  // ── Filter & sort ───────────────────────────────────────────────────────────
+  const rawData = subTab === "not_monitored" ? not_monitored
+    : subTab === "not_in_master" ? not_in_master
+    : matched_detail;
 
-  const filteredNotMast = (not_in_master || []).filter(r =>
-    !search || r.id_atm?.toLowerCase().includes(search.toLowerCase()) ||
-    r.lokasi?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = rawData.filter(r => {
+    const id  = (r.id_atm || "").toLowerCase();
+    const lok = (r.lokasi_atm || r.lokasi || "").toLowerCase();
+    const wil = (r.wilayah || "").toLowerCase();
+    const q   = search.toLowerCase();
+    return (!q || id.includes(q) || lok.includes(q) || wil.includes(q))
+        && (!filterWilayah || r.wilayah === filterWilayah);
+  }).sort((a, b) => {
+    if (sortKey === "wilayah")    return (a.wilayah || "").localeCompare(b.wilayah || "");
+    if (sortKey === "limit_desc") return (b.limit || 0) - (a.limit || 0);
+    if (sortKey === "pct_asc")    return (a.pct_saldo || 0) - (b.pct_saldo || 0);
+    return (a.id_atm || "").localeCompare(b.id_atm || "");
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageData   = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const wilayahOpts = [...new Set(rawData.map(r => r.wilayah).filter(Boolean))];
+
+  function handleSubtab(tab) {
+    setSubTab(tab); setSearch(""); setFilterWilayah(""); setSortKey("id"); setPage(1);
+  }
+
+  function exportCSV() {
+    if (!filtered.length) return;
+    const keys   = Object.keys(filtered[0]);
+    const header = keys.join(",");
+    const rows   = filtered.map(r => keys.map(k => JSON.stringify(r[k] ?? "")).join(","));
+    const blob   = new Blob([[header, ...rows].join("\n")], { type: "text/csv" });
+    const a      = Object.assign(document.createElement("a"), {
+      href: URL.createObjectURL(blob),
+      download: `atm_${subTab}_${new Date().toISOString().slice(0, 10)}.csv`,
+    });
+    a.click(); URL.revokeObjectURL(a.href);
+  }
+
+  const covColor = summary.coverage_pct >= 90 ? "#1D9E75" : summary.coverage_pct >= 70 ? "#EF9F27" : "#E24B4A";
+
+  // ── Shared input/select styles ──────────────────────────────────────────────
+  const inputStyle = {
+    fontSize: 12, padding: "6px 10px", borderRadius: 7,
+    border: "1px solid rgba(99,179,237,0.15)",
+    background: "rgba(255,255,255,0.04)", color: "#e2e8f0", outline: "none",
+  };
 
   return (
     <div>
-      {/* Summary cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+      {/* ── METRIC CARDS ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
         {[
-          { label: "Total Master SSI",    value: summary.total_master_ssi,  color: "#60a5fa", icon: "⊞", desc: "ATM terdaftar di master" },
-          { label: "Coverage",            value: summary.coverage_pct + "%", color: summary.coverage_pct >= 90 ? "#1D9E75" : summary.coverage_pct >= 70 ? "#EF9F27" : "#E24B4A", icon: "◉", desc: "Termonitor dari master" },
-          { label: "Belum Ada Upload",    value: summary.not_monitored,     color: "#EF9F27", icon: "⊕", desc: "Di master, belum diupload" },
-          { label: "Tidak di Master",     value: summary.not_in_master,     color: summary.not_in_master > 0 ? "#E24B4A" : "#1D9E75", icon: "⚠", desc: "Di upload, tak ada di master" },
+          { label: "Total Master SSI",   value: summary.total_master_ssi, icon: "⊞", color: "#60a5fa",                                                                    sub: "ATM terdaftar di master" },
+          { label: "Coverage",           value: `${summary.coverage_pct}%`, icon: "◉", color: covColor,                                                                   sub: "Termonitor dari master"  },
+          { label: "Belum ada upload",   value: summary.not_monitored,    icon: "⊕", color: "#EF9F27",                                                                    sub: "Di master, belum diupload" },
+          { label: "Tidak di Master",    value: summary.not_in_master,    icon: "⚠", color: summary.not_in_master > 0 ? "#E24B4A" : "#1D9E75",                           sub: "Di upload, tak ada di master" },
         ].map(c => (
-          <Card key={c.label} style={{ padding: "16px 18px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-              <span style={{ color: c.color, fontSize: 22 }}>{c.icon}</span>
-              <div style={{ color: c.color, fontSize: 26, fontWeight: 700 }}>{c.value}</div>
-            </div>
-            <div style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 600 }}>{c.label}</div>
-            <div style={{ color: "#ffffff", fontSize: 11, marginTop: 2 }}>{c.desc}</div>
-          </Card>
+          <div key={c.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,179,237,0.08)", borderRadius: 10, padding: "14px 16px" }}>
+            <div style={{ fontSize: 18, color: c.color, marginBottom: 6 }}>{c.icon}</div>
+            <div style={{ color: c.color, fontSize: 24, fontWeight: 700, lineHeight: 1.1 }}>{c.value}</div>
+            <div style={{ color: "#e2e8f0", fontSize: 12, marginTop: 4, fontWeight: 600 }}>{c.label}</div>
+            <div style={{ color: "#8a8a9a", fontSize: 11, marginTop: 2 }}>{c.sub}</div>
+          </div>
         ))}
       </div>
 
-      {/* Per Wilayah breakdown */}
-      <Card style={{ marginBottom: 16 }}>
-        <Label>Coverage Per Wilayah</Label>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12, marginTop: 12 }}>
-          {(wilayah_breakdown || []).map(w => {
-            const pct = Math.round((w.monitored / Math.max(w.master, 1)) * 100);
-            const color = pct >= 90 ? "#1D9E75" : pct >= 70 ? "#EF9F27" : "#E24B4A";
-            return (
-              <div key={w.wilayah} style={{
-                background: "rgba(255,255,255,0.02)", border: "1px solid rgba(99,179,237,0.08)",
-                borderRadius: 10, padding: "14px 16px",
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ color: "#e2e8f0", fontWeight: 600, fontSize: 13 }}>{w.wilayah}</span>
-                  <span style={{ color, fontSize: 13, fontWeight: 700 }}>{pct}%</span>
-                </div>
-                <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 3, marginBottom: 8 }}>
-                  <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3 }} />
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
-                  <span style={{ color: "#ffffff" }}>Master: <strong style={{ color: "#ffffff" }}>{w.master}</strong></span>
-                  <span style={{ color: "#ffffff" }}>Monitoring: <strong style={{ color: "#1D9E75" }}>{w.monitored}</strong></span>
-                  {w.not_monitored > 0 && <span style={{ color: "#EF9F27" }}>Belum: {w.not_monitored}</span>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
+      {/* ── INSIGHT PANEL ── */}
+      <InsightPanel coverage={coverage} />
 
-      {/* Sub-tab list */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 16, alignItems: "center" }}>
-        {[
-          { key: "not_monitored", label: `Belum Ada Upload (${summary.not_monitored})`, color: "#EF9F27" },
-          { key: "not_in_master", label: `Tidak di Master SSI (${summary.not_in_master})`, color: "#E24B4A" },
-        ].map(t => (
-          <button key={t.key} onClick={() => { setSubTab(t.key); setSearch(""); }} style={{
-            background: subTab === t.key ? `rgba(${t.color === "#EF9F27" ? "239,159,39" : "226,75,74"},0.12)` : "transparent",
-            border:     subTab === t.key ? `1px solid ${t.color}44` : "1px solid rgba(99,179,237,0.1)",
-            borderRadius: 8, color: subTab === t.key ? t.color : "#ffffff",
-            padding: "7px 16px", fontSize: 12, fontWeight: subTab === t.key ? 700 : 400, cursor: "pointer",
-          }}>{t.label}</button>
-        ))}
-        <input
-          placeholder="Cari ID ATM / lokasi / wilayah..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{
-            marginLeft: "auto",
-            background: "rgba(255,255,255,0.04)", border: "1px solid rgba(99,179,237,0.15)",
-            borderRadius: 8, color: "#e2e8f0", padding: "7px 14px", fontSize: 12,
-            outline: "none", width: 240,
-          }}
+      {/* ── ROW 1: Donut + Heatmap ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+        <SectionCard>
+          <SectionHeader title="Coverage overview" icon="◈"
+            right={<span style={{ fontSize: 12, fontWeight: 700, color: covColor }}>{summary.coverage_pct}%</span>}
+          />
+          <CoverageDonutChart summary={summary} chartReady={chartReady} />
+        </SectionCard>
+
+        <SectionCard>
+          <SectionHeader title="Status per wilayah" icon="◎" />
+          <WilayahHeatmap breakdown={wilayah_breakdown} />
+        </SectionCard>
+      </div>
+
+      {/* ── ROW 2: Bar chart + Goals ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+        <SectionCard>
+          <SectionHeader title="Distribusi ATM per wilayah" icon="▪" />
+          <WilayahBarChart breakdown={wilayah_breakdown} chartReady={chartReady} />
+        </SectionCard>
+
+        <SectionCard>
+          <SectionHeader title="Coverage goal tracker" icon="✓" />
+          <CoverageGoals summary={summary} />
+        </SectionCard>
+      </div>
+
+      {/* ── DETAIL TABLE ── */}
+      <SectionCard>
+        <SectionHeader title="Detail ATM" icon="⊟"
+          right={
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <span style={{ fontSize: 11, color: "#8a8a9a" }}>{filtered.length} ATM</span>
+              <button onClick={exportCSV} style={{
+                fontSize: 11, padding: "4px 12px", borderRadius: 6,
+                border: "1px solid rgba(56,130,221,0.3)", background: "rgba(56,130,221,0.08)",
+                color: "#60a5fa", cursor: "pointer",
+              }}>⬇ Export CSV</button>
+            </div>
+          }
         />
-      </div>
 
-      {/* List: ATM di master tapi belum diupload */}
-      {subTab === "not_monitored" && (
-        <Card style={{ padding: 0 }}>
-          {filteredNotMon.length === 0 ? (
-            <div style={{ padding: "40px 20px", textAlign: "center", color: "#1D9E75", fontSize: 13 }}>
-              {search ? "Tidak ada hasil pencarian." : "✓ Semua ATM SSI sudah punya data upload!"}
-            </div>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid rgba(99,179,237,0.1)" }}>
-                    {["ID ATM", "Merk", "Lokasi", "Wilayah", "Denom", "Limit", "Keterangan"].map(h => (
-                      <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: "#ffffff", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredNotMon.map((r, i) => (
-                    <tr key={r.id_atm} style={{
-                      borderBottom: "1px solid rgba(99,179,237,0.05)",
-                      background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)",
-                    }}>
-                      <td style={{ padding: "10px 16px", fontWeight: 600, color: "#e2e8f0", fontFamily: "monospace" }}>{r.id_atm}</td>
-                      <td style={{ padding: "10px 16px", color: "#ffffff" }}>{r.merk_atm || "-"}</td>
-                      <td style={{ padding: "10px 16px", color: "#ffffff", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.lokasi_atm}>{r.lokasi_atm || "-"}</td>
-                      <td style={{ padding: "10px 16px", color: "#ffffff" }}>{r.wilayah || "-"}</td>
-                      <td style={{ padding: "10px 16px", color: "#ffffff" }}>{r.denom_options || "-"}</td>
-                      <td style={{ padding: "10px 16px", color: "#ffffff" }}>{fmt.rupiah(r.limit)}</td>
-                      <td style={{ padding: "10px 16px" }}>
-                        <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "rgba(239,159,39,0.08)", color: "#EF9F27", border: "1px solid rgba(239,159,39,0.2)" }}>
-                          Belum ada data upload
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-      )}
+        {/* Subtabs */}
+        <div style={{ display: "flex", gap: 6, padding: "12px 16px 0" }}>
+          {[
+            { key: "not_monitored", label: `Belum ada upload (${not_monitored.length})`,    color: "#EF9F27" },
+            { key: "not_in_master", label: `Tidak di Master (${not_in_master.length})`,     color: "#E24B4A" },
+            { key: "matched",       label: `Termonitor (${matched_detail.length || summary.matched})`, color: "#1D9E75" },
+          ].map(t => (
+            <button key={t.key} onClick={() => handleSubtab(t.key)} style={{
+              padding: "6px 14px", borderRadius: 7, fontSize: 12, cursor: "pointer",
+              background: subTab === t.key ? `${t.color}18` : "transparent",
+              border:     subTab === t.key ? `1px solid ${t.color}44` : "1px solid rgba(99,179,237,0.1)",
+              color:      subTab === t.key ? t.color : "#8a8a9a",
+              fontWeight: subTab === t.key ? 700 : 400,
+            }}>{t.label}</button>
+          ))}
+        </div>
 
-      {/* List: ATM di upload tapi tidak di master */}
-      {subTab === "not_in_master" && (
-        <Card style={{ padding: 0 }}>
-          {filteredNotMast.length === 0 ? (
-            <div style={{ padding: "40px 20px", textAlign: "center", color: "#1D9E75", fontSize: 13 }}>
-              {search ? "Tidak ada hasil pencarian." : "✓ Semua ATM dari upload sudah terdaftar di Master SSI!"}
+        {/* Toolbar */}
+        <div style={{
+          padding: "10px 16px", display: "flex", gap: 8, alignItems: "center",
+          borderBottom: "1px solid rgba(99,179,237,0.08)", flexWrap: "wrap",
+        }}>
+          <input
+            placeholder="Cari ID ATM, lokasi, wilayah..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
+            style={{ ...inputStyle, flex: 1, minWidth: 180 }}
+          />
+          <select value={filterWilayah} onChange={e => { setFilterWilayah(e.target.value); setPage(1); }} style={inputStyle}>
+            <option value="">Semua wilayah</option>
+            {wilayahOpts.map(w => <option key={w} value={w}>{w}</option>)}
+          </select>
+          <select value={sortKey} onChange={e => { setSortKey(e.target.value); setPage(1); }} style={inputStyle}>
+            <option value="id">Urut: ID ATM</option>
+            <option value="wilayah">Urut: Wilayah</option>
+            <option value="limit_desc">Urut: Limit ↓</option>
+            <option value="pct_asc">Urut: % Saldo ↑</option>
+          </select>
+          <button onClick={() => { setSearch(""); setFilterWilayah(""); setSortKey("id"); setPage(1); }} style={{
+            ...inputStyle, cursor: "pointer", padding: "6px 12px",
+          }}>↺ Reset</button>
+        </div>
+
+        {/* Table content */}
+        {subTab === "not_monitored" && <TableNotMonitored data={pageData} />}
+        {subTab === "not_in_master" && <TableNotInMaster  data={pageData} />}
+        {subTab === "matched"       && <TableMatched       data={pageData} />}
+
+        {/* Pagination */}
+        {filtered.length > PAGE_SIZE && (
+          <div style={{
+            padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between",
+            borderTop: "1px solid rgba(99,179,237,0.08)", fontSize: 12, color: "#8a8a9a",
+          }}>
+            <span>
+              Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} dari {filtered.length}
+            </span>
+            <div style={{ display: "flex", gap: 4 }}>
+              {[
+                { label: "← Prev", dir: -1, disabled: page <= 1 },
+                { label: "Next →", dir:  1, disabled: page >= totalPages },
+              ].map(b => (
+                <button key={b.label} disabled={b.disabled} onClick={() => setPage(p => p + b.dir)} style={{
+                  padding: "3px 10px", borderRadius: 6,
+                  border: "1px solid rgba(99,179,237,0.12)", background: "transparent",
+                  color: b.disabled ? "#4a4a5a" : "#e2e8f0",
+                  cursor: b.disabled ? "default" : "pointer", fontSize: 12,
+                }}>{b.label}</button>
+              ))}
+              <span style={{ padding: "3px 10px", fontSize: 12 }}>{page}/{totalPages}</span>
             </div>
-          ) : (
-            <>
-              <div style={{ padding: "12px 16px", background: "rgba(226,75,74,0.04)", borderBottom: "1px solid rgba(226,75,74,0.1)", fontSize: 12, color: "#ffffff" }}>
-                ⚠ ATM ini sudah pernah ada di file upload tapi <strong style={{ color: "#E24B4A" }}>tidak ditemukan di ATM Master SSI</strong>.
-                Saldo tidak bisa diperbarui saat upload berikutnya sampai ATM ini ditambahkan ke Master.
-              </div>
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid rgba(99,179,237,0.1)" }}>
-                      {["ID ATM", "Lokasi", "Wilayah", "Saldo Terakhir", "% Saldo", "Status", "Last Update", "Aksi"].map(h => (
-                        <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: "#ffffff", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredNotMast.map((r, i) => {
-                      const sc = STATUS_COLOR[r.status] || "#6b7280";
-                      return (
-                        <tr key={r.id_atm} style={{
-                          borderBottom: "1px solid rgba(99,179,237,0.05)",
-                          background: i % 2 === 0 ? "rgba(226,75,74,0.02)" : "transparent",
-                        }}>
-                          <td style={{ padding: "10px 16px", fontWeight: 600, color: "#e2e8f0", fontFamily: "monospace" }}>{r.id_atm}</td>
-                          <td style={{ padding: "10px 16px", color: "#ffffff", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.lokasi}>{r.lokasi || "-"}</td>
-                          <td style={{ padding: "10px 16px", color: "#ffffff" }}>{r.wilayah || "-"}</td>
-                          <td style={{ padding: "10px 16px", color: "#ffffff", fontWeight: 600 }}>{fmt.rupiah(r.saldo)}</td>
-                          <td style={{ padding: "10px 16px", color: sc, fontWeight: 600 }}>{r.pct_saldo?.toFixed(1)}%</td>
-                          <td style={{ padding: "10px 16px" }}>
-                            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: sc + "18", color: sc, border: `1px solid ${sc}33` }}>{r.status || "-"}</span>
-                          </td>
-                          <td style={{ padding: "10px 16px", color: "#ffffff", fontSize: 11 }}>{r.last_update ? String(r.last_update).slice(0, 16) : "-"}</td>
-                          <td style={{ padding: "10px 16px" }}>
-                            <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, background: "rgba(226,75,74,0.08)", color: "#E24B4A", border: "1px solid rgba(226,75,74,0.25)" }}>
-                              Tambahkan ke Master
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </Card>
-      )}
+          </div>
+        )}
+      </SectionCard>
     </div>
   );
 }
 
-// ═══ SHARED COMPONENTS ══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+//  SHARED COMPONENTS
+// ═══════════════════════════════════════════════════════════════════════════════
 
 function CoverageRing({ pct }) {
-  const r   = 36;
-  const c   = 2 * Math.PI * r;
+  const r     = 36;
+  const c     = 2 * Math.PI * r;
   const color = pct >= 90 ? "#1D9E75" : pct >= 70 ? "#EF9F27" : "#E24B4A";
   return (
     <div style={{ position: "relative", width: 90, height: 90, flexShrink: 0 }}>
@@ -547,15 +1012,6 @@ function CoverageRing({ pct }) {
         <div style={{ color: "#ffffff", fontSize: 9, textTransform: "uppercase" }}>coverage</div>
       </div>
     </div>
-  );
-}
-
-function Pill({ children, color }) {
-  return (
-    <span style={{
-      background: color + "18", color, fontSize: 11, padding: "2px 8px",
-      borderRadius: 4, fontWeight: 600, border: `1px solid ${color}33`,
-    }}>{children}</span>
   );
 }
 

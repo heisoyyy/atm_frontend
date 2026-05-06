@@ -13,7 +13,6 @@ import {
   dismissAllNotifAPI,
 } from "../utils/api";
 
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const ALL_DENOM_OPTIONS = [
   { label: "Rp 50.000",  value: 50_000  },
   { label: "Rp 100.000", value: 100_000 },
@@ -29,23 +28,17 @@ const fmtLembar = (total, denomStr) => {
   if (!total || !denomStr) return "—";
   const parts = String(denomStr).split(",").map(Number).filter(v => v > 0);
   if (!parts.length) return "—";
-  const denomCalc = Math.min(...parts);
-  const lembar = Math.ceil(total / denomCalc);
   if (parts.length > 1) {
     const lembarMax = Math.ceil(total / Math.min(...parts));
     const lembarMin = Math.ceil(total / Math.max(...parts));
     return `${lembarMin.toLocaleString("id-ID")}–${lembarMax.toLocaleString("id-ID")} lembar`;
   }
-  return lembar.toLocaleString("id-ID") + " lembar";
+  return Math.ceil(total / parts[0]).toLocaleString("id-ID") + " lembar";
 };
 const jumlahIsiCalc = (saldo, limit) => Math.max(0, (limit || 0) - (saldo || 0));
 
-const PROSES_STYLE  = { color: "#f59e0b", bg: "rgba(245,158,11,0.12)",  border: "rgba(245,158,11,0.3)"  };
-const SELESAI_STYLE = { color: "#00e5a0", bg: "rgba(0,229,160,0.12)",   border: "rgba(0,229,160,0.3)"   };
-const BATAL_STYLE   = { color: "#ffffff", bg: "rgba(148,163,184,0.1)",  border: "rgba(148,163,184,0.25)"};
-const PENDING_STYLE = { color: "#60a5fa", bg: "rgba(96,165,250,0.08)",  border: "rgba(96,165,250,0.25)" };
+const PROSES_STYLE = { color: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.3)" };
 
-// ─── DENOM HELPERS ─────────────────────────────────────────────────────────────
 function parseDenomValue(raw) {
   if (!raw) return [100_000];
   const str = String(raw).trim();
@@ -64,12 +57,7 @@ function parseDenomValue(raw) {
 function getDenomOptionsForAtm(atm) {
   const raw  = atm?.denom_options || "100000";
   const vals = parseDenomValue(raw);
-
-  const opts = vals.map(v => ({
-    label: `Rp ${Number(v).toLocaleString("id-ID")}`,
-    value: String(v),
-  }));
-
+  const opts = vals.map(v => ({ label: `Rp ${Number(v).toLocaleString("id-ID")}`, value: String(v) }));
   if (vals.length > 1) {
     const valsDesc = [...vals].sort((a, b) => b - a);
     opts.push({
@@ -77,7 +65,6 @@ function getDenomOptionsForAtm(atm) {
       value: valsDesc.join(","),
     });
   }
-
   return opts;
 }
 
@@ -96,33 +83,23 @@ function getDenomLabel(atm) {
   return nonMix.map(o => o.label).join(" & ");
 }
 
-// ─── EXPORT EXCEL ──────────────────────────────────────────────────────────────
 function exportExcel(data, wilayah, bulan, tahun, getDenomFn, getKetFn) {
-  const rows = wilayah === "Semua"
-    ? data
-    : data.filter(d => d.wilayah?.toUpperCase() === wilayah.toUpperCase());
-
+  const rows = wilayah === "Semua" ? data : data.filter(d => d.wilayah?.toUpperCase() === wilayah.toUpperCase());
   const sheetData = rows.map((d, i) => {
     const denom    = getDenomFn(d.id_atm, d);
     const totalIsi = jumlahIsiCalc(d.saldo, d.limit);
     return {
-      "No":             i + 1,
-      "Tgl Masuk":      d.added_at ? new Date(d.added_at).toLocaleString("id-ID", { dateStyle:"short", timeStyle:"short" }) : "-",
-      "Bulan":          bulan,
-      "Tahun":          tahun,
-      "ID ATM":         d.id_atm || "-",
-      "Lokasi":         d.lokasi || "-",
-      "Wilayah":        d.wilayah || "-",
-      "Tipe":           d.tipe || "-",
+      "No": i + 1,
+      "Tgl Masuk": d.added_at ? new Date(d.added_at).toLocaleString("id-ID", { dateStyle:"short", timeStyle:"short" }) : "-",
+      "Bulan": bulan, "Tahun": tahun,
+      "ID ATM": d.id_atm || "-", "Lokasi": d.lokasi || "-", "Wilayah": d.wilayah || "-", "Tipe": d.tipe || "-",
       "Denom Tersedia": getDenomLabel(d),
       "Denominasi Isi": `Rp ${Number(denom).toLocaleString("id-ID")}`,
-      "Saldo Terakhir": d.saldo || 0,
-      "Total Isi":      totalIsi,
-      "Lembar":         totalIsi > 0 ? Math.ceil(totalIsi / denom) : 0,
-      "Keterangan":     getKetFn(d.id_atm) || "-",
+      "Saldo Terakhir": d.saldo || 0, "Total Isi": totalIsi,
+      "Lembar": totalIsi > 0 ? Math.ceil(totalIsi / denom) : 0,
+      "Keterangan": getKetFn(d.id_atm) || "-",
     };
   });
-
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(sheetData);
   ws["!cols"] = [{wch:5},{wch:18},{wch:12},{wch:8},{wch:14},{wch:30},{wch:16},{wch:8},{wch:16},{wch:14},{wch:16},{wch:14},{wch:10},{wch:22}];
@@ -134,10 +111,11 @@ function exportExcel(data, wilayah, bulan, tahun, getDenomFn, getKetFn) {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function CashPlan({ navigateTo }) {
-  const [cashplanItems, setCashplanItems] = useState([]);
-  const [notifItems,    setNotifItems]    = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [genAt,         setGenAt]         = useState(null);
+  const [cashplanItems,     setCashplanItems]     = useState([]);
+  const [notifItems,        setNotifItems]        = useState([]);
+  const [loading,           setLoading]           = useState(true);   // initial — unmount ke Spinner
+  const [refreshing,        setRefreshing]        = useState(false);  // background — tidak unmount
+  const [genAt,             setGenAt]             = useState(null);
 
   const [filterWilayah, setFilterWilayah] = useState("Semua");
   const [filterStatus,  setFilterStatus]  = useState("Semua");
@@ -147,8 +125,7 @@ export default function CashPlan({ navigateTo }) {
   const [showDlModal,   setShowDlModal]   = useState(false);
 
   const [overrides, setOverrides] = useState({});
-  const setOverride = (id, field, val) =>
-    setOverrides(prev => ({ ...prev, [id]: { ...prev[id], [field]: val } }));
+  const setOverride = (id, field, val) => setOverrides(prev => ({ ...prev, [id]: { ...prev[id], [field]: val } }));
   const getDenom = (id, atm) => overrides[id]?.denom !== undefined ? overrides[id].denom : getDefaultDenomForAtm(atm);
   const getKet   = id => overrides[id]?.keterangan ?? "";
 
@@ -162,42 +139,68 @@ export default function CashPlan({ navigateTo }) {
   const [addLoading,   setAddLoading]   = useState(false);
   const [addError,     setAddError]     = useState("");
 
-  const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const [showNotifPanel,    setShowNotifPanel]    = useState(false);
   const notifRef = useRef(null);
 
   const [validasiList,      setValidasiList]      = useState([]);
   const [showValidasiModal, setShowValidasiModal] = useState(false);
   const [validasiLoading,   setValidasiLoading]   = useState(false);
   const [validasiOverrides, setValidasiOverrides] = useState({});
-  const setVOv   = (id, field, val) =>
-    setValidasiOverrides(prev => ({ ...prev, [id]: { ...prev[id], [field]: val } }));
-  const getVDenom = (id, atm) =>
-    validasiOverrides[id]?.denom !== undefined ? validasiOverrides[id].denom : getDefaultDenomForAtm(atm);
-  const getVKet = id => validasiOverrides[id]?.ket ?? "";
+  const setVOv    = (id, field, val) => setValidasiOverrides(prev => ({ ...prev, [id]: { ...prev[id], [field]: val } }));
+  const getVDenom = (id, atm) => validasiOverrides[id]?.denom !== undefined ? validasiOverrides[id].denom : getDefaultDenomForAtm(atm);
+  const getVKet   = id => validasiOverrides[id]?.ket ?? "";
 
-  // ─── FETCH ──────────────────────────────────────────────────────────────────
-  const fetchData = useCallback(async () => {
+  // ─── FETCH AWAL (mount) — load cashplan + notif ────────────────────────────
+  // Saat mount: tampilkan data yang sudah ada di DB (user sudah konfirmasi sebelumnya)
+  // Table kosong hanya kalau DB memang kosong
+  const fetchInitial = useCallback(async () => {
     setLoading(true);
     try {
-      const cpResp = await getCashplanAPI("PENDING");
+      const [cpResp, notifResp] = await Promise.all([
+        getCashplanAPI("PENDING"),
+        getNotifCashplanAPI(),
+      ]);
       setCashplanItems(cpResp.data || []);
-
-      const notifResp = await getNotifCashplanAPI();
       setNotifItems(notifResp.data || []);
-
       try {
         const predResp = await apiFetch("/api/predictions?limit=1");
         setGenAt(predResp.generated_at || null);
       } catch { /* tidak kritikal */ }
-
     } catch (e) {
-      console.error("Fetch error:", e);
+      console.error("Fetch initial error:", e);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  // ─── FETCH SEMUA — pakai refreshing agar tidak unmount komponen ─────────────
+  const fetchAll = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const [cpResp, notifResp] = await Promise.all([
+        getCashplanAPI("PENDING"),
+        getNotifCashplanAPI(),
+      ]);
+      setCashplanItems(cpResp.data || []);
+      setNotifItems(notifResp.data || []);
+      try {
+        const predResp = await apiFetch("/api/predictions?limit=1");
+        setGenAt(predResp.generated_at || null);
+      } catch { /* tidak kritikal */ }
+    } catch (e) {
+      console.error("Fetch all error:", e);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
+  // Mount: load semua data (cashplan yg sudah ada di DB + notif)
+  useEffect(() => { fetchInitial(); }, [fetchInitial]);
+
+  // Refresh tombol: selalu load semua (background, tidak unmount)
+  const handleRefresh = useCallback(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   useEffect(() => {
     const h = e => { if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotifPanel(false); };
@@ -205,9 +208,8 @@ export default function CashPlan({ navigateTo }) {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  // ─── NOTIF BELL ─────────────────────────────────────────────────────────────
+  // ─── NOTIF ──────────────────────────────────────────────────────────────────
   const unreadCount = notifItems.length;
-
   const handleOpenNotif = () => setShowNotifPanel(p => !p);
 
   const handleDismissNotif = async (notifId, e) => {
@@ -215,9 +217,7 @@ export default function CashPlan({ navigateTo }) {
     try {
       await dismissNotifAPI(notifId);
       setNotifItems(prev => prev.filter(n => n.id !== notifId));
-    } catch (err) {
-      console.error("Dismiss notif error:", err);
-    }
+    } catch (err) { console.error("Dismiss notif error:", err); }
   };
 
   const handleDismissAllNotif = async () => {
@@ -225,18 +225,14 @@ export default function CashPlan({ navigateTo }) {
       await dismissAllNotifAPI();
       setNotifItems([]);
       setShowNotifPanel(false);
-    } catch (err) {
-      console.error("Dismiss all error:", err);
-    }
+    } catch (err) { console.error("Dismiss all error:", err); }
   };
 
   // ─── BUKA VALIDASI MODAL ────────────────────────────────────────────────────
   const openValidasiModal = (atmList) => {
     setValidasiList(atmList);
     const init = {};
-    atmList.forEach(a => {
-      init[a.id_atm] = { denom: getDefaultDenomForAtm(a), ket: "" };
-    });
+    atmList.forEach(a => { init[a.id_atm] = { denom: getDefaultDenomForAtm(a), ket: "" }; });
     setValidasiOverrides(init);
     setShowValidasiModal(true);
     setShowNotifPanel(false);
@@ -247,6 +243,7 @@ export default function CashPlan({ navigateTo }) {
     if (!validasiList.length) return;
     setValidasiLoading(true);
     const errors = [];
+    const confirmedIds = [];
     try {
       await Promise.all(
         validasiList.map(async atm => {
@@ -255,36 +252,31 @@ export default function CashPlan({ navigateTo }) {
               await approveNotifAPI(atm._notif_id);
             } else {
               await addCashplanAPI({
-                id_atm:        atm.id_atm,
-                lokasi:        atm.lokasi,
-                wilayah:       atm.wilayah,
-                tipe:          atm.tipe,
-                denom_options: atm.denom_options || "100000",
-                saldo:         atm.saldo,
-                limit:         atm.limit,
-                pct_saldo:     atm.pct_saldo,
-                status:        atm.status,
-                tgl_isi:       atm.tgl_isi,
-                jam_isi:       atm.jam_isi,
-                est_jam:       atm.est_jam,
-                skor_urgensi:  atm.skor_urgensi,
-                denom:         getVDenom(atm.id_atm, atm),
-                keterangan:    getVKet(atm.id_atm),
-                added_by:      atm._notif_id ? "notif" : "manual",
+                id_atm: atm.id_atm, lokasi: atm.lokasi, wilayah: atm.wilayah, tipe: atm.tipe,
+                denom_options: atm.denom_options || "100000", saldo: atm.saldo, limit: atm.limit,
+                pct_saldo: atm.pct_saldo, status: atm.status, tgl_isi: atm.tgl_isi,
+                jam_isi: atm.jam_isi, est_jam: atm.est_jam, skor_urgensi: atm.skor_urgensi,
+                denom: getVDenom(atm.id_atm, atm), keterangan: getVKet(atm.id_atm),
+                added_by: atm._notif_id ? "notif" : "manual",
               });
             }
-          } catch (e) {
-            errors.push(`${atm.id_atm}: ${e.message}`);
-          }
+            confirmedIds.push({ id_atm: atm.id_atm, _notif_id: atm._notif_id });
+          } catch (e) { errors.push(`${atm.id_atm}: ${e.message}`); }
         })
       );
 
       setShowValidasiModal(false);
       setValidasiList([]);
       setSelectedRows([]);
+
+      // fetchAll sudah handle refresh cashplan + notif sekaligus
+      await fetchAll();
+
+      // TIDAK perlu filter lokal lagi — backend sudah DELETE
+
       if (errors.length) alert(`⚠️ Beberapa ATM gagal:\n\n${errors.join("\n")}`);
-      else alert(`✅ ${validasiList.length} ATM berhasil dikonfirmasi ke Cash Plan!`);
-      await fetchData();
+      else alert(`✅ ${confirmedIds.length} ATM berhasil dikonfirmasi ke Cash Plan!`);
+
     } catch (e) {
       alert("Gagal konfirmasi: " + e.message);
     } finally {
@@ -292,16 +284,9 @@ export default function CashPlan({ navigateTo }) {
     }
   };
 
-  // ─── DATA ───────────────────────────────────────────────────────────────────
-  const tableData = useMemo(() => {
-    return cashplanItems.map(c => ({
-      ...c,
-      _cp_id:   c.id,
-      _in_db:   true,
-    }));
-  }, [cashplanItems]);
+  // ─── TABLE DATA ─────────────────────────────────────────────────────────────
+  const tableData = useMemo(() => cashplanItems.map(c => ({ ...c, _cp_id: c.id, _in_db: true })), [cashplanItems]);
 
-  // ─── FILTER + SORT ──────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     let d = tableData;
     if (filterWilayah !== "Semua") d = d.filter(r => r.wilayah?.toUpperCase() === filterWilayah.toUpperCase());
@@ -321,9 +306,8 @@ export default function CashPlan({ navigateTo }) {
   const maxPage = Math.ceil(filtered.length / PAGE_SIZE);
   const toggleSort = key => { setSort(s => ({ key, dir: s.key === key ? -s.dir : -1 })); setPage(0); };
 
-  // ─── CHECKBOX ───────────────────────────────────────────────────────────────
-  const toggleSelect    = id  => setSelectedRows(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
-  const toggleSelectAll = ()  => {
+  const toggleSelect    = id => setSelectedRows(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
+  const toggleSelectAll = () => {
     const ids = paged.map(d => d.id_atm);
     const all = ids.every(id => selectedRows.includes(id));
     if (all) setSelectedRows(p => p.filter(id => !ids.includes(id)));
@@ -332,48 +316,31 @@ export default function CashPlan({ navigateTo }) {
   const isAllPage  = paged.length > 0 && paged.every(d => selectedRows.includes(d.id_atm));
   const isSomePage = paged.some(d => selectedRows.includes(d.id_atm));
 
-  // ─── UPDATE STATUS ──────────────────────────────────────────────────────────
+  // ─── ACTIONS ────────────────────────────────────────────────────────────────
   const handleUpdateStatus = async (atm, newStatus) => {
     if (!window.confirm(`Tandai ATM ${atm.id_atm} sebagai ${newStatus}?`)) return;
-
-    if (newStatus === "BATAL") {
-      const ket = getKet(atm.id_atm);
-      if (!ket) {
-        alert(`⚠️ Keterangan wajib diisi sebelum membatalkan ATM ${atm.id_atm}.\n\nPilih keterangan terlebih dahulu di kolom Keterangan.`);
-        return;
-      }
+    if (newStatus === "BATAL" && !getKet(atm.id_atm)) {
+      alert(`⚠️ Keterangan wajib diisi sebelum membatalkan ATM ${atm.id_atm}.`);
+      return;
     }
-
     try {
-      await updateCashplanStatusAPI(
-        atm._cp_id,
-        newStatus,
-        newStatus === "SELESAI" ? "" : getKet(atm.id_atm),
-        getDenom(atm.id_atm, atm),
-      );
+      await updateCashplanStatusAPI(atm._cp_id, newStatus, newStatus === "SELESAI" ? "" : getKet(atm.id_atm), getDenom(atm.id_atm, atm));
       alert(newStatus === "SELESAI"
         ? `✅ ATM ${atm.id_atm} ditandai Selesai — data masuk ke Rekap Replacement.`
         : `🚫 ATM ${atm.id_atm} dibatalkan — data masuk ke Rekap Replacement.`
       );
-      await fetchData();
+      await fetchAll();
     } catch (e) { alert("Gagal update status: " + e.message); }
   };
 
-  // ─── REMOVE ─────────────────────────────────────────────────────────────────
   const handleRemove = async (atm) => {
     const pct = parseFloat(atm.pct_saldo ?? 0);
-    if (pct <= 25) {
-      alert(`⚠️ ATM ${atm.id_atm} tidak bisa dihapus!\n\nSaldo ${pct.toFixed(1)}% ≤ 25% — wajib diisi dulu (tandai Selesai).`);
-      return;
-    }
-    if (!window.confirm(`Hapus ATM ${atm.id_atm} dari antrian Cash Plan?\n\nData ini tidak akan masuk Rekap (dianggap salah input).`)) return;
-    try {
-      await removeCashplanAPI(atm._cp_id);
-      await fetchData();
-    } catch (e) { alert("Gagal hapus: " + e.message); }
+    if (pct <= 25) { alert(`⚠️ ATM ${atm.id_atm} tidak bisa dihapus!\n\nSaldo ${pct.toFixed(1)}% ≤ 25% — wajib diisi dulu.`); return; }
+    if (!window.confirm(`Hapus ATM ${atm.id_atm} dari antrian Cash Plan?\n\nData tidak masuk Rekap.`)) return;
+    try { await removeCashplanAPI(atm._cp_id); await fetchAll(); }
+    catch (e) { alert("Gagal hapus: " + e.message); }
   };
 
-  // ─── BULK REMOVE ────────────────────────────────────────────────────────────
   const handleBulkRemove = async () => {
     const selected = tableData.filter(d => selectedRows.includes(d.id_atm));
     const blocked  = selected.filter(d => parseFloat(d.pct_saldo ?? 0) <= 25);
@@ -385,11 +352,10 @@ export default function CashPlan({ navigateTo }) {
     try {
       await Promise.all(selected.map(a => removeCashplanAPI(a._cp_id)));
       setSelectedRows([]);
-      await fetchData();
+      await fetchAll();
     } catch (e) { alert("Gagal hapus: " + e.message); }
   };
 
-  // ─── TAMBAH MANUAL ──────────────────────────────────────────────────────────
   const handleAddManual = async () => {
     const id = addIdInput.trim().toUpperCase();
     if (!id) return;
@@ -405,37 +371,35 @@ export default function CashPlan({ navigateTo }) {
     } finally { setAddLoading(false); }
   };
 
-  // ─── SUMMARY ────────────────────────────────────────────────────────────────
-  const totalBongkar  = tableData.filter(d => (d.status_awal||d.status) === "BONGKAR").length;
-  const totalAwas     = tableData.filter(d => (d.status_awal||d.status) === "AWAS").length;
-  const totalNominal  = filtered.reduce((s, d) => s + jumlahIsiCalc(d.saldo, d.limit), 0);
+  const totalBongkar = tableData.filter(d => (d.status_awal||d.status) === "BONGKAR").length;
+  const totalAwas    = tableData.filter(d => (d.status_awal||d.status) === "AWAS").length;
+  const totalNominal = filtered.reduce((s, d) => s + jumlahIsiCalc(d.saldo, d.limit), 0);
 
   if (loading) return <Spinner />;
 
   return (
     <div style={{ position:"relative" }}>
 
-      {/* ── HEADER ──────────────────────────────────────────────────────────── */}
+      {/* ── HEADER ── */}
       <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:24, flexWrap:"wrap", gap:12 }}>
         <div>
           <h1 style={{ color:"#e2e8f0", fontSize:24, fontWeight:700, margin:"0 0 4px", letterSpacing:"-0.02em" }}>
             Cash Plan — Penambahan Saldo ATM
           </h1>
-          <p style={{ color:"#ffffff", fontSize:13, margin:0 }}>
+          <p style={{ color:"#94a3b8", fontSize:13, margin:0 }}>
             {filterBulan} {nowTahun()} · {tableData.length} ATM dalam antrian ·{" "}
             {genAt ? `Prediksi: ${new Date(genAt).toLocaleString("id-ID")}` : "—"}
           </p>
         </div>
-
         <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
           <select value={filterBulan} onChange={e => setFilterBulan(e.target.value)} style={selectStyle}>
             {BULAN_ID.map(b => <option key={b} value={b}>{b} {nowTahun()}</option>)}
           </select>
 
-          {/* 🔔 Bell Notif */}
+          {/* 🔔 Bell */}
           <div ref={notifRef} style={{ position:"relative" }}>
             <button onClick={handleOpenNotif}
-              style={{ position:"relative", background:unreadCount>0?"rgba(245,158,11,0.15)":"rgba(255,255,255,0.04)", border:unreadCount>0?"1px solid rgba(245,158,11,0.4)":"1px solid rgba(99,179,237,0.15)", borderRadius:8, color:unreadCount>0?"#f59e0b":"#ffffff", padding:"8px 14px", fontSize:18, cursor:"pointer" }}>
+              style={{ position:"relative", background:unreadCount>0?"rgba(245,158,11,0.15)":"rgba(255,255,255,0.04)", border:unreadCount>0?"1px solid rgba(245,158,11,0.4)":"1px solid rgba(99,179,237,0.15)", borderRadius:8, color:unreadCount>0?"#f59e0b":"#94a3b8", padding:"8px 14px", fontSize:18, cursor:"pointer" }}>
               🔔
               {unreadCount > 0 && (
                 <span style={{ position:"absolute", top:-6, right:-6, background:"#ff3b5c", color:"#fff", borderRadius:"50%", width:18, height:18, fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", border:"2px solid #0d1228", animation:"pulse 1.5s infinite" }}>
@@ -449,31 +413,27 @@ export default function CashPlan({ navigateTo }) {
                 <div style={{ padding:"14px 18px", borderBottom:"1px solid rgba(99,179,237,0.1)", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, gap:8, flexWrap:"wrap" }}>
                   <div>
                     <span style={{ color:"#e2e8f0", fontWeight:700, fontSize:14 }}>🔔 Rekomendasi Sistem</span>
-                    <span style={{ marginLeft:8, fontSize:11, color:"#ffffff" }}>{notifItems.length} ATM perlu diputuskan</span>
+                    <span style={{ marginLeft:8, fontSize:11, color:"#94a3b8" }}>{notifItems.length} ATM perlu diputuskan</span>
                   </div>
                   <div style={{ display:"flex", gap:6 }}>
                     {notifItems.length > 0 && (
-                      <button
-                        onClick={() => openValidasiModal(notifItems.map(n => ({ ...n, status: n.status_awal, _notif_id: n.id })))}
+                      <button onClick={() => openValidasiModal(notifItems.map(n => ({ ...n, status: n.status_awal, _notif_id: n.id })))}
                         style={{ fontSize:11, padding:"4px 10px", borderRadius:6, background:"rgba(0,229,160,0.12)", color:"#00e5a0", border:"1px solid rgba(0,229,160,0.3)", cursor:"pointer", fontWeight:700, whiteSpace:"nowrap" }}>
                         + Konfirmasi Semua ({notifItems.length})
                       </button>
                     )}
                     {notifItems.length > 0 && (
-                      <button onClick={handleDismissAllNotif}
-                        style={{ fontSize:11, color:"#ffffff", background:"none", border:"none", cursor:"pointer" }}>
+                      <button onClick={handleDismissAllNotif} style={{ fontSize:11, color:"#94a3b8", background:"none", border:"none", cursor:"pointer" }}>
                         Abaikan Semua
                       </button>
                     )}
                   </div>
                 </div>
-
                 <div style={{ overflowY:"auto", flex:1 }}>
                   {notifItems.length === 0 ? (
-                    <div style={{ padding:"40px 20px", textAlign:"center", color:"#ffffff" }}>
+                    <div style={{ padding:"40px 20px", textAlign:"center", color:"#94a3b8" }}>
                       <div style={{ fontSize:32, marginBottom:8 }}>✓</div>
                       <div style={{ fontSize:13 }}>Tidak ada rekomendasi baru</div>
-                      <div style={{ fontSize:11, marginTop:6, color:"#374151" }}>Semua ATM dalam kondisi aman atau sudah di Cash Plan</div>
                     </div>
                   ) : [...notifItems].sort((a,b)=>(b.skor_urgensi||0)-(a.skor_urgensi||0)).map(n => {
                     const isUrgent = n.status_awal === "BONGKAR";
@@ -488,27 +448,26 @@ export default function CashPlan({ navigateTo }) {
                               <span style={{ fontSize:9, padding:"1px 6px", borderRadius:3, fontWeight:700, background:isUrgent?"rgba(255,59,92,0.15)":"rgba(245,158,11,0.15)", color:isUrgent?"#ff3b5c":"#f59e0b" }}>{n.status_awal}</span>
                               <span style={{ fontSize:9, padding:"1px 6px", borderRadius:3, background:"rgba(167,139,250,0.12)", color:"#a78bfa", border:"1px solid rgba(167,139,250,0.25)" }}>{getDenomLabel(n)}</span>
                             </div>
-                            <div style={{ color:"#ffffff", fontSize:11, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>📍 {n.lokasi||"—"} · {n.wilayah||"—"}</div>
+                            <div style={{ color:"#94a3b8", fontSize:11, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>📍 {n.lokasi||"—"} · {n.wilayah||"—"}</div>
                             <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:3 }}>
                               <SaldoBar pct={n.pct_saldo} compact />
-                              <span style={{ color:"#ffffff", fontSize:10 }}>{fmtRp(n.saldo)} / {fmtRp(n.limit)}</span>
+                              <span style={{ color:"#94a3b8", fontSize:10 }}>{fmtRp(n.saldo)} / {fmtRp(n.limit)}</span>
                             </div>
                           </div>
                           <div style={{ display:"flex", flexDirection:"column", gap:4, flexShrink:0 }}>
                             <button onClick={e=>{e.stopPropagation();openValidasiModal([{...n,status:n.status_awal,_notif_id:n.id}]);}}
                               style={{ fontSize:10, padding:"4px 10px", borderRadius:6, background:"rgba(0,229,160,0.12)", color:"#00e5a0", border:"1px solid rgba(0,229,160,0.3)", cursor:"pointer", fontWeight:700 }}>+ Konfirmasi</button>
                             <button onClick={e => handleDismissNotif(n.id, e)}
-                              style={{ fontSize:10, padding:"3px 8px", borderRadius:6, background:"transparent", color:"#ffffff", border:"1px solid rgba(99,179,237,0.1)", cursor:"pointer" }}>Abaikan</button>
+                              style={{ fontSize:10, padding:"3px 8px", borderRadius:6, background:"transparent", color:"#94a3b8", border:"1px solid rgba(99,179,237,0.1)", cursor:"pointer" }}>Abaikan</button>
                           </div>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-
                 {notifItems.length > 0 && (
                   <div style={{ padding:"10px 16px", borderTop:"1px solid rgba(99,179,237,0.08)", background:"rgba(0,0,0,0.2)", flexShrink:0 }}>
-                    <div style={{ color:"#ffffff", fontSize:11, textAlign:"center" }}>Klik ATM atau <strong style={{ color:"#00e5a0" }}>+ Konfirmasi Semua</strong> · Abaikan tidak masuk Cash Plan</div>
+                    <div style={{ color:"#94a3b8", fontSize:11, textAlign:"center" }}>Klik ATM atau <strong style={{ color:"#00e5a0" }}>+ Konfirmasi Semua</strong> · Abaikan tidak masuk Cash Plan</div>
                   </div>
                 )}
               </div>
@@ -517,11 +476,13 @@ export default function CashPlan({ navigateTo }) {
 
           <button onClick={() => setShowDlModal(true)} style={btnStyle("#a78bfa")}>↓ Excel</button>
           <button onClick={() => { setAddError(""); setShowAddModal(true); }} style={btnStyle("#00e5a0")}>+ Manual</button>
-          <button onClick={fetchData} style={btnStyle("#3b82f6")}>↺ Refresh</button>
+          <button onClick={handleRefresh} style={btnStyle("#3b82f6")}>
+            {refreshing ? "⟳ Loading..." : "↺ Refresh"}
+          </button>
         </div>
       </div>
 
-      {/* ── SUMMARY CARDS ───────────────────────────────────────────────────── */}
+      {/* ── SUMMARY CARDS ── */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:10, marginBottom:20 }}>
         {[
           { label:"Dalam Antrian",  value:tableData.length,     color:"#60a5fa", icon:"◈" },
@@ -535,23 +496,19 @@ export default function CashPlan({ navigateTo }) {
             onClick={() => c.clickable && openValidasiModal(notifItems.map(n=>({...n,status:n.status_awal,_notif_id:n.id})))}>
             <div style={{ fontSize:16, color:c.color, marginBottom:5 }}>{c.icon}</div>
             <div style={{ color:c.color, fontSize:c.small?13:24, fontWeight:700, lineHeight:1 }}>{c.value}</div>
-            <div style={{ color:"#ffffff", fontSize:9, marginTop:5, textTransform:"uppercase", letterSpacing:"0.07em" }}>{c.label}</div>
+            <div style={{ color:"#94a3b8", fontSize:9, marginTop:5, textTransform:"uppercase", letterSpacing:"0.07em" }}>{c.label}</div>
             {c.clickable && <div style={{ color:"#f59e0b", fontSize:9, marginTop:3 }}>▶ klik konfirmasi</div>}
           </div>
         ))}
       </div>
 
-      {/* Banner notif pending */}
+      {/* Banner notif */}
       {notifItems.length > 0 && (
         <div style={{ background:"rgba(245,158,11,0.06)", border:"1px solid rgba(245,158,11,0.25)", borderRadius:10, padding:"12px 18px", marginBottom:12, display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
           <span style={{ fontSize:20 }}>🔔</span>
           <div style={{ flex:1 }}>
-            <div style={{ color:"#f59e0b", fontWeight:700, fontSize:13, marginBottom:3 }}>
-              {notifItems.length} ATM direkomendasikan sistem — belum diputuskan
-            </div>
-            <div style={{ color:"#ffffff", fontSize:12 }}>
-              Klik bell atau tombol berikut untuk review dan konfirmasi masuk Cash Plan.
-            </div>
+            <div style={{ color:"#f59e0b", fontWeight:700, fontSize:13, marginBottom:3 }}>{notifItems.length} ATM direkomendasikan sistem — belum diputuskan</div>
+            <div style={{ color:"#94a3b8", fontSize:12 }}>Klik bell atau tombol berikut untuk review dan konfirmasi masuk Cash Plan.</div>
           </div>
           <button onClick={() => openValidasiModal(notifItems.map(n=>({...n,status:n.status_awal,_notif_id:n.id})))}
             style={{ ...btnStyle("#00e5a0"), fontSize:12, padding:"8px 16px", flexShrink:0, whiteSpace:"nowrap" }}>
@@ -560,7 +517,9 @@ export default function CashPlan({ navigateTo }) {
         </div>
       )}
 
-      {/* ── FILTER BAR ──────────────────────────────────────────────────────── */}
+
+
+      {/* ── FILTER BAR ── */}
       <div style={{ display:"flex", gap:10, marginBottom:16, flexWrap:"wrap", alignItems:"center" }}>
         <input placeholder="Cari ID ATM / lokasi / wilayah..."
           value={search} onChange={e => { setSearch(e.target.value); setPage(0); }}
@@ -574,22 +533,30 @@ export default function CashPlan({ navigateTo }) {
             {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
         ))}
-        <span style={{ color:"#ffffff", fontSize:12, marginLeft:"auto" }}>{filtered.length} ATM</span>
+        <span style={{ color:"#94a3b8", fontSize:12, marginLeft:"auto" }}>{filtered.length} ATM</span>
       </div>
 
-      {/* ── BULK ACTION BAR ─────────────────────────────────────────────────── */}
+      {/* Bulk action bar */}
       {selectedRows.length > 0 && (
         <div style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px", marginBottom:10, background:"rgba(59,130,246,0.07)", border:"1px solid rgba(59,130,246,0.25)", borderRadius:10, flexWrap:"wrap" }}>
           <span style={{ color:"#60a5fa", fontSize:13, fontWeight:600 }}>{selectedRows.length} ATM dipilih</span>
           <div style={{ marginLeft:"auto", display:"flex", gap:8 }}>
             <button onClick={handleBulkRemove} style={bulkBtn("#ff3b5c")}>✕ Remove ({selectedRows.length})</button>
-            <button onClick={() => setSelectedRows([])} style={bulkBtn("#ffffff")}>Batal Pilih</button>
+            <button onClick={() => setSelectedRows([])} style={bulkBtn("#94a3b8")}>Batal Pilih</button>
           </div>
         </div>
       )}
 
-      {/* ── TABLE ───────────────────────────────────────────────────────────── */}
-      {filtered.length === 0 ? <EmptyState /> : (
+      {/* Refreshing indicator */}
+      {refreshing && (
+        <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 14px", marginBottom:8, background:"rgba(59,130,246,0.06)", border:"1px solid rgba(59,130,246,0.15)", borderRadius:8 }}>
+          <div style={{ width:14, height:14, border:"2px solid rgba(59,130,246,0.3)", borderTopColor:"#3b82f6", borderRadius:"50%", animation:"spin 0.8s linear infinite", flexShrink:0 }} />
+          <span style={{ color:"#60a5fa", fontSize:12 }}>Memuat data terbaru...</span>
+        </div>
+      )}
+
+      {/* ── TABLE ── */}
+      {filtered.length === 0 && !refreshing ? <EmptyState /> : filtered.length > 0 ? (
         <div style={{ background:"rgba(255,255,255,0.015)", border:"1px solid rgba(99,179,237,0.08)", borderRadius:12, overflow:"hidden" }}>
           <div style={{ overflowX:"auto" }}>
             <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
@@ -606,7 +573,7 @@ export default function CashPlan({ navigateTo }) {
                     {label:"Status",key:"status_awal"},{label:"Keterangan",key:null},{label:"Aksi",key:null},
                   ].map((col,ci) => (
                     <th key={ci} onClick={col.key?()=>toggleSort(col.key):undefined}
-                      style={{ padding:"11px 12px", textAlign:"left", color:col.key&&sort.key===col.key?"#60a5fa":"#ffffff", fontWeight:600, fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", cursor:col.key?"pointer":"default", whiteSpace:"nowrap" }}>
+                      style={{ padding:"11px 12px", textAlign:"left", color:col.key&&sort.key===col.key?"#60a5fa":"#94a3b8", fontWeight:600, fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", cursor:col.key?"pointer":"default", whiteSpace:"nowrap" }}>
                       {col.label}{col.key&&sort.key===col.key&&<span style={{marginLeft:3}}>{sort.dir>0?"↑":"↓"}</span>}
                     </th>
                   ))}
@@ -614,96 +581,83 @@ export default function CashPlan({ navigateTo }) {
               </thead>
               <tbody>
                 {paged.map((atm, i) => {
-                  const rowNo      = page * PAGE_SIZE + i + 1;
-                  const denomOpts  = getDenomOptionsForAtm(atm);
-                  const denom      = getDenom(atm.id_atm, atm);
-                  const totalIsiV  = atm.jumlah_isi || jumlahIsiCalc(atm.saldo, atm.limit);
-                  const ket        = getKet(atm.id_atm);
+                  const rowNo     = page * PAGE_SIZE + i + 1;
+                  const denomOpts = getDenomOptionsForAtm(atm);
+                  const denom     = getDenom(atm.id_atm, atm);
+                  const totalIsiV = atm.jumlah_isi || jumlahIsiCalc(atm.saldo, atm.limit);
+                  const ket       = getKet(atm.id_atm);
                   const isSelected = selectedRows.includes(atm.id_atm);
-                  const statusATM  = atm.status_awal || atm.status || "—";
-                  const addedBy    = atm.added_by || "system";
-                  const rowBg      = isSelected?"rgba(59,130,246,0.1)":statusATM==="BONGKAR"?"rgba(255,59,92,0.025)":"transparent";
+                  const statusATM = atm.status_awal || atm.status || "—";
+                  const addedBy   = atm.added_by || "system";
+                  const rowBg     = isSelected?"rgba(59,130,246,0.1)":statusATM==="BONGKAR"?"rgba(255,59,92,0.025)":"transparent";
 
                   return (
                     <tr key={atm.id_atm}
                       style={{ background:rowBg, borderBottom:"1px solid rgba(99,179,237,0.05)", transition:"all 0.1s" }}
                       onMouseEnter={e=>!isSelected&&(e.currentTarget.style.background="rgba(59,130,246,0.04)")}
                       onMouseLeave={e=>e.currentTarget.style.background=rowBg}>
-
                       <td style={{padding:"8px 14px"}}><Checkbox checked={isSelected} onChange={()=>toggleSelect(atm.id_atm)} /></td>
-                      <td style={td("#ffffff")}>{rowNo}</td>
-
+                      <td style={td("#94a3b8")}>{rowNo}</td>
                       <td style={{padding:"8px 12px"}}>
                         {atm.added_at ? (
                           <div>
                             <div style={{color:"#60a5fa",fontSize:11,fontWeight:600}}>{new Date(atm.added_at).toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"})}</div>
-                            <div style={{color:"#ffffff",fontSize:10,marginTop:1}}>{new Date(atm.added_at).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})}</div>
+                            <div style={{color:"#94a3b8",fontSize:10,marginTop:1}}>{new Date(atm.added_at).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})}</div>
                           </div>
-                        ) : <span style={{color:"#374151",fontSize:11}}>—</span>}
+                        ) : <span style={{color:"#475569",fontSize:11}}>—</span>}
                       </td>
-
                       <td style={{padding:"8px 12px"}}>
                         <span style={{color:"#e2e8f0",fontFamily:"monospace",fontWeight:700,cursor:"pointer",textDecoration:"underline dotted"}} onClick={()=>navigateTo?.("history",atm.id_atm)}>{atm.id_atm}</span>
                       </td>
-
-                      <td style={{...td("#ffffff"),maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={atm.lokasi}>{atm.lokasi||"—"}</td>
-                      <td style={td("#ffffff")}>{atm.wilayah||"—"}</td>
-
+                      <td style={{...td("#94a3b8"),maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={atm.lokasi}>{atm.lokasi||"—"}</td>
+                      <td style={td("#94a3b8")}>{atm.wilayah||"—"}</td>
                       <td style={{padding:"8px 12px"}}>
                         <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:4,background:atm.tipe==="CRM"?"rgba(167,139,250,0.15)":"rgba(96,165,250,0.12)",color:atm.tipe==="CRM"?"#a78bfa":"#60a5fa",border:atm.tipe==="CRM"?"1px solid rgba(167,139,250,0.3)":"1px solid rgba(96,165,250,0.25)"}}>
                           {atm.tipe||"—"}
                         </span>
                       </td>
-
-                      {/* Denom — FIXED: onChange tanpa Number() */}
                       <td style={{padding:"8px 10px"}}>
                         <select value={denom} onChange={e=>setOverride(atm.id_atm,"denom",e.target.value)}
                           style={{background:"#0d1228",border:"1px solid rgba(167,139,250,0.25)",borderRadius:6,color:"#a78bfa",padding:"4px 6px",fontSize:11,cursor:"pointer",outline:"none",width:"100%"}}>
                           {denomOpts.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
                         </select>
-                        {denomOpts.length > 1 && <div style={{fontSize:9,color:"#ffffff",marginTop:2,textAlign:"center"}}>support {denomOpts.length} denom</div>}
+                        {denomOpts.length > 1 && <div style={{fontSize:9,color:"#94a3b8",marginTop:2,textAlign:"center"}}>support {denomOpts.length} denom</div>}
                       </td>
-
                       <td style={{padding:"8px 12px"}}>
                         <span style={{color:"#f59e0b",fontWeight:600}}>{fmtRp(totalIsiV)}</span>
-                        <div style={{color:"#ffffff",fontSize:10,marginTop:1}}>target: {fmtRp(atm.limit)}</div>
+                        <div style={{color:"#94a3b8",fontSize:10,marginTop:1}}>target: {fmtRp(atm.limit)}</div>
                       </td>
-                      <td style={td("#ffffff")}>{totalIsiV>0?fmtLembar(totalIsiV,denom):"—"}</td>
-
+                      <td style={td("#94a3b8")}>{totalIsiV>0?fmtLembar(totalIsiV,denom):"—"}</td>
                       <td style={{padding:"8px 12px"}}>
                         <div style={{color:"#e2e8f0",fontWeight:600}}>{fmtRp(atm.saldo)}</div>
                         <SaldoBar pct={atm.pct_saldo} />
                       </td>
-
                       <td style={{padding:"8px 10px"}}>
-                        <span style={{fontSize:9,padding:"2px 7px",borderRadius:4,fontWeight:700,background:addedBy==="system"?"rgba(96,165,250,0.1)":addedBy==="notif"?"rgba(245,158,11,0.1)":addedBy==="manual"?"rgba(0,229,160,0.1)":"rgba(167,139,250,0.1)",color:addedBy==="system"?"#60a5fa":addedBy==="notif"?"#f59e0b":addedBy==="manual"?"#00e5a0":"#a78bfa",border:"none"}}>
+                        <span style={{fontSize:9,padding:"2px 7px",borderRadius:4,fontWeight:700,
+                          background:addedBy==="system"?"rgba(96,165,250,0.1)":addedBy==="notif"?"rgba(245,158,11,0.1)":addedBy==="manual"?"rgba(0,229,160,0.1)":"rgba(167,139,250,0.1)",
+                          color:addedBy==="system"?"#60a5fa":addedBy==="notif"?"#f59e0b":addedBy==="manual"?"#00e5a0":"#a78bfa"}}>
                           {addedBy}
                         </span>
                       </td>
-
                       <td style={{padding:"8px 12px"}}>
                         <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                          <div style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:5,...PROSES_STYLE,border:`1px solid ${PROSES_STYLE.border}`,textAlign:"center"}}>◎ Proses</div>
+                          <div style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:5,color:"#f59e0b",background:"rgba(245,158,11,0.12)",border:"1px solid rgba(245,158,11,0.3)",textAlign:"center"}}>◎ Proses</div>
                           <div style={{display:"flex",gap:4}}>
                             <button onClick={()=>handleUpdateStatus(atm,"SELESAI")}
-                              title="Tandai Selesai → masuk Rekap"
                               style={{flex:1,fontSize:10,fontWeight:700,padding:"4px 6px",borderRadius:5,background:"rgba(0,229,160,0.1)",color:"#00e5a0",border:"1px solid rgba(0,229,160,0.3)",cursor:"pointer"}}>✔ Selesai</button>
                             <button onClick={()=>handleUpdateStatus(atm,"BATAL")}
-                              title={!ket?"Pilih keterangan dulu":"Tandai Batal → masuk Rekap"}
-                              style={{flex:1,fontSize:10,fontWeight:700,padding:"4px 6px",borderRadius:5,background:ket?"rgba(148,163,184,0.15)":"rgba(148,163,184,0.04)",color:ket?"#ffffff":"#374151",border:ket?"1px solid rgba(148,163,184,0.35)":"1px solid rgba(148,163,184,0.12)",cursor:ket?"pointer":"not-allowed",opacity:ket?1:0.5}}>✕ Batal</button>
+                              style={{flex:1,fontSize:10,fontWeight:700,padding:"4px 6px",borderRadius:5,background:ket?"rgba(148,163,184,0.15)":"rgba(148,163,184,0.04)",color:ket?"#e2e8f0":"#475569",border:ket?"1px solid rgba(148,163,184,0.35)":"1px solid rgba(148,163,184,0.12)",cursor:ket?"pointer":"not-allowed",opacity:ket?1:0.5}}>✕ Batal</button>
                           </div>
                           {!ket && <div style={{color:"#f59e0b",fontSize:9,textAlign:"center"}}>isi ket. dulu ↓</div>}
                         </div>
                       </td>
-
                       <td style={{padding:"8px 10px"}}>
                         <select value={ket} onChange={e=>setOverride(atm.id_atm,"keterangan",e.target.value)}
-                          style={{background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:6,color:ket?"#e2e8f0":"#ffffff",padding:"5px 8px",fontSize:11,width:150,outline:"none",cursor:"pointer"}}>
+                          style={{background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:6,color:ket?"#e2e8f0":"#94a3b8",padding:"5px 8px",fontSize:11,width:150,outline:"none",cursor:"pointer"}}>
                           <option value="">— pilih keterangan —</option>
                           {KET_OPTIONS.map(k=><option key={k} value={k}>{k}</option>)}
                         </select>
                       </td>
-
                       <td style={{padding:"8px 10px"}}>
                         <button onClick={()=>handleRemove(atm)}
                           style={{background:"rgba(255,59,92,0.08)",border:"1px solid rgba(255,59,92,0.25)",borderRadius:6,color:"#ff3b5c",padding:"4px 10px",fontSize:11,cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"}}>
@@ -716,10 +670,9 @@ export default function CashPlan({ navigateTo }) {
               </tbody>
             </table>
           </div>
-
           {maxPage > 1 && (
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 20px",borderTop:"1px solid rgba(99,179,237,0.08)"}}>
-              <span style={{color:"#ffffff",fontSize:12}}>Halaman {page+1} dari {maxPage} · {filtered.length} ATM</span>
+              <span style={{color:"#94a3b8",fontSize:12}}>Halaman {page+1} dari {maxPage} · {filtered.length} ATM</span>
               <div style={{display:"flex",gap:6}}>
                 <PageBtn disabled={page===0}        onClick={()=>setPage(p=>p-1)}>← Prev</PageBtn>
                 <PageBtn disabled={page>=maxPage-1} onClick={()=>setPage(p=>p+1)}>Next →</PageBtn>
@@ -727,40 +680,39 @@ export default function CashPlan({ navigateTo }) {
             </div>
           )}
         </div>
-      )}
+      ) : null}
 
       {/* Legend */}
       <div style={{display:"flex",gap:16,marginTop:16,flexWrap:"wrap"}}>
         {[
-          {label:"Tabel hanya menampilkan ATM yang masih PENDING (belum selesai/batal)",color:"#60a5fa"},
-          {label:"Setelah Selesai/Batal → otomatis pindah ke Rekap Replacement",       color:"#00e5a0"},
-          {label:"✕ Remove = data salah input, tidak masuk Rekap",                      color:"#ff3b5c"},
-          {label:"Bell = rekomendasi sistem (pct ≤ 35%), user yang putuskan",           color:"#f59e0b"},
+          {label:"Table kosong saat buka — data masuk hanya setelah user konfirmasi", color:"#60a5fa"},
+          {label:"Setelah Selesai/Batal → otomatis pindah ke Rekap Replacement",      color:"#00e5a0"},
+          {label:"✕ Remove = data salah input, tidak masuk Rekap",                     color:"#ff3b5c"},
+          {label:"Bell = rekomendasi sistem (pct ≤ 35%), user yang putuskan",          color:"#f59e0b"},
         ].map(l=>(
           <div key={l.label} style={{display:"flex",alignItems:"center",gap:6}}>
             <div style={{width:8,height:8,borderRadius:2,background:l.color}} />
-            <span style={{color:"#ffffff",fontSize:11}}>{l.label}</span>
+            <span style={{color:"#94a3b8",fontSize:11}}>{l.label}</span>
           </div>
         ))}
       </div>
 
-      {/* ══ MODAL VALIDASI / KONFIRMASI ══════════════════════════════════════ */}
+      {/* ══ MODAL VALIDASI ══ */}
       {showValidasiModal && validasiList.length > 0 && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1100,padding:16}}>
           <div style={{background:"#0d1228",border:"1px solid rgba(0,229,160,0.25)",borderRadius:18,padding:"24px 28px",width:validasiList.length===1?520:780,maxWidth:"98vw",maxHeight:"90vh",boxShadow:"0 30px 100px rgba(0,0,0,0.8)",display:"flex",flexDirection:"column"}}>
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16}}>
               <div>
                 <h2 style={{color:"#00e5a0",fontSize:17,fontWeight:700,margin:"0 0 4px"}}>✅ Konfirmasi Masuk Cash Plan</h2>
-                <p style={{color:"#ffffff",fontSize:12,margin:0}}>
+                <p style={{color:"#94a3b8",fontSize:12,margin:0}}>
                   {validasiList.length===1
                     ? `Review ATM ${validasiList[0].id_atm} ${validasiList[0]._notif_id?"(dari rekomendasi sistem)":"(manual)"}`
                     : `${validasiList.length} ATM — atur denom & keterangan per ATM`}
                 </p>
               </div>
-              <button onClick={()=>{setShowValidasiModal(false);setValidasiList([]);}} style={{background:"none",border:"none",color:"#ffffff",fontSize:22,cursor:"pointer"}}>×</button>
+              <button onClick={()=>{setShowValidasiModal(false);setValidasiList([]);}} style={{background:"none",border:"none",color:"#94a3b8",fontSize:22,cursor:"pointer"}}>×</button>
             </div>
 
-            {/* Bulk denom shortcut */}
             {validasiList.length > 1 && (
               <div style={{background:"rgba(167,139,250,0.06)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:10,padding:"10px 14px",marginBottom:14}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
@@ -798,7 +750,6 @@ export default function CashPlan({ navigateTo }) {
                       <span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:"rgba(167,139,250,0.1)",color:"#a78bfa"}}>Denom: {getDenomLabel(atm)}</span>
                       {atm._notif_id && <span style={{fontSize:11,padding:"3px 10px",borderRadius:5,background:"rgba(245,158,11,0.1)",color:"#f59e0b"}}>🔔 Rekomendasi Sistem</span>}
                     </div>
-                    {/* Isi Table Modal */}
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
                       {[
                         {label:"ID ATM",value:atm.id_atm,mono:true,color:"#e2e8f0"},
@@ -806,19 +757,19 @@ export default function CashPlan({ navigateTo }) {
                         {label:"Lokasi",value:atm.lokasi||"—",span:true},
                         {label:"Wilayah",value:atm.wilayah||"—"},
                         {label:"Saldo",value:fmtRp(atm.saldo),color:"#ff3b5c"},
-                        {label:"Limit",value:fmtRp(atm.limit),color:"#ffffff"},
+                        {label:"Limit",value:fmtRp(atm.limit),color:"#e2e8f0"},
                         {label:"Total Isi",value:fmtRp(jumlahIsiCalc(atm.saldo,atm.limit)),color:"#f59e0b"},
                         {label:"Est. Jam Kosong",value:atm.est_jam?`${atm.est_jam} jam`:"—"},
                       ].map((f,fi)=>(
                         <div key={fi} style={{gridColumn:f.span?"1 / -1":"auto",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(99,179,237,0.1)",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{color:"#ffffff",fontSize:10,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:4}}>{f.label}</div>
-                          <div style={{color:f.color||"#ffffff",fontSize:13,fontWeight:600,fontFamily:f.mono?"monospace":"inherit"}}>{f.value}</div>
+                          <div style={{color:"#94a3b8",fontSize:10,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:4}}>{f.label}</div>
+                          <div style={{color:f.color||"#e2e8f0",fontSize:13,fontWeight:600,fontFamily:f.mono?"monospace":"inherit"}}>{f.value}</div>
                         </div>
                       ))}
                     </div>
                     <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(99,179,237,0.1)",borderRadius:8,padding:"12px 14px",marginBottom:14}}>
                       <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                        <span style={{color:"#ffffff",fontSize:11}}>Persentase Saldo</span>
+                        <span style={{color:"#94a3b8",fontSize:11}}>Persentase Saldo</span>
                         <span style={{color:(atm.pct_saldo||0)<=20?"#ff3b5c":"#f59e0b",fontWeight:700,fontSize:13}}>{(atm.pct_saldo||0).toFixed(1)}%</span>
                       </div>
                       <div style={{width:"100%",height:8,background:"rgba(255,255,255,0.06)",borderRadius:4}}>
@@ -827,24 +778,23 @@ export default function CashPlan({ navigateTo }) {
                     </div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
                       <div>
-                        <label style={{color:"#ffffff",fontSize:11,display:"block",marginBottom:5}}>Denominasi {dOpts.length>1&&<span style={{color:"#f59e0b"}}>*pilih salah satu</span>}</label>
-                        {/* FIXED: onChange tanpa Number() */}
+                        <label style={{color:"#94a3b8",fontSize:11,display:"block",marginBottom:5}}>Denominasi {dOpts.length>1&&<span style={{color:"#f59e0b"}}>*pilih salah satu</span>}</label>
                         <select value={vd} onChange={e=>setVOv(atm.id_atm,"denom",e.target.value)}
                           style={{width:"100%",background:"#0d1228",border:"1px solid rgba(167,139,250,0.3)",borderRadius:8,color:"#a78bfa",padding:"8px 10px",fontSize:12,outline:"none",cursor:"pointer"}}>
                           {dOpts.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
                         </select>
                       </div>
                       <div>
-                        <label style={{color:"#ffffff",fontSize:11,display:"block",marginBottom:5}}>Jumlah Lembar</label>
+                        <label style={{color:"#94a3b8",fontSize:11,display:"block",marginBottom:5}}>Jumlah Lembar</label>
                         <div style={{background:"rgba(245,158,11,0.08)",border:"1px solid rgba(245,158,11,0.2)",borderRadius:8,padding:"8px 10px",color:"#f59e0b",fontSize:12,fontWeight:700}}>
                           {fmtLembar(jumlahIsiCalc(atm.saldo,atm.limit),vd)}
                         </div>
                       </div>
                     </div>
                     <div>
-                      <label style={{color:"#ffffff",fontSize:11,display:"block",marginBottom:5}}>Keterangan (opsional)</label>
+                      <label style={{color:"#94a3b8",fontSize:11,display:"block",marginBottom:5}}>Keterangan (opsional)</label>
                       <select value={getVKet(atm.id_atm)} onChange={e=>setVOv(atm.id_atm,"ket",e.target.value)}
-                        style={{width:"100%",background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:8,color:getVKet(atm.id_atm)?"#e2e8f0":"#ffffff",padding:"8px 10px",fontSize:12,outline:"none",cursor:"pointer"}}>
+                        style={{width:"100%",background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:8,color:getVKet(atm.id_atm)?"#e2e8f0":"#94a3b8",padding:"8px 10px",fontSize:12,outline:"none",cursor:"pointer"}}>
                         <option value="">— pilih keterangan (opsional) —</option>
                         {KET_OPTIONS.map(k=><option key={k} value={k}>{k}</option>)}
                       </select>
@@ -856,7 +806,7 @@ export default function CashPlan({ navigateTo }) {
                   <thead>
                     <tr style={{background:"rgba(255,255,255,0.03)",borderBottom:"1px solid rgba(99,179,237,0.1)"}}>
                       {["No","ID ATM","Lokasi","Wilayah","Status","Saldo %","Total Isi","Denom Tersedia","Pilih Denom","Keterangan"].map(h=>(
-                        <th key={h} style={{padding:"8px 10px",textAlign:"left",color:"#ffffff",fontWeight:600,fontSize:10,textTransform:"uppercase",letterSpacing:"0.07em",whiteSpace:"nowrap"}}>{h}</th>
+                        <th key={h} style={{padding:"8px 10px",textAlign:"left",color:"#94a3b8",fontWeight:600,fontSize:10,textTransform:"uppercase",letterSpacing:"0.07em",whiteSpace:"nowrap"}}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -866,24 +816,20 @@ export default function CashPlan({ navigateTo }) {
                       const dOpts = getDenomOptionsForAtm(atm);
                       return (
                         <tr key={atm.id_atm} style={{borderBottom:"1px solid rgba(99,179,237,0.06)"}}>
-                          <td style={td("#ffffff")}>{idx+1}</td>
+                          <td style={td("#94a3b8")}>{idx+1}</td>
                           <td style={{padding:"7px 10px",color:"#e2e8f0",fontFamily:"monospace",fontWeight:700,whiteSpace:"nowrap"}}>
-                            {atm.id_atm}
-                            {atm._notif_id && <span style={{marginLeft:4,fontSize:8,color:"#f59e0b"}}>🔔</span>}
+                            {atm.id_atm}{atm._notif_id && <span style={{marginLeft:4,fontSize:8,color:"#f59e0b"}}>🔔</span>}
                           </td>
-                          <td style={{...td("#ffffff"),maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={atm.lokasi}>{atm.lokasi||"—"}</td>
-                          <td style={td("#ffffff")}>{atm.wilayah||"—"}</td>
+                          <td style={{...td("#94a3b8"),maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={atm.lokasi}>{atm.lokasi||"—"}</td>
+                          <td style={td("#94a3b8")}>{atm.wilayah||"—"}</td>
                           <td style={{padding:"7px 10px"}}>
                             <span style={{fontSize:9,padding:"2px 7px",borderRadius:3,fontWeight:700,background:atm.status==="BONGKAR"?"rgba(255,59,92,0.15)":"rgba(245,158,11,0.15)",color:atm.status==="BONGKAR"?"#ff3b5c":"#f59e0b"}}>{atm.status}</span>
                           </td>
-                          <td style={{padding:"7px 10px"}}>
-                            <span style={{color:(atm.pct_saldo||0)<=20?"#ff3b5c":"#f59e0b",fontWeight:700,fontSize:10}}>{(atm.pct_saldo||0).toFixed(0)}%</span>
-                          </td>
+                          <td style={{padding:"7px 10px"}}><span style={{color:(atm.pct_saldo||0)<=20?"#ff3b5c":"#f59e0b",fontWeight:700,fontSize:10}}>{(atm.pct_saldo||0).toFixed(0)}%</span></td>
                           <td style={{padding:"7px 10px",color:"#f59e0b",fontWeight:600,whiteSpace:"nowrap"}}>{fmtRp(jumlahIsiCalc(atm.saldo,atm.limit))}</td>
                           <td style={{padding:"7px 8px"}}>
                             <span style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:"rgba(167,139,250,0.1)",color:"#a78bfa",border:"1px solid rgba(167,139,250,0.2)",whiteSpace:"nowrap"}}>{getDenomLabel(atm)}</span>
                           </td>
-                          {/* FIXED: onChange tanpa Number() */}
                           <td style={{padding:"7px 8px"}}>
                             <select value={vd} onChange={e=>setVOv(atm.id_atm,"denom",e.target.value)}
                               style={{background:"#0d1228",border:"1px solid rgba(167,139,250,0.25)",borderRadius:6,color:"#a78bfa",padding:"3px 6px",fontSize:10,cursor:"pointer",outline:"none"}}>
@@ -892,7 +838,7 @@ export default function CashPlan({ navigateTo }) {
                           </td>
                           <td style={{padding:"7px 8px"}}>
                             <select value={getVKet(atm.id_atm)} onChange={e=>setVOv(atm.id_atm,"ket",e.target.value)}
-                              style={{background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:6,color:getVKet(atm.id_atm)?"#e2e8f0":"#ffffff",padding:"3px 6px",fontSize:10,cursor:"pointer",outline:"none",width:115}}>
+                              style={{background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:6,color:getVKet(atm.id_atm)?"#e2e8f0":"#94a3b8",padding:"3px 6px",fontSize:10,cursor:"pointer",outline:"none",width:115}}>
                               <option value="">— opsional —</option>
                               {KET_OPTIONS.map(k=><option key={k} value={k}>{k}</option>)}
                             </select>
@@ -905,14 +851,13 @@ export default function CashPlan({ navigateTo }) {
               )}
             </div>
 
-            {/* Ringkasan */}
             <div style={{background:"rgba(0,229,160,0.05)",border:"1px solid rgba(0,229,160,0.2)",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
               <div style={{color:"#00e5a0",fontWeight:700,fontSize:12,marginBottom:6}}>📋 Ringkasan</div>
               <div style={{display:"flex",gap:20,flexWrap:"wrap"}}>
-                <span style={{color:"#ffffff",fontSize:12}}>ATM: <strong style={{color:"#e2e8f0"}}>{validasiList.length}</strong></span>
-                <span style={{color:"#ffffff",fontSize:12}}>Total Isi: <strong style={{color:"#f59e0b"}}>{fmtRp(validasiList.reduce((s,a)=>s+jumlahIsiCalc(a.saldo,a.limit),0))}</strong></span>
-                <span style={{color:"#ffffff",fontSize:12}}>BONGKAR: <strong style={{color:"#ff3b5c"}}>{validasiList.filter(a=>a.status==="BONGKAR").length}</strong></span>
-                <span style={{color:"#ffffff",fontSize:12}}>Dari sistem: <strong style={{color:"#f59e0b"}}>{validasiList.filter(a=>a._notif_id).length} ATM</strong></span>
+                <span style={{color:"#94a3b8",fontSize:12}}>ATM: <strong style={{color:"#e2e8f0"}}>{validasiList.length}</strong></span>
+                <span style={{color:"#94a3b8",fontSize:12}}>Total Isi: <strong style={{color:"#f59e0b"}}>{fmtRp(validasiList.reduce((s,a)=>s+jumlahIsiCalc(a.saldo,a.limit),0))}</strong></span>
+                <span style={{color:"#94a3b8",fontSize:12}}>BONGKAR: <strong style={{color:"#ff3b5c"}}>{validasiList.filter(a=>a.status==="BONGKAR").length}</strong></span>
+                <span style={{color:"#94a3b8",fontSize:12}}>Dari sistem: <strong style={{color:"#f59e0b"}}>{validasiList.filter(a=>a._notif_id).length} ATM</strong></span>
               </div>
             </div>
 
@@ -922,7 +867,7 @@ export default function CashPlan({ navigateTo }) {
                 {validasiLoading?"Menyimpan...":`✅ Konfirmasi ${validasiList.length} ATM ke Cash Plan`}
               </button>
               <button onClick={()=>{setShowValidasiModal(false);setValidasiList([]);}}
-                style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(99,179,237,0.15)",borderRadius:10,color:"#ffffff",padding:"12px 18px",fontSize:13,cursor:"pointer"}}>
+                style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(99,179,237,0.15)",borderRadius:10,color:"#94a3b8",padding:"12px 18px",fontSize:13,cursor:"pointer"}}>
                 Batal
               </button>
             </div>
@@ -930,45 +875,43 @@ export default function CashPlan({ navigateTo }) {
         </div>
       )}
 
-      {/* ══ MODAL DOWNLOAD EXCEL ════════════════════════════════════════════ */}
+      {/* ══ MODAL EXCEL ══ */}
       {showDlModal && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#0d1228",border:"1px solid rgba(99,179,237,0.2)",borderRadius:16,padding:"28px 32px",width:440,boxShadow:"0 24px 80px rgba(0,0,0,0.6)"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
               <h2 style={{color:"#e2e8f0",fontSize:18,fontWeight:700,margin:0}}>📊 Download Excel Cash Plan</h2>
-              <button onClick={()=>setShowDlModal(false)} style={{background:"none",border:"none",color:"#ffffff",fontSize:20,cursor:"pointer"}}>×</button>
+              <button onClick={()=>setShowDlModal(false)} style={{background:"none",border:"none",color:"#94a3b8",fontSize:20,cursor:"pointer"}}>×</button>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {["Semua","PEKANBARU","BATAM","DUMAI","Tanjung Pinang"].map(w=>{
                 const cnt = w==="Semua" ? filtered.length : filtered.filter(d=>d.wilayah?.toUpperCase()===w.toUpperCase()).length;
                 return (
-                  <button key={w}
-                    onClick={()=>exportExcel(filtered,w,filterBulan,nowTahun(),(id,atm)=>getDenom(id,atm),getKet)}
-                    disabled={cnt===0}
-                    style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",borderRadius:8,background:cnt===0?"rgba(255,255,255,0.02)":"rgba(167,139,250,0.08)",border:`1px solid ${cnt===0?"rgba(99,179,237,0.1)":"rgba(167,139,250,0.25)"}`,color:cnt===0?"#374151":"#a78bfa",cursor:cnt===0?"not-allowed":"pointer",fontSize:13,fontWeight:600}}>
+                  <button key={w} onClick={()=>exportExcel(filtered,w,filterBulan,nowTahun(),(id,atm)=>getDenom(id,atm),getKet)} disabled={cnt===0}
+                    style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",borderRadius:8,background:cnt===0?"rgba(255,255,255,0.02)":"rgba(167,139,250,0.08)",border:`1px solid ${cnt===0?"rgba(99,179,237,0.1)":"rgba(167,139,250,0.25)"}`,color:cnt===0?"#475569":"#a78bfa",cursor:cnt===0?"not-allowed":"pointer",fontSize:13,fontWeight:600}}>
                     <span>📥 {w==="Semua"?"Semua Wilayah":w}</span>
-                    <span style={{fontSize:12,fontWeight:400,color:cnt===0?"#374151":"#ffffff"}}>{cnt} ATM · .xlsx</span>
+                    <span style={{fontSize:12,fontWeight:400,color:cnt===0?"#475569":"#94a3b8"}}>{cnt} ATM · .xlsx</span>
                   </button>
                 );
               })}
             </div>
-            <button onClick={()=>setShowDlModal(false)} style={{marginTop:16,width:"100%",padding:"10px",borderRadius:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(99,179,237,0.12)",color:"#ffffff",cursor:"pointer",fontSize:13}}>Tutup</button>
+            <button onClick={()=>setShowDlModal(false)} style={{marginTop:16,width:"100%",padding:"10px",borderRadius:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(99,179,237,0.12)",color:"#94a3b8",cursor:"pointer",fontSize:13}}>Tutup</button>
           </div>
         </div>
       )}
 
-      {/* ══ MODAL TAMBAH MANUAL ════════════════════════════════════════════ */}
+      {/* ══ MODAL MANUAL ══ */}
       {showAddModal && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
           <div style={{background:"#0d1228",border:"1px solid rgba(99,179,237,0.2)",borderRadius:16,padding:"28px 32px",width:420,boxShadow:"0 24px 80px rgba(0,0,0,0.6)"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
               <h2 style={{color:"#e2e8f0",fontSize:18,fontWeight:700,margin:0}}>Tambah ATM Manual</h2>
-              <button onClick={()=>{setShowAddModal(false);setAddError("");setAddIdInput("");}} style={{background:"none",border:"none",color:"#ffffff",fontSize:20,cursor:"pointer"}}>×</button>
+              <button onClick={()=>{setShowAddModal(false);setAddError("");setAddIdInput("");}} style={{background:"none",border:"none",color:"#94a3b8",fontSize:20,cursor:"pointer"}}>×</button>
             </div>
             <div style={{background:"rgba(59,130,246,0.06)",border:"1px solid rgba(59,130,246,0.2)",borderRadius:8,padding:"10px 14px",marginBottom:16,color:"#93c5fd",fontSize:12}}>
               ℹ️ ATM akan melewati <strong>validasi detail</strong> sebelum masuk ke antrian Cash Plan.
             </div>
-            <label style={{color:"#ffffff",fontSize:12,display:"block",marginBottom:6}}>ID ATM</label>
+            <label style={{color:"#94a3b8",fontSize:12,display:"block",marginBottom:6}}>ID ATM</label>
             <input value={addIdInput} onChange={e=>{setAddIdInput(e.target.value.toUpperCase());setAddError("");}}
               onKeyDown={e=>e.key==="Enter"&&handleAddManual()}
               placeholder="Contoh: CRM10101 atau EMV82901" autoFocus
@@ -981,7 +924,7 @@ export default function CashPlan({ navigateTo }) {
                 {addLoading?"Mencari ATM...":"Cari & Review →"}
               </button>
               <button onClick={()=>{setShowAddModal(false);setAddError("");setAddIdInput("");}}
-                style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(99,179,237,0.12)",borderRadius:8,color:"#ffffff",padding:"10px 18px",fontSize:13,cursor:"pointer"}}>
+                style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(99,179,237,0.12)",borderRadius:8,color:"#94a3b8",padding:"10px 18px",fontSize:13,cursor:"pointer"}}>
                 Batal
               </button>
             </div>
@@ -997,7 +940,6 @@ export default function CashPlan({ navigateTo }) {
   );
 }
 
-// ─── SUB COMPONENTS ───────────────────────────────────────────────────────────
 function Checkbox({ checked, indeterminate, onChange }) {
   return (
     <div onClick={onChange} style={{width:16,height:16,borderRadius:4,cursor:"pointer",border:checked||indeterminate?"2px solid #3b82f6":"2px solid rgba(99,179,237,0.3)",background:checked?"#3b82f6":indeterminate?"rgba(59,130,246,0.3)":"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -1022,13 +964,13 @@ function EmptyState() {
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:280,gap:12,background:"rgba(0,229,160,0.03)",border:"1px solid rgba(0,229,160,0.1)",borderRadius:12}}>
       <span style={{fontSize:36}}>✓</span>
       <span style={{color:"#00e5a0",fontWeight:600,fontSize:16}}>Antrian Cash Plan Kosong</span>
-      <span style={{color:"#ffffff",fontSize:13}}>Tidak ada ATM yang menunggu pengisian. Cek bell notif untuk rekomendasi sistem.</span>
+      <span style={{color:"#94a3b8",fontSize:13}}>Tidak ada ATM yang menunggu. Cek bell notif untuk rekomendasi sistem.</span>
     </div>
   );
 }
 function Spinner() {
   return (
-    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",flexDirection:"column",gap:12,color:"#ffffff"}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",flexDirection:"column",gap:12,color:"#94a3b8"}}>
       <div style={{width:32,height:32,border:"2px solid rgba(59,130,246,0.2)",borderTopColor:"#3b82f6",borderRadius:"50%",animation:"spin 0.8s linear infinite"}} />
       <span>Memuat data Cash Plan...</span>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
@@ -1037,10 +979,10 @@ function Spinner() {
 }
 function PageBtn({ children, onClick, disabled }) {
   return (
-    <button onClick={onClick} disabled={disabled} style={{background:disabled?"transparent":"rgba(59,130,246,0.1)",border:"1px solid rgba(59,130,246,0.2)",borderRadius:6,color:disabled?"#374151":"#60a5fa",padding:"5px 12px",fontSize:12,cursor:disabled?"default":"pointer"}}>{children}</button>
+    <button onClick={onClick} disabled={disabled} style={{background:disabled?"transparent":"rgba(59,130,246,0.1)",border:"1px solid rgba(59,130,246,0.2)",borderRadius:6,color:disabled?"#475569":"#60a5fa",padding:"5px 12px",fontSize:12,cursor:disabled?"default":"pointer"}}>{children}</button>
   );
 }
-const selectStyle = {background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:8,color:"#ffffff",padding:"8px 12px",fontSize:13,cursor:"pointer",outline:"none"};
+const selectStyle = {background:"#0d1228",border:"1px solid rgba(99,179,237,0.15)",borderRadius:8,color:"#e2e8f0",padding:"8px 12px",fontSize:13,cursor:"pointer",outline:"none"};
 const td          = color => ({padding:"8px 12px",color,whiteSpace:"nowrap"});
 const btnStyle    = accent => ({background:`${accent}18`,border:`1px solid ${accent}44`,borderRadius:8,color:accent,padding:"8px 16px",fontSize:13,cursor:"pointer",fontWeight:600});
-const bulkBtn     = accent => ({background:`${accent}15`,border:`1px solid ${accent}40`,borderRadius:7,color:accent,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"});
+const bulkBtn     = accent => ({background:`${accent}15`,border:`1px solid ${accent}40`,borderRadius:7,color:accent,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"});    

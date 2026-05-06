@@ -56,8 +56,8 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
           <div style={{ display:"flex", alignItems:"center", gap:10, overflow:"hidden", minWidth:0 }}>
             <div
               style={{
-                width:          36,
-                height:         36,
+                width:          50,
+                height:         50,
                 background:     "linear-gradient(135deg, #3b82f6, #06b6d4)",
                 borderRadius:   8,
                 display:        "flex",
@@ -70,11 +70,11 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
                 flexShrink:     0,
               }}
             >
-              A
+              BRK
             </div>
             {!collapsed && (
               <div style={{ overflow:"hidden", whiteSpace:"nowrap" }}>
-                <div style={{ color:"#ffffff", fontWeight:700, fontSize:14 }}>Smart ATM</div>
+                <div style={{ color:"#ffffff", fontWeight:700, fontSize:14 }}>SIPRAS</div>
                 <div style={{ color:"#95c6ff", fontSize:10, textTransform:"uppercase" }}>BRK Syariah</div>
               </div>
             )}
@@ -272,7 +272,7 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
               </button>
             </Tooltip>
           ) : (
-            <div style={{ color:"#ffffff", fontSize:11 }}>v6.0.0 · 2026</div>
+            <div style={{ color:"#ffffff", fontSize:11 }}>BRKS Operational · 2026</div>
           )}
         </div>
       </nav>

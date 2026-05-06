@@ -81,8 +81,8 @@ export default function MonitoringHub({ navigateTo }) {
 }
 
 // ═══ TAB 1 – MONITORING ═══════════════════════════════════
-const WILAYAH_LIST = ["Semua", "Pekanbaru", "Batam", "Dumai", "Tanjung Pinang"];
-const STATUS_LIST  = ["Semua", "BONGKAR", "AWAS", "PERLU PANTAU", "AMAN", "OVERFUND"];
+const WILAYAH_LIST = ["Semua", "Pekanbaru", "Batam", "Dumai", "Pinang"];
+const STATUS_LIST  = ["Semua", "BONGKAR", "AWAS", "PERLU PANTAU", "AMAN"];
 const TIPE_LIST    = ["Semua", "EMV", "CRM"];
 
 function TabMonitoring({ navigateTo }) {
@@ -122,7 +122,7 @@ function TabMonitoring({ navigateTo }) {
   const toggleSort = (key) => { setSort(s => ({ key, dir: s.key === key ? -s.dir : -1 })); setPage(0); };
 
   const counts = useMemo(() => {
-    const c = { BONGKAR: 0, AWAS: 0, "PERLU PANTAU": 0, AMAN: 0, OVERFUND: 0 };
+    const c = { BONGKAR: 0, AWAS: 0, "PERLU PANTAU": 0, AMAN: 0};
     data.forEach(r => { if (c[r.status] !== undefined) c[r.status]++; });
     return c;
   }, [data]);
@@ -149,7 +149,6 @@ function TabMonitoring({ navigateTo }) {
           { key: "AWAS",         color: "#EF9F27", bg: "rgba(239,159,39,0.1)",   border: "rgba(239,159,39,0.3)",   desc: THR_BONGKAR + "–" + THR_AWAS + "%" },
           { key: "PERLU PANTAU", color: "#d4b800", bg: "rgba(212,184,0,0.08)",   border: "rgba(212,184,0,0.3)",    desc: THR_AWAS + "–" + THR_TRIGGER + "%" },
           { key: "AMAN",         color: "#1D9E75", bg: "rgba(29,158,117,0.08)",  border: "rgba(29,158,117,0.25)",  desc: ">" + THR_TRIGGER + "%" },
-          { key: "OVERFUND",     color: "#7F77DD", bg: "rgba(127,119,221,0.08)", border: "rgba(127,119,221,0.25)", desc: ">100%" },
         ].map(s => (
           <button key={s.key}
             onClick={() => { setStatus(status === s.key ? "Semua" : s.key); setPage(0); }}

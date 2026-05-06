@@ -12,7 +12,7 @@ const NAV = [
   { id: "training",         label: "Training",           icon: "⚙" },
 ];
 
-export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
+export default function Sidebar({ page, setPage, collapsed, setCollapsed, user, onLogout }) {
   const [openMenu, setOpenMenu] = useState(null);
 
   // Tutup dropdown saat sidebar di-collapse
@@ -54,28 +54,39 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
         >
           {/* Logo + nama */}
           <div style={{ display:"flex", alignItems:"center", gap:10, overflow:"hidden", minWidth:0 }}>
+            {/* Avatar */}
             <div
               style={{
-                width:          50,
-                height:         50,
-                background:     "linear-gradient(135deg, #3b82f6, #06b6d4)",
-                borderRadius:   8,
-                display:        "flex",
-                alignItems:     "center",
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #3b82f6, #06b6d4)",
+                display: "flex",
+                alignItems: "center",
                 justifyContent: "center",
-                fontSize:       18,
-                fontWeight:     700,
-                color:          "#ffffff",
-                boxShadow:      "0 0 20px rgba(59,130,246,0.4)",
-                flexShrink:     0,
+                fontSize: 14,
+                fontWeight: 700,
+                color: "#fff",
+                flexShrink: 0,
               }}
             >
-              BRK
+              {(user?.full_name || user?.username || "?")[0].toUpperCase()}
             </div>
+
+            {/* Nama + role */}
             {!collapsed && (
               <div style={{ overflow:"hidden", whiteSpace:"nowrap" }}>
-                <div style={{ color:"#ffffff", fontWeight:700, fontSize:14 }}>SIPRAS</div>
-                <div style={{ color:"#95c6ff", fontSize:10, textTransform:"uppercase" }}>BRK Syariah</div>
+                <div style={{ color:"#ffffff", fontWeight:600, fontSize:13 }}>
+                  {user?.full_name || user?.username}
+                </div>
+                <div style={{
+                  fontSize:10,
+                  color:"#94a3b8",
+                  textTransform:"uppercase",
+                  letterSpacing:"0.05em"
+                }}>
+                  {user?.role || "viewer"}
+                </div>
               </div>
             )}
           </div>
@@ -237,42 +248,67 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed }) {
         </div>
 
         {/* ── FOOTER ──────────────────────────────────────────────────────── */}
+        {/* ── FOOTER — User info + Logout ─────────────────────────────────── */}
         <div
           style={{
-            padding:     collapsed ? "16px 0" : "16px 24px",
-            borderTop:   "1px solid rgba(255, 255, 255, 0.08)",
-            flexShrink:  0,
-            textAlign:   collapsed ? "center" : "left",
-            transition:  "padding 0.3s",
+            padding:    collapsed ? "12px 0" : "14px 16px",
+            borderTop:  "1px solid rgba(255,255,255,0.08)",
+            flexShrink: 0,
+            transition: "padding 0.3s",
           }}
         >
           {collapsed ? (
-            /* Tombol expand saat collapsed */
-            <Tooltip label="Buka sidebar">
-              <button
-                onClick={handleCollapse}
-                style={{
-                  background:   "rgba(59,130,246,0.1)",
-                  border:       "1px solid rgba(59,130,246,0.25)",
-                  borderRadius: 8,
-                  color:        "#fffefe",
-                  width:        36,
-                  height:       36,
-                  cursor:       "pointer",
-                  fontSize:     16,
-                  display:      "inline-flex",
-                  alignItems:   "center",
-                  justifyContent: "center",
-                  transition:   "all 0.2s",
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background="rgba(59,130,246,0.2)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background="rgba(59,130,246,0.1)"; }}
-              >
-                ▸
-              </button>
-            </Tooltip>
+            /* Tombol expand + avatar kecil */
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+              <Tooltip label={user?.full_name || user?.username || "User"}>
+              </Tooltip>
+              <Tooltip label="Buka sidebar">
+                <button
+                  onClick={handleCollapse}
+                  style={{
+                    background: "rgba(59,130,246,0.1)",
+                    border: "1px solid rgba(59,130,246,0.25)",
+                    borderRadius: 8, color: "#fffefe",
+                    width: 32, height: 28, cursor: "pointer", fontSize: 14,
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    transition: "all 0.2s",
+                  }}
+                >
+                  ▸
+                </button>
+              </Tooltip>
+            </div>
           ) : (
-            <div style={{ color:"#ffffff", fontSize:11 }}>BRKS Operational · 2026</div>
+            /* User card + logout */
+            <div
+              style={{
+                padding: collapsed ? "12px 0" : "14px 16px",
+                borderTop: "1px solid rgba(255,255,255,0.08)",
+                flexShrink: 0,
+              }}
+            >
+              <button
+                onClick={onLogout}
+                style={{
+                  width: "100%",
+                  padding: collapsed ? "8px 0" : "8px 10px",
+                  background: "rgba(239,68,68,0.07)",
+                  border: "1px solid rgba(239,68,68,0.2)",
+                  borderRadius: 8,
+                  color: "#fca5a5",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                }}
+              >
+                <span>⏻</span>
+                {!collapsed && "Logout"}
+              </button>
+            </div>
           )}
         </div>
       </nav>

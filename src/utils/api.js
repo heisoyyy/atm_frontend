@@ -196,3 +196,25 @@ export const uploadDataAPI = (file, retrain = true) => {
     return res.json();
   });
 };
+
+// ================== AUTH ==================
+export const getStoredToken = () => localStorage.getItem("sipras_token");
+
+export const authFetch = (path, options = {}) => {
+  const token = getStoredToken();
+  return apiFetch(path, {
+    ...options,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
+};
+
+export const loginAPI = (username, password) =>
+  apiFetch("/api/auth/login", {
+    method: "POST",
+    body:   JSON.stringify({ username, password }),
+  });
+
+export const getMeAPI = () => authFetch("/api/auth/me");

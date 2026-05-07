@@ -129,7 +129,7 @@ export default function CashPlan({ navigateTo }) {
   const getDenom = (id, atm) => overrides[id]?.denom !== undefined ? overrides[id].denom : getDefaultDenomForAtm(atm);
   const getKet   = id => overrides[id]?.keterangan ?? "";
 
-  const [sort,         setSort]         = useState({ key: "skor_urgensi", dir: -1 });
+  const [sort,         setSort]         = useState({ key: "added_at", dir: 1 });
   const [page,         setPage]         = useState(0);
   const [selectedRows, setSelectedRows] = useState([]);
   const PAGE_SIZE = 15;
@@ -297,7 +297,11 @@ export default function CashPlan({ navigateTo }) {
       d = d.filter(r => r.id_atm?.toLowerCase().includes(q) || r.lokasi?.toLowerCase().includes(q) || r.wilayah?.toLowerCase().includes(q));
     }
     return [...d].sort((a, b) => {
-      const va = a[sort.key] ?? 0, vb = b[sort.key] ?? 0;
+      let va = a[sort.key] ?? "", vb = b[sort.key] ?? "";
+      if (sort.key === "skor_urgensi" || sort.key === "saldo" || sort.key === "jumlah_isi") {
+        va = Number(va) || 0;
+        vb = Number(vb) || 0;
+      }
       return sort.dir * (va > vb ? 1 : va < vb ? -1 : 0);
     });
   }, [tableData, filterWilayah, filterStatus, filterTipe, search, sort]);

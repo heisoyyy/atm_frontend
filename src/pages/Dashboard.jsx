@@ -111,8 +111,8 @@ function Td({ children, style = {} }) {
 // ── TABS config ───────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: "overview", label: "Overview",        icon: "◈" },
-  { id: "coverage", label: "Master vs Upload", icon: "⊞" },
+  { id: "overview", label: "Overview",},
+  { id: "coverage", label: "Master vs Upload",},
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -219,12 +219,12 @@ function TabOverview({ summary, status, coverage, navigateTo }) {
   const total = ov.total_atm || 1;
 
   const statCards = [
-    { label: "Total ATM Master SSI", value: ov.total_master_ssi || coverage?.summary?.total_master_ssi || "-", color: "#60a5fa", icon: "⊞", sub: "Di ATM Master" },
-    { label: "Termonitor",           value: ov.total_atm,    color: "#378ADD", icon: "◈", sub: "Punya data upload" },
-    { label: "Bongkar",              value: ov.bongkar,      color: "#E24B4A", icon: "⚠", sub: "≤ 20% limit" },
-    { label: "Awas",                 value: ov.awas,         color: "#EF9F27", icon: "⊕", sub: "20–30% limit" },
-    { label: "Perlu Pantau",         value: ov.perlu_pantau, color: "#d4b800", icon: "◎", sub: "30–35% limit" },
-    { label: "Aman",                 value: ov.aman,         color: "#1D9E75", icon: "✓", sub: "> 35% limit" },
+    { label: "Total ATM Master SSI", value: ov.total_master_ssi || coverage?.summary?.total_master_ssi || "-", color: "#60a5fa", sub: "Di ATM Master" },
+    { label: "Termonitor",           value: ov.total_atm,    color: "#378ADD", sub: "Punya data upload" },
+    { label: "Bongkar",              value: ov.bongkar,      color: "#E24B4A", sub: "≤ 20% limit" },
+    { label: "Awas",                 value: ov.awas,         color: "#EF9F27", sub: "20–30% limit" },
+    { label: "Perlu Pantau",         value: ov.perlu_pantau, color: "#d4b800", sub: "30–35% limit" },
+    { label: "Aman",                 value: ov.aman,         color: "#1D9E75", sub: "> 35% limit" },
   ];
 
   const covPct  = coverage?.summary?.coverage_pct ?? 0;
@@ -439,17 +439,17 @@ function InsightPanel({ coverage }) {
 
   const insights = [];
   if (s.coverage_pct < 70)
-    insights.push({ cls: "err",  icon: "⊗", text: `Coverage hanya ${s.coverage_pct}% — kurang dari 70%. Banyak ATM SSI belum pernah masuk data upload.` });
+    insights.push({ cls: "err", text: `Coverage hanya ${s.coverage_pct}% — kurang dari 70%. Banyak ATM SSI belum pernah masuk data upload.` });
   else if (s.coverage_pct < 90)
-    insights.push({ cls: "warn", icon: "⊕", text: `Coverage ${s.coverage_pct}% — ada ${s.not_monitored} ATM SSI yang belum pernah muncul di file monitoring.` });
+    insights.push({ cls: "warn", text: `Coverage ${s.coverage_pct}% — ada ${s.not_monitored} ATM SSI yang belum pernah muncul di file monitoring.` });
   else
-    insights.push({ cls: "ok",   icon: "✓", text: `Coverage ${s.coverage_pct}% — sangat baik! Hampir semua ATM SSI sudah terpantau.` });
+    insights.push({ cls: "ok", text: `Coverage ${s.coverage_pct}% — sangat baik! Hampir semua ATM SSI sudah terpantau.` });
 
   if (s.not_in_master > 0)
-    insights.push({ cls: "err", icon: "⚠", text: `${s.not_in_master} ATM ada di file upload tapi tidak ada di ATM Master SSI. Saldo mereka tidak terhitung dalam kalkulasi wilayah.` });
+    insights.push({ cls: "err", text: `${s.not_in_master} ATM ada di file upload tapi tidak ada di ATM Master SSI. Saldo mereka tidak terhitung dalam kalkulasi wilayah.` });
 
   if (worst.not_monitored > 0)
-    insights.push({ cls: "info", icon: "◎", text: `Wilayah ${worst.wilayah} punya gap terbesar: ${worst.not_monitored} ATM (${worstPct}%) belum ada data upload.` });
+    insights.push({ cls: "info", text: `Wilayah ${worst.wilayah} punya gap terbesar: ${worst.not_monitored} ATM (${worstPct}%) belum ada data upload.` });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
@@ -848,10 +848,10 @@ function TabCoverage({ coverage, navigateTo }) {
       {/* ── METRIC CARDS ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
         {[
-          { label: "Total Master SSI",   value: summary.total_master_ssi, icon: "⊞", color: "#60a5fa",                                                                    sub: "ATM terdaftar di master" },
-          { label: "Coverage",           value: `${summary.coverage_pct}%`, icon: "◉", color: covColor,                                                                   sub: "Termonitor dari master"  },
-          { label: "Belum ada upload",   value: summary.not_monitored,    icon: "⊕", color: "#EF9F27",                                                                    sub: "Di master, belum diupload" },
-          { label: "Tidak di Master",    value: summary.not_in_master,    icon: "⚠", color: summary.not_in_master > 0 ? "#E24B4A" : "#1D9E75",                           sub: "Di upload, tak ada di master" },
+          { label: "Total Master SSI",   value: summary.total_master_ssi, color: "#60a5fa",                                                                    sub: "ATM terdaftar di master" },
+          { label: "Coverage",           value: `${summary.coverage_pct}%`, color: covColor,                                                                   sub: "Termonitor dari master"  },
+          { label: "Belum ada upload",   value: summary.not_monitored, color: "#EF9F27",                                                                    sub: "Di master, belum diupload" },
+          { label: "Tidak di Master",    value: summary.not_in_master, color: summary.not_in_master > 0 ? "#E24B4A" : "#1D9E75",                           sub: "Di upload, tak ada di master" },
         ].map(c => (
           <div key={c.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,179,237,0.08)", borderRadius: 10, padding: "14px 16px" }}>
             <div style={{ fontSize: 18, color: c.color, marginBottom: 6 }}>{c.icon}</div>
@@ -868,14 +868,14 @@ function TabCoverage({ coverage, navigateTo }) {
       {/* ── ROW 1: Donut + Heatmap ── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
         <SectionCard>
-          <SectionHeader title="Coverage overview" icon="◈"
+          <SectionHeader title="Coverage overview"
             right={<span style={{ fontSize: 12, fontWeight: 700, color: covColor }}>{summary.coverage_pct}%</span>}
           />
           <CoverageDonutChart summary={summary} chartReady={chartReady} />
         </SectionCard>
 
         <SectionCard>
-          <SectionHeader title="Status per wilayah" icon="◎" />
+          <SectionHeader title="Status per wilayah" />
           <WilayahHeatmap breakdown={wilayah_breakdown} />
         </SectionCard>
       </div>
@@ -883,19 +883,19 @@ function TabCoverage({ coverage, navigateTo }) {
       {/* ── ROW 2: Bar chart + Goals ── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
         <SectionCard>
-          <SectionHeader title="Distribusi ATM per wilayah" icon="▪" />
+          <SectionHeader title="Distribusi ATM per wilayah"/>
           <WilayahBarChart breakdown={wilayah_breakdown} chartReady={chartReady} />
         </SectionCard>
 
         <SectionCard>
-          <SectionHeader title="Coverage goal tracker" icon="✓" />
+          <SectionHeader title="Coverage goal tracker"/>
           <CoverageGoals summary={summary} />
         </SectionCard>
       </div>
 
       {/* ── DETAIL TABLE ── */}
       <SectionCard>
-        <SectionHeader title="Detail ATM" icon="⊟"
+        <SectionHeader title="Detail ATM"
           right={
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <span style={{ fontSize: 11, color: "#8a8a9a" }}>{filtered.length} ATM</span>

@@ -283,12 +283,12 @@ export default function RekapReplacement({ navigateTo }) {
       {/* Summary Cards */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:12, marginBottom:20 }}>
         {[
-          { label:"Total Rekap",    value:filtered.length,                              color:"#00e5a0", icon:"✓"  },
-          { label:"Selesai",        value:totalSelesai,                                 color:"#00e5a0", icon:"✔"  },
-          { label:"Batal",          value:totalBatal,                                   color:"#ffffff", icon:"✕"  },
-          { label:"Sudah Disimpan", value:totalSaved,                                   color:"#60a5fa", icon:"💾" },
-          { label:"Total Nominal",  value:fmtRp(totalNominal),                          color:"#a78bfa", icon:"◎",  small:true },
-          { label:"Total Lembar",   value:`${totalLembar.toLocaleString("id-ID")} lbr`, color:"#f59e0b", icon:"◈",  small:true },
+          { label:"Total Rekap",    value:filtered.length,                              color:"#00e5a0" },
+          { label:"Selesai",        value:totalSelesai,                                 color:"#00e5a0"},
+          { label:"Batal",          value:totalBatal,                                   color:"#ffffff"},
+          { label:"Sudah Disimpan", value:totalSaved,                                   color:"#60a5fa"},
+          { label:"Total Nominal",  value:fmtRp(totalNominal),                          color:"#a78bfa",  small:true },
+          { label:"Total Lembar",   value:`${totalLembar.toLocaleString("id-ID")} lbr`, color:"#f59e0b",  small:true },
         ].map(c=>(
           <div key={c.label} style={{ background:"rgba(255,255,255,0.02)", border:`1px solid ${c.color}28`, borderRadius:10, padding:"14px 16px", textAlign:"center" }}>
             <div style={{ fontSize:18, color:c.color, marginBottom:6 }}>{c.icon}</div>

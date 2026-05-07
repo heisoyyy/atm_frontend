@@ -79,8 +79,11 @@ export default function Login({ onGoRegister }) {
           <h1 style={{ color: "#ffffff", fontSize: 22, fontWeight: 700, margin: "0 0 4px" }}>
             SIPRAS
           </h1>
-          <p style={{ color: "#ffffff", fontSize: 13, margin: 0 }}>
-            Divisi Operational Echannel - BRK Syariah
+          <p style={{ color: "#ffffff", fontSize: 13, margin: "0 0 4px" , fontWeight: 3500}}>
+            Bank Riau Kepri Syariah
+          </p>
+          <p style={{ color: "#ffffff", fontSize: 10, margin: 0 }}>
+            Divisi Operational Echannel
           </p>
         </div>
 
@@ -223,9 +226,6 @@ export default function Login({ onGoRegister }) {
             >
               Daftar di sini
             </button>
-          </p>
-          <p style={{ color: "#ffffff", fontSize: 11, margin: 0 }}>
-            Bank Riau Kepri Syariah · SIPRAS
           </p>
         </div>
       </div>

@@ -9,9 +9,9 @@ const THR_AWAS    = 30;
 const THR_TRIGGER = 35;
 
 const TABS = [
-  { id: "monitoring", label: "Monitoring",   icon: "⬡" },
-  { id: "alerts",     label: "Alerts",       icon: "⚠" },
-  { id: "wilayah",    label: "Peta Wilayah", icon: "◉" },
+  { id: "monitoring", label: "Monitoring"},
+  { id: "alerts",     label: "Alerts"},
+  { id: "wilayah",    label: "Peta Wilayah"},
 ];
 
 export default function MonitoringHub({ navigateTo }) {

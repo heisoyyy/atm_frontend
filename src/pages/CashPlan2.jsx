@@ -113,11 +113,11 @@ export default function CashPlan({ items = [], onRemove, navigateTo }) {
       {/* Summary Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 12, marginBottom: 20 }}>
         {[
-          { label: "Total ATM",         value: items.length,       color: "#60a5fa", icon: "◈" },
-          { label: "BONGKAR",           value: totalBongkar,       color: "#ff3b5c", icon: "⚠" },
-          { label: "AWAS",              value: totalAwas,          color: "#f59e0b", icon: "⊕" },
-          { label: "Selesai",           value: totalDone,          color: "#00e5a0", icon: "✓" },
-          { label: "Est. Total Nominal",value: fmtRp(totalNominal),color: "#a78bfa", icon: "◎", sm: true },
+          { label: "Total ATM",         value: items.length,       color: "#60a5fa"},
+          { label: "BONGKAR",           value: totalBongkar,       color: "#ff3b5c"},
+          { label: "AWAS",              value: totalAwas,          color: "#f59e0b"},
+          { label: "Selesai",           value: totalDone,          color: "#00e5a0"},
+          { label: "Est. Total Nominal",value: fmtRp(totalNominal),color: "#a78bfa", sm: true },
         ].map(c => (
           <div key={c.label} style={{
             background: "rgba(255,255,255,0.02)", border: `1px solid ${c.color}28`,

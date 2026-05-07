@@ -212,12 +212,12 @@ export default function Upload() {
           {/* Stats Grid */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 }}>
             {[
-              { label: "ID di File",       value: result.total_file,   color: "#60a5fa", icon: "📄" },
-              { label: "Cocok di Master",  value: result.matched,      color: "#1D9E75", icon: "✓" },
-              { label: "Dilewati",         value: result.skipped,      color: result.skipped > 0 ? "#EF9F27" : "#1D9E75", icon: result.skipped > 0 ? "⊕" : "✓" },
-              { label: "Rows Diproses",    value: result.rows,         color: "#ffffff", icon: "◈" },
-              { label: "ATM Unik",         value: result.atm_count,    color: "#ffffff", icon: "◉" },
-              { label: "Prediksi",         value: result.predictions,  color: "#a78bfa", icon: "⟳" },
+              { label: "ID di File",       value: result.total_file,   color: "#60a5fa"},
+              { label: "Cocok di Master",  value: result.matched,      color: "#1D9E75"},
+              { label: "Dilewati",         value: result.skipped,      color: result.skipped > 0 ? "#EF9F27" : "#1D9E75"},
+              { label: "Rows Diproses",    value: result.rows,         color: "#ffffff" },
+              { label: "ATM Unik",         value: result.atm_count,    color: "#ffffff"},
+              { label: "Prediksi",         value: result.predictions,  color: "#a78bfa"},
             ].map(s => (
               <div key={s.label} style={{
                 background: "rgba(255,255,255,0.02)", border: "1px solid rgba(99,179,237,0.08)",

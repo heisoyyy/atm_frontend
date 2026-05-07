@@ -485,11 +485,11 @@ export default function CashPlan({ navigateTo }) {
       {/* ── SUMMARY CARDS ── */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:10, marginBottom:20 }}>
         {[
-          { label:"Dalam Antrian",  value:tableData.length,     color:"#60a5fa", icon:"◈" },
-          { label:"BONGKAR",        value:totalBongkar,         color:"#ff3b5c", icon:"⚠" },
-          { label:"AWAS",           value:totalAwas,            color:"#f59e0b", icon:"⊕" },
-          { label:"Notif Sistem",   value:notifItems.length,    color:"#f59e0b", icon:"🔔", clickable: notifItems.length > 0 },
-          { label:"Est. Total Isi", value:fmtRp(totalNominal),  color:"#a78bfa", icon:"◎", small:true },
+          { label:"Dalam Antrian",  value:tableData.length,     color:"#60a5fa"},
+          { label:"BONGKAR",        value:totalBongkar,         color:"#ff3b5c"},
+          { label:"AWAS",           value:totalAwas,            color:"#f59e0b"},
+          { label:"Notif Sistem",   value:notifItems.length,    color:"#f59e0b", clickable: notifItems.length > 0 },
+          { label:"Est. Total Isi", value:fmtRp(totalNominal),  color:"#a78bfa", small:true },
         ].map(c => (
           <div key={c.label}
             style={{ background:"rgba(255,255,255,0.02)", border:`1px solid ${c.clickable?"rgba(245,158,11,0.35)":c.color+"28"}`, borderRadius:10, padding:"12px 14px", textAlign:"center", cursor:c.clickable?"pointer":"default" }}

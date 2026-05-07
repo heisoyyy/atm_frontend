@@ -2,20 +2,26 @@
 import { useState } from "react";
 
 const NAV = [
-  { id: "dashboard", label: "Dashboard", icon: "⬡" },
-  { id: "data",          label: "Data ATM",          icon: "◷" },
-  { id: "monitoring",       label: "Monitoring",          icon: "◈" },
-  { id: "history",          label: "Historis",          icon: "◷" },
-  { id: "cashplan",         label: "Cash Plan",          icon: "◳" },
-  { id: "rekapreplacement", label: "Rekap Replacement",  icon: "◳" },
-  { id: "upload",           label: "Upload Data",        icon: "⇑" },
-  { id: "training",         label: "Training",           icon: "⚙" },
+  { id: "dashboard",        label: "Dashboard",},
+  { id: "data",             label: "Data ATM",},
+  { id: "monitoring",       label: "Monitoring",},
+  { id: "history",          label: "Historis",},
+  { id: "cashplan",         label: "Cash Plan",},
+  { id: "rekapreplacement", label: "Rekap Replacement",},
+  { id: "upload",           label: "Upload Data",},
+  { id: "training",         label: "Training",},
+];
+
+// Menu khusus admin
+const NAV_ADMIN = [
+  { id: "admin-users",    label: "Kelola User",},
+  { id: "admin-cashplan", label: "Kelola Cashplan",},
+  { id: "admin-rekap",    label: "Kelola Rekap",},
 ];
 
 export default function Sidebar({ page, setPage, collapsed, setCollapsed, user, onLogout }) {
   const [openMenu, setOpenMenu] = useState(null);
 
-  // Tutup dropdown saat sidebar di-collapse
   const handleCollapse = () => {
     setCollapsed(c => !c);
     if (!collapsed) setOpenMenu(null);
@@ -23,21 +29,20 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed, user, 
 
   return (
     <>
-      {/* ── SIDEBAR ─────────────────────────────────────────────────────── */}
       <nav
         style={{
-          position:        "fixed",
-          left:            0,
-          top:             0,
-          bottom:          0,
-          width:           collapsed ? 64 : 240,
-          background:      "linear-gradient(180deg, #000000 0%, #171717 100%)",
-          borderRight:     "1px solid rgba(253, 254, 255, 0.08)",
-          display:         "flex",
-          flexDirection:   "column",
-          zIndex:          100,
-          transition:      "width 0.3s cubic-bezier(.4,0,.2,1)",
-          overflow:        "hidden",
+          position:       "fixed",
+          left:           0,
+          top:            0,
+          bottom:         0,
+          width:          collapsed ? 64 : 240,
+          background:     "linear-gradient(180deg, #000000 0%, #171717 100%)",
+          borderRight:    "1px solid rgba(253, 254, 255, 0.08)",
+          display:        "flex",
+          flexDirection:  "column",
+          zIndex:         100,
+          transition:     "width 0.3s cubic-bezier(.4,0,.2,1)",
+          overflow:       "hidden",
         }}
       >
         {/* ── HEADER ──────────────────────────────────────────────────────── */}
@@ -121,23 +126,85 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed, user, 
 
         <div style={{ height:1, background:"rgba(99,179,237,0.08)", margin:"0 12px 12px", flexShrink:0 }} />
 
-        {/* ── MENU ────────────────────────────────────────────────────────── */}
+        {/* ── MENU ── */}
         <div style={{ flex:1, padding:"0 8px", overflowY:"auto", overflowX:"hidden" }}>
-          {NAV.map(n => {
-            const isGroup = !!n.children;
-            const isOpen  = openMenu === n.id;
 
-            /* ── DROPDOWN GROUP ── */
-            if (isGroup) {
-              const groupActive = n.children.some(c => c.id === page);
+          {/* Menu utama */}
+          {/* Menu utama */}
+          {NAV
+            .filter(n => {
+              // admin tidak boleh lihat training & upload
+              if (
+                user?.role === "admin" &&
+                ["training", "upload"].includes(n.id)
+              ) {
+                return false;
+              }
+
+              return true;
+            })
+            .map(n => {
+              const active = page === n.id;
+
               return (
-                <div key={n.id}>
-                  <Tooltip label={collapsed ? n.label : null}>
+                <Tooltip key={n.id} label={collapsed ? n.label : null}>
+                  <button
+                    onClick={() => setPage(n.id)}
+                    style={{
+                      display:        "flex",
+                      alignItems:     "center",
+                      gap:            12,
+                      width:          "100%",
+                      padding:        collapsed ? "10px 0" : "10px 14px",
+                      marginBottom:   4,
+                      justifyContent: collapsed ? "center" : "flex-start",
+                      background:     active ? "rgba(250, 250, 250, 0.15)" : "transparent",
+                      border:         active ? "1px solid rgba(255, 255, 255, 0.3)" : "1px solid transparent",
+                      borderRadius:   8,
+                      color:          active ? "#f4f1f1" : "#f6f6f6",
+                      fontSize:       collapsed ? 18 : 13,
+                      cursor:         "pointer",
+                      transition:     "all 0.2s",
+                      whiteSpace:     "nowrap",
+                      overflow:       "hidden",
+                    }}
+                  >
+                    <span style={{ flexShrink:0 }}>{n.icon}</span>
+                    {!collapsed && n.label}
+                  </button>
+                </Tooltip>
+              );
+            })}
+
+          {/* ── ADMIN SECTION — hanya tampil jika role === "admin" ── */}
+          {user?.role === "admin" && (
+            <>
+              {/* Divider + label */}
+              <div style={{
+                margin:    collapsed ? "10px 4px 6px" : "10px 6px 6px",
+                borderTop: "1px solid rgb(116, 116, 116)",
+              }}>
+                {!collapsed && (
+                  <div style={{
+                    color:         "rgb(255, 255, 255)",
+                    fontSize:      9,
+                    fontWeight:    700,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    padding:       "8px 6px 4px",
+                    fontFamily:    "'IBM Plex Mono', monospace",
+                  }}>
+                    Admin
+                  </div>
+                )}
+              </div>
+
+              {NAV_ADMIN.map(n => {
+                const active = page === n.id;
+                return (
+                  <Tooltip key={n.id} label={collapsed ? n.label : null}>
                     <button
-                      onClick={() => {
-                        if (collapsed) { setCollapsed(false); setOpenMenu(n.id); return; }
-                        setOpenMenu(isOpen ? null : n.id);
-                      }}
+                      onClick={() => setPage(n.id)}
                       style={{
                         display:        "flex",
                         alignItems:     "center",
@@ -146,179 +213,120 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed, user, 
                         padding:        collapsed ? "10px 0" : "10px 14px",
                         marginBottom:   4,
                         justifyContent: collapsed ? "center" : "flex-start",
-                        background:     isOpen || groupActive ? "rgba(255, 255, 255, 0.08)" : "transparent",
-                        border:         "1px solid transparent",
+                        background:     active
+                          ? "rgb(71, 71, 71)"
+                          : "transparent",
+                        border:         active
+                          ? "1px solid rgba(255, 255, 255, 0.35)"
+                          : "1px solid transparent",
                         borderRadius:   8,
-                        color:          groupActive ? "#ffffff" : "#ffffff",
+                        color:          active ? "#ffffff" : "rgb(255, 255, 255)",
                         fontSize:       collapsed ? 18 : 13,
                         cursor:         "pointer",
                         transition:     "all 0.2s",
                         whiteSpace:     "nowrap",
                         overflow:       "hidden",
                       }}
-                    >
-                      <span style={{ flexShrink:0 }}>{n.icon}</span>
-                      {!collapsed && (
-                        <>
-                          <span style={{ flex:1, textAlign:"left" }}>{n.label}</span>
-                          <span style={{ transition:"transform 0.25s", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", fontSize:10 }}>▸</span>
-                        </>
-                      )}
-                    </button>
-                  </Tooltip>
-
-                  {/* Children — hanya render saat expanded */}
-                  {!collapsed && (
-                    <div
-                      style={{
-                        maxHeight:  isOpen ? 200 : 0,
-                        overflow:   "hidden",
-                        transition: "all 0.3s ease",
-                        opacity:    isOpen ? 1 : 0,
+                      onMouseEnter={e => {
+                        if (!active) {
+                          e.currentTarget.style.background = "rgba(248,113,113,0.08)";
+                          e.currentTarget.style.color = "#ffffff";
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (!active) {
+                          e.currentTarget.style.background = "transparent";
+                          e.currentTarget.style.color = "rgb(255, 255, 255)";
+                        }
                       }}
                     >
-                      {n.children.map(child => {
-                        const active = page === child.id;
-                        return (
-                          <button
-                            key={child.id}
-                            onClick={() => setPage(child.id)}
-                            style={{
-                              display:      "flex",
-                              alignItems:   "center",
-                              gap:          12,
-                              width:        "100%",
-                              padding:      "8px 28px",
-                              marginBottom: 2,
-                              background:   active ? "rgba(252, 252, 252, 0.15)" : "transparent",
-                              border:       "1px solid transparent",
-                              borderRadius: 8,
-                              color:        active ? "#ffffff" : "#002252",
-                              fontSize:     12,
-                              cursor:       "pointer",
-                              transform:    isOpen ? "translateY(0)" : "translateY(-5px)",
-                              transition:   "all 0.25s",
-                              whiteSpace:   "nowrap",
-                            }}
-                          >
-                            {child.label}
-                            {child.hasAlert && (
-                              <span style={{ marginLeft:"auto", width:6, height:6, background:"#ff3b5c", borderRadius:"50%", boxShadow:"0 0 6px #ff3b5c" }} />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
-            /* ── NORMAL MENU ── */
-            const active = page === n.id;
-            return (
-              <Tooltip key={n.id} label={collapsed ? n.label : null}>
-                <button
-                  onClick={() => setPage(n.id)}
-                  style={{
-                    display:        "flex",
-                    alignItems:     "center",
-                    gap:            12,
-                    width:          "100%",
-                    padding:        collapsed ? "10px 0" : "10px 14px",
-                    marginBottom:   4,
-                    justifyContent: collapsed ? "center" : "flex-start",
-                    background:     active ? "rgba(250, 250, 250, 0.15)" : "transparent",
-                    border:         active ? "1px solid rgba(255, 255, 255, 0.3)" : "1px solid transparent",
-                    borderRadius:   8,
-                    color:          active ? "#f4f1f1" : "#f6f6f6",
-                    fontSize:       collapsed ? 18 : 13,
-                    cursor:         "pointer",
-                    transition:     "all 0.2s",
-                    whiteSpace:     "nowrap",
-                    overflow:       "hidden",
-                  }}
-                >
-                  <span style={{ flexShrink:0 }}>{n.icon}</span>
-                  {!collapsed && n.label}
-                </button>
-              </Tooltip>
-            );
-          })}
+                      <span style={{ flexShrink:0 }}>{n.icon}</span>
+                      {!collapsed && n.label}
+                    </button>
+                  </Tooltip>
+                );
+              })}
+            </>
+          )}
         </div>
 
         {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-        {/* ── FOOTER — User info + Logout ─────────────────────────────────── */}
         <div
           style={{
-            padding:    collapsed ? "12px 0" : "14px 16px",
-            borderTop:  "1px solid rgba(255,255,255,0.08)",
+            padding: collapsed ? "12px 10px" : "16px",
+            borderTop: "1px solid rgba(255,255,255,0.08)",
             flexShrink: 0,
-            transition: "padding 0.3s",
+            marginTop: "auto", // penting biar nempel bawah
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            background: "rgba(0,0,0,0.25)",
+            backdropFilter: "blur(6px)",
           }}
         >
           {collapsed ? (
-            /* Tombol expand + avatar kecil */
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-              <Tooltip label={user?.full_name || user?.username || "User"}>
-              </Tooltip>
-              <Tooltip label="Buka sidebar">
-                <button
-                  onClick={handleCollapse}
-                  style={{
-                    background: "rgba(59,130,246,0.1)",
-                    border: "1px solid rgba(59,130,246,0.25)",
-                    borderRadius: 8, color: "#fffefe",
-                    width: 32, height: 28, cursor: "pointer", fontSize: 14,
-                    display: "inline-flex", alignItems: "center", justifyContent: "center",
-                    transition: "all 0.2s",
-                  }}
-                >
-                  ▸
-                </button>
-              </Tooltip>
-            </div>
-          ) : (
-            /* User card + logout */
-            <div
-              style={{
-                padding: collapsed ? "12px 0" : "14px 16px",
-                borderTop: "1px solid rgba(255,255,255,0.08)",
-                flexShrink: 0,
-              }}
-            >
+            <Tooltip label="Buka sidebar">
               <button
-                onClick={onLogout}
+                onClick={handleCollapse}
                 style={{
-                  width: "100%",
-                  padding: collapsed ? "8px 0" : "8px 10px",
-                  background: "rgba(239,68,68,0.07)",
-                  border: "1px solid rgba(239,68,68,0.2)",
-                  borderRadius: 8,
-                  color: "#fca5a5",
-                  fontSize: 12,
-                  fontWeight: 600,
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  border: "1px solid rgba(59,130,246,0.3)",
+                  background: "rgba(59,130,246,0.12)",
+                  color: "#fff",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: 6,
+                  fontSize: 16,
+                  transition: "all .2s ease",
                 }}
               >
-                <span>⏻</span>
-                {!collapsed && "Logout"}
+                ▸
               </button>
-            </div>
+            </Tooltip>
+          ) : (
+            <button
+              onClick={onLogout}
+              style={{
+                width: "100%",
+                padding: "11px 14px",
+                background: "rgba(239,68,68,0.08)",
+                border: "1px solid rgba(239,68,68,0.85)",
+                borderRadius: 12,
+                color: "#ffffff",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                transition: "all .2s ease",
+                boxShadow: "0 0 0 rgba(239,68,68,0)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(239,68,68,0.16)";
+                e.currentTarget.style.boxShadow =
+                  "0 0 18px rgba(239,68,68,0.25)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(239,68,68,0.08)";
+                e.currentTarget.style.boxShadow = "0 0 0 rgba(239,68,68,0)";
+              }}
+            >
+              <span style={{ fontSize: 15 }}>⏻</span>
+              Logout
+            </button>
           )}
         </div>
       </nav>
-
-      {/* ── OVERLAY (mobile/keyboard feel, optional) — tidak ada agar desktop tetap visible ── */}
     </>
   );
 }
 
-/* ── TOOLTIP helper (muncul di kanan ikon saat collapsed) ── */
+/* ── TOOLTIP ── */
 function Tooltip({ label, children }) {
   const [show, setShow] = useState(false);
   if (!label) return children;
@@ -330,36 +338,33 @@ function Tooltip({ label, children }) {
     >
       {children}
       {show && (
-        <div
-          style={{
-            position:     "absolute",
-            left:         "calc(100% + 10px)",
-            top:          "50%",
-            transform:    "translateY(-50%)",
-            background:   "#1e2a45",
-            border:       "1px solid rgba(96,165,250,0.25)",
-            borderRadius: 6,
-            padding:      "5px 10px",
-            color:        "#e2e8f0",
-            fontSize:     12,
-            fontWeight:   600,
-            whiteSpace:   "nowrap",
-            zIndex:       200,
-            pointerEvents:"none",
-            boxShadow:    "0 4px 16px rgba(0,0,0,0.5)",
-          }}
-        >
+        <div style={{
+          position:     "absolute",
+          left:         "calc(100% + 10px)",
+          top:          "50%",
+          transform:    "translateY(-50%)",
+          background:   "#1e2a45",
+          border:       "1px solid rgba(96,165,250,0.25)",
+          borderRadius: 6,
+          padding:      "5px 10px",
+          color:        "#e2e8f0",
+          fontSize:     12,
+          fontWeight:   600,
+          whiteSpace:   "nowrap",
+          zIndex:       200,
+          pointerEvents:"none",
+          boxShadow:    "0 4px 16px rgba(0,0,0,0.5)",
+        }}>
           {label}
-          {/* Arrow kiri tooltip */}
           <div style={{
-            position:   "absolute",
-            left:       -5,
-            top:        "50%",
-            transform:  "translateY(-50%)",
-            width:      0,
-            height:     0,
-            borderTop:  "5px solid transparent",
-            borderBottom: "5px solid transparent",
+            position:    "absolute",
+            left:        -5,
+            top:         "50%",
+            transform:   "translateY(-50%)",
+            width:       0,
+            height:      0,
+            borderTop:   "5px solid transparent",
+            borderBottom:"5px solid transparent",
             borderRight: "5px solid rgba(96,165,250,0.25)",
           }} />
         </div>

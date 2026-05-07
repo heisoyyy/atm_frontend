@@ -702,6 +702,28 @@ export function UserCRUD({ showToast }) {
     username:"", email:"", full_name:"", password:"",
     role:"viewer", wilayah:"",
   });
+  // Tambah fungsi doApprove di UserCRUD
+  const doApprove = async (user) => {
+    setBusy(true);
+    try {
+      const token = localStorage.getItem("sipras_token");
+      const res = await fetch(`${API_BASE}/api/auth/users/${user.id}/approve`, {
+        method: "PATCH",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Gagal approve user");
+      setUsers(prev => prev.map(u =>
+        u.id === user.id ? { ...u, is_approved: true } : u
+      ));
+      showToast(`User '${user.username}' berhasil diverifikasi`);
+    } catch(e) {
+      showToast(e.message, "err");
+    } finally {
+      setBusy(false);
+      setConfirm(null);
+    }
+  };
 
   const WILAYAH_OPTS = ["","Pekanbaru","Batam","Dumai","Tanjung Pinang"];
   const ROLE_OPTS    = ["viewer","operator","admin"];
@@ -870,7 +892,7 @@ export function UserCRUD({ showToast }) {
             <thead>
               <tr>
                 {["ID","Username","Nama Lengkap","Email","Role","Wilayah",
-                  "Status","Terdaftar","Last Login","Aksi"].map(h => (
+                  "Status","Verifikasi","Terdaftar","Last Login","Aksi"].map(h => (
                   <Th key={h}>{h}</Th>
                 ))}
               </tr>
@@ -910,6 +932,20 @@ export function UserCRUD({ showToast }) {
                       {u.is_active ? "✓ AKTIF" : "✕ NONAKTIF"}
                     </span>
                   </Td>
+                  <Td>
+                    {u.is_approved
+                      ? <span style={{
+                          fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:5,
+                          background:"rgba(74,222,128,0.1)", color:"#4ade80",
+                          border:"1px solid rgba(74,222,128,0.3)",
+                        }}>✓ VERIFIED</span>
+                      : <span style={{
+                          fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:5,
+                          background:"rgba(251,191,36,0.1)", color:"#fbbf24",
+                          border:"1px solid rgba(251,191,36,0.3)",
+                        }}>⏳ PENDING</span>
+                    }
+                  </Td>
                   <Td dim small>
                     {u.created_at ? new Date(u.created_at).toLocaleDateString("id-ID",{dateStyle:"short"}) : "—"}
                   </Td>
@@ -920,6 +956,13 @@ export function UserCRUD({ showToast }) {
                   </Td>
                   <Td>
                     <div style={{ display:"flex", gap:4 }}>
+                      {!u.is_approved && (  
+                        <ActionBtn color="#4ade80"
+                          title="Verifikasi user"
+                          onClick={() => setConfirm({ type:"approve", user: u })}>
+                          ✓
+                        </ActionBtn>
+                      )}
                       <ActionBtn color={u.is_active ? "#f87171" : "#4ade80"}
                         title={u.is_active ? "Nonaktifkan" : "Aktifkan"}
                         onClick={() => setConfirm({ type:"toggle", user: u })}>
@@ -931,6 +974,7 @@ export function UserCRUD({ showToast }) {
                       </ActionBtn>
                     </div>
                   </Td>
+
                 </tr>
               ))}
             </tbody>
@@ -1051,6 +1095,16 @@ export function UserCRUD({ showToast }) {
             : "User akan bisa login kembali ke sistem."}
           danger={confirm.user.is_active}
           onOk={() => doToggle(confirm.user)}
+          onCancel={() => setConfirm(null)}
+          loading={busy}
+        />
+      )}
+      {confirm?.type === "approve" && (
+        <ConfirmModal
+          title={`Verifikasi user '${confirm.user.username}'?`}
+          desc="User akan bisa login ke sistem setelah diverifikasi."
+          danger={false}
+          onOk={() => doApprove(confirm.user)}
           onCancel={() => setConfirm(null)}
           loading={busy}
         />

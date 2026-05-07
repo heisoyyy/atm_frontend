@@ -229,7 +229,7 @@ export default function Sidebar({ page, setPage, collapsed, setCollapsed, user, 
                       }}
                       onMouseEnter={e => {
                         if (!active) {
-                          e.currentTarget.style.background = "rgba(248,113,113,0.08)";
+                          e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
                           e.currentTarget.style.color = "#ffffff";
                         }
                       }}

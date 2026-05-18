@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import * as XLSX from "xlsx";
 import {
-  apiFetch,
+  authFetch,
   addCashplanAPI,
   getCashplanAPI,
   updateCashplanStatusAPI,
@@ -163,7 +163,7 @@ export default function CashPlan({ navigateTo }) {
       setCashplanItems(cpResp.data || []);
       setNotifItems(notifResp.data || []);
       try {
-        const predResp = await apiFetch("/api/predictions?limit=1");
+        const predResp = await authFetch("/api/predictions?limit=1");
         setGenAt(predResp.generated_at || null);
       } catch { /* tidak kritikal */ }
     } catch (e) {
@@ -184,7 +184,7 @@ export default function CashPlan({ navigateTo }) {
       setCashplanItems(cpResp.data || []);
       setNotifItems(notifResp.data || []);
       try {
-        const predResp = await apiFetch("/api/predictions?limit=1");
+        const predResp = await authFetch("/api/predictions?limit=1");
         setGenAt(predResp.generated_at || null);
       } catch { /* tidak kritikal */ }
     } catch (e) {
@@ -252,12 +252,21 @@ export default function CashPlan({ navigateTo }) {
               await approveNotifAPI(atm._notif_id);
             } else {
               await addCashplanAPI({
-                id_atm: atm.id_atm, lokasi: atm.lokasi, wilayah: atm.wilayah, tipe: atm.tipe,
-                denom_options: atm.denom_options || "100000", saldo: atm.saldo, limit: atm.limit,
-                pct_saldo: atm.pct_saldo, status: atm.status, tgl_isi: atm.tgl_isi,
-                jam_isi: atm.jam_isi, est_jam: atm.est_jam, skor_urgensi: atm.skor_urgensi,
-                denom: getVDenom(atm.id_atm, atm), keterangan: getVKet(atm.id_atm),
-                added_by: atm._notif_id ? "notif" : "manual",
+                id_atm:        String(atm.id_atm || "").trim().toUpperCase(),
+                lokasi:        atm.lokasi  || "-",
+                wilayah:       atm.wilayah || "-",
+                tipe:          atm.tipe    || "-",
+                denom_options: String(atm.denom_options || "100000"),
+                saldo:         parseInt(atm.saldo)           || 0,
+                limit:         parseInt(atm.limit)           || 0,
+                pct_saldo:     parseFloat(atm.pct_saldo)     || 0,
+                status:        atm.status  || "AWAS",
+                tgl_isi:       atm.tgl_isi  || null,
+                jam_isi:       atm.jam_isi  || null,
+                est_jam:       atm.est_jam  != null ? parseFloat(atm.est_jam) : null,
+                skor_urgensi:  parseFloat(atm.skor_urgensi)  || 0,
+                denom:         String(getVDenom(atm.id_atm, atm) || "100000"),
+                added_by:      atm._notif_id ? "notif" : "manual",
               });
             }
             confirmedIds.push({ id_atm: atm.id_atm, _notif_id: atm._notif_id });
@@ -366,7 +375,7 @@ export default function CashPlan({ navigateTo }) {
     if (tableData.some(d => d.id_atm === id)) { setAddError("ATM ini sudah ada dalam antrian Cash Plan."); return; }
     setAddLoading(true); setAddError("");
     try {
-      const res = await apiFetch(`/api/predictions/${id}`);
+      const res = await authFetch(`/api/predictions/${id}`);
       if (!res?.id_atm) throw new Error("ATM tidak ditemukan");
       setAddIdInput(""); setShowAddModal(false);
       openValidasiModal([{ ...res, _notif_id: null }]);

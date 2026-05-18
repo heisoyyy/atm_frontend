@@ -11,10 +11,12 @@ import Training          from "./pages/Training";
 import Data              from "./pages/Data";
 import CashPlan          from "./pages/CashPlan";
 import RekapReplacement  from "./pages/Rekapreplacement";
-import { UserCRUD, CashplanCRUD, RekapCRUD } from "./pages/AdminPanel";
+import UserCRUD from "./pages/admin/AdminUsers";
+import CashplanCRUD from "./pages/admin/AdminCashplan";
+import RekapCRUD from "./pages/admin/AdminRekap";
 import Login             from "./pages/Login";
 import Register          from "./pages/Register";
-
+import AdminActivityLog from "./pages/admin/AdminActivityLog";
 
 // ── Toast sederhana untuk halaman admin inline ─────────────────────────────
 function useToast() {
@@ -222,6 +224,27 @@ function AppInner() {
                 </div>
                 <div style={{ padding:"24px 32px" }}>
                   <RekapCRUD showToast={showAdminToast} />
+                </div>
+              </AdminPageWrapper>
+            )}
+
+            {page === "admin-activity" && (
+              <AdminPageWrapper toast={adminToast}>
+                <div style={{
+                  padding: "20px 32px 16px",
+                  borderBottom: "1px solid rgb(255,255,255)",
+                  background: "rgba(56,189,248,0.03)",
+                }}>
+                  <div>
+                    <div style={{ color:"#ffffff", fontSize:15, fontWeight:700,
+                      fontFamily:"'IBM Plex Mono',monospace" }}>Activity Log</div>
+                    <div style={{ color:"rgb(255,255,255)", fontSize:11 }}>
+                      Monitor aktivitas semua pengguna SIPRAS
+                    </div>
+                  </div>
+                </div>
+                <div style={{ padding:"24px 32px" }}>
+                  <AdminActivityLog showToast={showAdminToast} />
                 </div>
               </AdminPageWrapper>
             )}

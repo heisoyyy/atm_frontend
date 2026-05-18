@@ -314,6 +314,7 @@ export default function History({ atmId: initialAtmId, navigateTo }) {
                 jam_isi:       predData.jam_isi,
                 est_jam:       predData.est_jam,
                 skor_urgensi:  predData.skor_urgensi,
+                denom_options: predData?.denom_options || "100000",
               }}
             />
           )}
@@ -428,8 +429,9 @@ function PredCard({ pred, saldoLatest, limit, atmSepi, isLajuTinggi, alreadyAdde
         jam_isi:      atmInfo.jam_isi   || null,
         est_jam:      atmInfo.est_jam   || null,
         skor_urgensi: atmInfo.skor_urgensi || 0,
+        denom_options: atmInfo.denom_options || "100000",
         added_by:     "user",
-        denom_options: predData?.denom_options || "100000",
+        denom_options: pred?.denom_options || "100000",
       });
       onAdded?.(atmInfo.id_atm);
     } catch (e) {

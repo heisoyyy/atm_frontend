@@ -34,6 +34,7 @@ const NAV_ADMIN = [
   { id: "admin-users",    label: "Kelola User",     icon: IconUsers },
   { id: "admin-cashplan", label: "Kelola Cashplan", icon: IconFileInvoice },
   { id: "admin-rekap",    label: "Kelola Rekap",    icon: IconClipboardList },
+  { id: "admin-activity", label: "Activity Log",    icon: IconActivity },  // ← TAMBAH
 ];
 
 export default function Sidebar({ page, setPage, collapsed, setCollapsed, user, onLogout }) {

@@ -10,15 +10,10 @@ const fmtRp    = v => v == null || isNaN(v) ? "—" : "Rp " + Number(v).toLocale
 const nowBulan = () => BULAN_ID[new Date().getMonth()];
 const nowTahun = () => new Date().getFullYear();
 
-// jumlah_isi langsung dari kolom DB (sudah dihitung backend: limit - saldo)
-const getJumlahIsi = item => item.jumlah_isi || 0;
+// jumlah_isi = limit ATM (kapasitas maksimal pengisian), nilai tetap tidak berubah
+const getJumlahIsi = (item) => item.limit || item.jumlah_isi || 0;
 
 // ── Denom Helpers ──────────────────────────────────────────────────────────────
-
-/**
- * Parse denom_options dari atm_masters ke array nilai rupiah penuh.
- * Handle format: "50", "100", "50000", "100000", "100 & 50", "100000,50000"
- */
 function parseDenomOptions(raw) {
   if (!raw) return [100_000];
   const str = String(raw).trim();
@@ -27,7 +22,6 @@ function parseDenomOptions(raw) {
   for (const p of parts) {
     const num = parseInt(p.replace(/\./g, ""), 10);
     if (isNaN(num) || num <= 0) continue;
-    // "50" / "100" → ribuan → kalikan 1000; "50000"/"100000" → sudah full
     const val = num <= 1_000 ? num * 1_000 : num;
     if (!results.includes(val)) results.push(val);
   }
@@ -35,10 +29,6 @@ function parseDenomOptions(raw) {
   return results.length > 0 ? results : [100_000];
 }
 
-/**
- * Build opsi dropdown denom berdasarkan denom_options item.
- * Return array { label, value: number }
- */
 function getDenomOptionsForItem(item) {
   const vals = parseDenomOptions(item?.denom_options || "100000");
   return vals.map(v => ({
@@ -47,9 +37,6 @@ function getDenomOptionsForItem(item) {
   }));
 }
 
-/**
- * Label teks untuk kolom "Denom Tersedia" (read-only info).
- */
 function getDenomLabel(item) {
   const vals = parseDenomOptions(item?.denom_options || "100000");
   if (!vals.length) return "—";
@@ -57,13 +44,6 @@ function getDenomLabel(item) {
   return vals.map(v => `Rp ${Number(v).toLocaleString("id-ID")}`).join(" & ");
 }
 
-/**
- * Parse denom dari DB ke number untuk kalkulasi lembar.
- * denom di DB bisa berupa:
- *   - number: 100000
- *   - string: "100000" | "50000" | "100000,50000"
- * Jika multi-denom → ambil terkecil (worst case / max lembar).
- */
 function parseDenomForCalc(denomRaw) {
   if (!denomRaw) return 100_000;
   const str = String(denomRaw).trim();
@@ -73,7 +53,6 @@ function parseDenomForCalc(denomRaw) {
   }
   const val = parseInt(str, 10);
   if (isNaN(val) || val <= 0) return 100_000;
-  // handle nilai ribuan ("50", "100")
   return val <= 1_000 ? val * 1_000 : val;
 }
 
@@ -94,6 +73,9 @@ function exportToXLSX(data, overrides, bulan, tahun, wilayah) {
     const denomCalc = item.is_saved
       ? parseDenomForCalc(item.denom || 100_000)
       : parseDenomForCalc(ov.denom ?? item.denom ?? 100_000);
+    const saldoFinal = item.is_saved
+      ? (item.saldo_awal || 0)
+      : (ov.saldo_awal !== undefined ? Number(ov.saldo_awal) : (item.saldo_awal || 0));
     const jumlahIsi = getJumlahIsi(item);
     const lembar    = hitungLembar(jumlahIsi, denomCalc);
     const tglIsi    = item.is_saved ? (item.tgl_isi||"-")      : (ov.tgl_isi     ||item.tgl_isi||"-");
@@ -109,7 +91,7 @@ function exportToXLSX(data, overrides, bulan, tahun, wilayah) {
       "Wilayah":           item.wilayah || "-",
       "Tipe":              item.tipe || "-",
       "Denom Tersedia":    getDenomLabel(item),
-      "Saldo Akhir (Rp)":  item.saldo_awal || 0,
+      "Saldo Akhir (Rp)":  saldoFinal,
       "Limit (Rp)":        item.limit || 0,
       "Jumlah Isi (Rp)":   jumlahIsi,
       "Denominasi":        `Rp ${Number(denomCalc).toLocaleString("id-ID")}`,
@@ -145,7 +127,6 @@ export default function RekapReplacement({ navigateTo }) {
   const [savingId,      setSavingId]      = useState(null);
   const [showDlModal,   setShowDlModal]   = useState(false);
 
-  // overrides: perubahan lokal sebelum disimpan
   const [overrides, setOverrides] = useState({});
   const setOv = (id, field, val) =>
     setOverrides(prev => ({ ...prev, [id]: { ...prev[id], [field]: val } }));
@@ -175,23 +156,35 @@ export default function RekapReplacement({ navigateTo }) {
   const handleSave = async (item) => {
     setSavingId(item.id);
     const ov = overrides[item.id] || {};
-    // denom dikirim sebagai int ke backend (RekapUpdateRequest.denom: Optional[int])
     const denomToSave = parseDenomForCalc(ov.denom ?? item.denom ?? 100_000);
+
+    // Saldo final: pakai override jika ada, fallback ke item
+    const saldoFinal = ov.saldo_awal !== undefined && ov.saldo_awal !== ""
+      ? Number(ov.saldo_awal)
+      : (item.saldo_awal ?? null);
+
+    // Saldo final yang akan disimpan
+    const jumlahIsiFinal = getJumlahIsi(item);
+
     try {
       await updateRekapAPI(item.id, {
         tgl_isi:      ov.tgl_isi      ?? item.tgl_isi      ?? null,
         jam_cash_in:  ov.jam_cash_in  ?? item.jam_cash_in  ?? null,
         jam_cash_out: ov.jam_cash_out ?? item.jam_cash_out ?? null,
         denom:        denomToSave,
+        // ↓ field baru — pastikan backend sudah terima ini
+        saldo_awal:   saldoFinal,
+        jumlah_isi:   item.limit || item.jumlah_isi || 0,
       });
-      // Tandai is_saved di local state agar UI langsung update tanpa refetch
       setItems(prev => prev.map(d => d.id === item.id
         ? {
             ...d, is_saved: true,
-            tgl_isi:      ov.tgl_isi     ?? d.tgl_isi,
-            jam_cash_in:  ov.jam_cash_in ?? d.jam_cash_in,
+            tgl_isi:      ov.tgl_isi      ?? d.tgl_isi,
+            jam_cash_in:  ov.jam_cash_in  ?? d.jam_cash_in,
             jam_cash_out: ov.jam_cash_out ?? d.jam_cash_out,
             denom:        denomToSave,
+            saldo_awal:   saldoFinal ?? d.saldo_awal,
+            jumlah_isi:   item.limit || item.jumlah_isi || 0,
           }
         : d
       ));
@@ -222,9 +215,10 @@ export default function RekapReplacement({ navigateTo }) {
   const toggleSort = key => { setSort(s => ({ key, dir: s.key===key ? -s.dir : -1 })); setPage(0); };
 
   // ── Summary ──────────────────────────────────────────────────────────────────
-  const totalNominal = filtered.reduce((s,d) => s + getJumlahIsi(d), 0);
+  const totalNominal = filtered.reduce((s, d) => s + getJumlahIsi(d), 0);
   const totalLembar  = filtered.reduce((s, d) => {
-    const denomRaw = overrides[d.id]?.denom ?? d.denom ?? 100_000;
+    const ov       = overrides[d.id] || {};
+    const denomRaw = ov.denom ?? d.denom ?? 100_000;
     return s + hitungLembar(getJumlahIsi(d), denomRaw);
   }, 0);
   const totalSelesai = filtered.filter(d => (d.status_done||"").toUpperCase() === "SELESAI").length;
@@ -234,7 +228,8 @@ export default function RekapReplacement({ navigateTo }) {
   const byWilayah = WILAYAH_LIST.slice(1).map(w => ({
     wilayah: w,
     count:   items.filter(d => d.wilayah?.toLowerCase() === w.toLowerCase()).length,
-    nominal: items.filter(d => d.wilayah?.toLowerCase() === w.toLowerCase()).reduce((s,d)=>s+getJumlahIsi(d),0),
+    nominal: items.filter(d => d.wilayah?.toLowerCase() === w.toLowerCase())
+                  .reduce((s, d) => s + getJumlahIsi(d), 0),
   })).filter(w => w.count > 0);
 
   return (
@@ -275,8 +270,9 @@ export default function RekapReplacement({ navigateTo }) {
         <span style={{ fontSize:18 }}>ℹ</span>
         <div style={{ color:"#ffffff", fontSize:12 }}>
           Data di sini bersifat <strong style={{ color:"#00e5a0" }}>permanen</strong> — tidak berubah meskipun user upload ulang setiap hari.
-          Isi <strong style={{ color:"#60a5fa" }}>Tanggal Isi</strong>, <strong style={{ color:"#a78bfa" }}>Jam Cash In</strong>, <strong style={{ color:"#f59e0b" }}>Jam Cash Out</strong> lalu klik <strong style={{ color:"#00e5a0" }}>Simpan</strong>.
+          Isi <strong style={{ color:"#e2e8f0" }}>Saldo Akhir</strong>, <strong style={{ color:"#60a5fa" }}>Tanggal Isi</strong>, <strong style={{ color:"#a78bfa" }}>Jam Cash In</strong>, <strong style={{ color:"#f59e0b" }}>Jam Cash Out</strong> lalu klik <strong style={{ color:"#00e5a0" }}>Simpan</strong>.
           Kolom <strong style={{ color:"#a78bfa" }}>Denom</strong> otomatis dari data ATM (EMV: 50rb/100rb, CRM: keduanya).
+         
         </div>
       </div>
 
@@ -284,14 +280,13 @@ export default function RekapReplacement({ navigateTo }) {
       <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:12, marginBottom:20 }}>
         {[
           { label:"Total Rekap",    value:filtered.length,                              color:"#00e5a0" },
-          { label:"Selesai",        value:totalSelesai,                                 color:"#00e5a0"},
-          { label:"Batal",          value:totalBatal,                                   color:"#ffffff"},
-          { label:"Sudah Disimpan", value:totalSaved,                                   color:"#60a5fa"},
-          { label:"Total Nominal",  value:fmtRp(totalNominal),                          color:"#a78bfa",  small:true },
-          { label:"Total Lembar",   value:`${totalLembar.toLocaleString("id-ID")} lbr`, color:"#f59e0b",  small:true },
+          { label:"Selesai",        value:totalSelesai,                                 color:"#00e5a0" },
+          { label:"Batal",          value:totalBatal,                                   color:"#ffffff" },
+          { label:"Sudah Disimpan", value:totalSaved,                                   color:"#60a5fa" },
+          { label:"Total Nominal",  value:fmtRp(totalNominal),                          color:"#a78bfa", small:true },
+          { label:"Total Lembar",   value:`${totalLembar.toLocaleString("id-ID")} lbr`, color:"#f59e0b", small:true },
         ].map(c=>(
           <div key={c.label} style={{ background:"rgba(255,255,255,0.02)", border:`1px solid ${c.color}28`, borderRadius:10, padding:"14px 16px", textAlign:"center" }}>
-            <div style={{ fontSize:18, color:c.color, marginBottom:6 }}>{c.icon}</div>
             <div style={{ color:c.color, fontSize:c.small?12:22, fontWeight:700, lineHeight:1 }}>{c.value}</div>
             <div style={{ color:"#ffffff", fontSize:10, marginTop:6, textTransform:"uppercase", letterSpacing:"0.07em" }}>{c.label}</div>
           </div>
@@ -338,13 +333,23 @@ export default function RekapReplacement({ navigateTo }) {
                   {[
                     {label:"No",key:null},{label:"Done At",key:"done_at"},{label:"Bulan",key:"bulan"},
                     {label:"ID ATM",key:"id_atm"},{label:"Lokasi",key:"lokasi"},{label:"Wilayah",key:"wilayah"},
-                    {label:"Tipe",key:"tipe"},{label:"Saldo Akhir",key:"saldo_awal"},{label:"Jumlah Isi",key:"jumlah_isi"},
+                    {label:"Tipe",key:"tipe"},
+                    // ↓ header kolom saldo dengan hint editable
+                    {label:"Saldo Akhir ✎",key:"saldo_awal"},
+                    {label:"Jumlah Isi",key:"jumlah_isi"},
                     {label:"Denom Tersedia",key:null},{label:"Lembar",key:null},
                     {label:"Tanggal Isi",key:"tgl_isi"},{label:"Jam Cash In",key:null},{label:"Jam Cash Out",key:null},
                     {label:"Status",key:"status_done"},{label:"Keterangan",key:null},{label:"Aksi",key:null},
                   ].map((col,ci)=>(
                     <th key={ci} onClick={col.key?()=>toggleSort(col.key):undefined}
-                      style={{ padding:"11px 12px", textAlign:"left", color:col.key&&sort.key===col.key?"#60a5fa":"#ffffff", fontWeight:600, fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", cursor:col.key?"pointer":"default", whiteSpace:"nowrap" }}>
+                      style={{
+                        padding:"11px 12px", textAlign:"left",
+                        color: col.label.includes("✎") ? "#f59e0b"
+                             : col.key && sort.key === col.key ? "#60a5fa"
+                             : "#ffffff",
+                        fontWeight:600, fontSize:10, letterSpacing:"0.07em",
+                        textTransform:"uppercase", cursor:col.key?"pointer":"default", whiteSpace:"nowrap",
+                      }}>
                       {col.label}{col.key&&sort.key===col.key&&<span style={{marginLeft:3}}>{sort.dir>0?"↑":"↓"}</span>}
                     </th>
                   ))}
@@ -356,14 +361,23 @@ export default function RekapReplacement({ navigateTo }) {
                   const saved     = item.is_saved;
                   const isSaving  = savingId === item.id;
 
-                  // ── Denom ─────────────────────────────────────────────────
-                  // denomRaw: nilai yang sedang dipilih user (number) atau dari DB (number/string)
+                  // ── Denom ──────────────────────────────────────────────────
                   const denomRaw  = saved
                     ? parseDenomForCalc(item.denom || 100_000)
                     : (ov.denom !== undefined ? Number(ov.denom) : parseDenomForCalc(item.denom || 100_000));
-                  const denomCalc = denomRaw; // sudah number dari parseDenomForCalc atau Number()
+                  const denomCalc = denomRaw;
                   const denomOpts = getDenomOptionsForItem(item);
 
+                  // ── Saldo & Jumlah Isi ─────────────────────────────────────
+                  // Nilai saldo yang ditampilkan di input
+                  const saldoDisplay = saved
+                    ? (item.saldo_awal ?? 0)
+                    : (ov.saldo_awal !== undefined ? ov.saldo_awal : (item.saldo_awal ?? ""));
+
+                  // Apakah saldo sudah diubah user (beda dari original)?
+                  const saldoChanged = ov.saldo_awal !== undefined && Number(ov.saldo_awal) !== Number(item.saldo_awal);
+
+                  // Jumlah isi: recalc jika saldo diubah
                   const jumlahIsi = getJumlahIsi(item);
                   const lembar    = hitungLembar(jumlahIsi, denomCalc);
 
@@ -376,13 +390,22 @@ export default function RekapReplacement({ navigateTo }) {
                   const ssBg     = statusCP==="SELESAI"?"rgba(0,229,160,0.1)":statusCP==="BATAL"?"rgba(148,163,184,0.08)":"rgba(245,158,11,0.1)";
                   const rowBg    = saved?"rgba(0,229,160,0.02)":i%2===0?"transparent":"rgba(255,255,255,0.01)";
 
-                  const inputSt = (hasVal) => ({
-                    background: saved?"rgba(255,255,255,0.02)":"#0d1228",
-                    border:`1px solid ${saved?"rgba(99,179,237,0.06)":hasVal?"rgba(96,165,250,0.35)":"rgba(96,165,250,0.2)"}`,
-                    borderRadius:6, color:saved?"#475569":hasVal?"#60a5fa":"#475569",
-                    padding:"4px 8px", fontSize:11, outline:"none",
-                    cursor:saved?"not-allowed":"pointer",
-                    pointerEvents:saved?"none":"auto",
+                  const inputSt = (hasVal, changed) => ({
+                    background: saved ? "rgba(255,255,255,0.02)" : "#0d1228",
+                    border: `1px solid ${
+                      saved        ? "rgba(99,179,237,0.06)"
+                      : changed    ? "rgba(245,158,11,0.5)"
+                      : hasVal     ? "rgba(96,165,250,0.35)"
+                                   : "rgba(96,165,250,0.2)"
+                    }`,
+                    borderRadius: 6,
+                    color: saved     ? "#475569"
+                         : changed  ? "#f59e0b"
+                         : hasVal   ? "#60a5fa"
+                                    : "#475569",
+                    padding: "4px 8px", fontSize: 11, outline: "none",
+                    cursor:       saved ? "not-allowed" : "pointer",
+                    pointerEvents: saved ? "none" : "auto",
                   });
 
                   return (
@@ -418,11 +441,51 @@ export default function RekapReplacement({ navigateTo }) {
                         </span>
                       </td>
 
-                      <td style={tdS("#e2e8f0")}>{fmtRp(item.saldo_awal)}</td>
+                      {/* ── SALDO AKHIR — editable sebelum saved ─────────── */}
+                      <td style={{padding:"8px 10px"}}>
+                        {saved ? (
+                          // Setelah saved: tampil read-only
+                          <span style={{color:"#e2e8f0",fontFamily:"monospace",fontSize:12,whiteSpace:"nowrap"}}>
+                            {fmtRp(item.saldo_awal)}
+                          </span>
+                        ) : (
+                          // Sebelum saved: input number
+                          <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                            <input
+                              type="number"
+                              value={saldoDisplay}
+                              onChange={e => setOv(item.id, "saldo_awal",
+                                e.target.value === "" ? "" : Number(e.target.value)
+                              )}
+                              style={{
+                                ...inputSt(saldoDisplay !== "" && saldoDisplay !== null, saldoChanged),
+                                width: 130,
+                              }}
+                              placeholder="Masukkan saldo"
+                              min={0}
+                              step={1000}
+                            />
+                            {/* Hint jika saldo diubah */}
+                            {saldoChanged && (
+                              <span style={{fontSize:9,color:"#f59e0b"}}>
+                                saldo diubah dari {fmtRp(item.saldo_awal)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
 
-                      {/* Jumlah Isi dari DB */}
+                      {/* Jumlah Isi — auto-recalc jika saldo diubah */}
                       <td style={{padding:"8px 12px"}}>
-                        <span style={{color:"#f59e0b",fontWeight:700}}>{fmtRp(jumlahIsi)}</span>
+                        <div style={{display:"flex",flexDirection:"column",gap:1}}>
+                          <span style={{
+                            color: saldoChanged ? "#f59e0b" : "#f59e0b",
+                            fontWeight:700,
+                            fontSize:12,
+                          }}>
+                            {fmtRp(jumlahIsi)}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Denom Tersedia (read-only info) */}
@@ -438,17 +501,20 @@ export default function RekapReplacement({ navigateTo }) {
 
                       {/* Tanggal Isi */}
                       <td style={{padding:"8px 10px"}}>
-                        <input type="date" value={tglIsi} onChange={e=>!saved&&setOv(item.id,"tgl_isi",e.target.value)} style={inputSt(!!tglIsi)} />
+                        <input type="date" value={tglIsi} onChange={e=>!saved&&setOv(item.id,"tgl_isi",e.target.value)}
+                          style={inputSt(!!tglIsi, false)} />
                       </td>
 
                       {/* Jam Cash In */}
                       <td style={{padding:"8px 10px"}}>
-                        <input type="time" value={cashIn} onChange={e=>!saved&&setOv(item.id,"jam_cash_in",e.target.value)} style={{...inputSt(!!cashIn),width:90}} />
+                        <input type="time" value={cashIn} onChange={e=>!saved&&setOv(item.id,"jam_cash_in",e.target.value)}
+                          style={{...inputSt(!!cashIn, false),width:90}} />
                       </td>
 
                       {/* Jam Cash Out */}
                       <td style={{padding:"8px 10px"}}>
-                        <input type="time" value={cashOut} onChange={e=>!saved&&setOv(item.id,"jam_cash_out",e.target.value)} style={{...inputSt(!!cashOut),width:90}} />
+                        <input type="time" value={cashOut} onChange={e=>!saved&&setOv(item.id,"jam_cash_out",e.target.value)}
+                          style={{...inputSt(!!cashOut, false),width:90}} />
                       </td>
 
                       {/* Status */}
@@ -497,10 +563,10 @@ export default function RekapReplacement({ navigateTo }) {
       {/* Legend */}
       <div style={{marginTop:16,display:"flex",gap:20,flexWrap:"wrap"}}>
         {[
-          {label:"Denom Tersedia = dari data ATM master (EMV: 50rb/100rb, CRM: bisa keduanya)", color:"#a78bfa"},
-          {label:"Jumlah Isi dari DB = limit − saldo saat cashplan dibuat",                     color:"#f59e0b"},
-          {label:"Data permanen — tidak berubah saat upload ulang",                             color:"#00e5a0"},
-          {label:"Setelah disimpan, baris tidak bisa diedit lagi (SAVED)",                      color:"#60a5fa"},
+          {label:"Saldo Akhir bisa diedit sebelum data disimpan",           color:"#f59e0b"},
+          {label:"Denom Tersedia = dari data ATM master (EMV: 50rb/100rb, CRM: keduanya)", color:"#a78bfa"},
+          {label:"Data permanen — tidak berubah saat upload ulang",                        color:"#00e5a0"},
+          {label:"Setelah disimpan, baris tidak bisa diedit lagi (SAVED)",                 color:"#60a5fa"},
         ].map(l=>(
           <div key={l.label} style={{display:"flex",alignItems:"center",gap:6}}>
             <div style={{width:8,height:8,borderRadius:2,background:l.color}} />
@@ -521,7 +587,7 @@ export default function RekapReplacement({ navigateTo }) {
               <button onClick={()=>setShowDlModal(false)} style={{background:"none",border:"none",color:"#ffffff",fontSize:20,cursor:"pointer"}}>×</button>
             </div>
             <div style={{color:"#ffffff",fontSize:12,marginBottom:16}}>
-              Kolom <strong style={{color:"#a78bfa"}}>Denom Tersedia</strong> dan <strong style={{color:"#a78bfa"}}>Pilih Denom</strong> ikut tercatat di file Excel.
+              Kolom <strong style={{color:"#a78bfa"}}>Denom Tersedia</strong> dan <strong style={{color:"#f59e0b"}}>Saldo Akhir</strong> yang sudah diedit ikut tercatat di file Excel.
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {["Semua","Pekanbaru","Batam","Dumai","Tanjung Pinang"].map(w=>{
